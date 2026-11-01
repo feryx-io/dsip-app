@@ -9,13 +9,19 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/thevoiceguy/dsip-app"
 
 [workspace.dependencies]
-# dsip-rs, every crate at one tag (dsip-rs RELEASING.md, "Downstream")
-dsip-core = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
-dsip-endpoint = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
-dsip-media = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
-dsip-phone = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
-dsip-transport = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
-dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
+# dsip-rs, every crate at one ref (dsip-rs RELEASING.md, "Downstream"): a commit with native discovery (dsip-rs #25)
+# until a release carries it, then its tag
+dsip-core = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-endpoint = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-media = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-phone = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-transport = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-messenger = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-messaging-device = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821", features = ["sqlite"] }
+dsip-mls = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821", features = ["sqlite"] }
+dsip-mailbox = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-messaging = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
+dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "3672f838339f1e2ca6bf233f17dc606f838e7821" }
 # Anvil's audio (app plan decision 4 (a)): cpal, echo cancellation
 anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", features = ["tone"] }
 anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", default-features = false }

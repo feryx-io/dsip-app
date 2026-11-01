@@ -19,6 +19,72 @@ pub struct State {
     pub calls: BTreeMap<u64, CallView>,
     /// The audio devices.
     pub audio: Audio,
+    /// Messages: the mailbox, the conversations, the requests to answer.
+    pub messaging: Messaging,
+}
+
+/// Messaging's part of the state.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Messaging {
+    /// The identity's mailbox DID, when messaging is on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mailbox: Option<String>,
+    /// Bound to it now.
+    pub connected: bool,
+    /// The conversations this device is in (its identity's personal group left out).
+    pub conversations: Vec<ConversationView>,
+    /// Introductions waiting for an answer (M§14.1).
+    pub requests: Vec<RequestView>,
+}
+
+/// A conversation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConversationView {
+    /// Its group id: what `message` and `thread` name.
+    pub group: String,
+    /// Its conversation id.
+    pub conversation: String,
+    /// `direct` or `group`.
+    pub kind: String,
+    /// The other identity of a direct conversation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub peer: Option<String>,
+    /// Its members' identities.
+    pub members: Vec<String>,
+    /// Messages sent here not yet accepted by its hub.
+    pub pending: usize,
+}
+
+/// A message.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MessageView {
+    /// The conversation's group id.
+    pub conversation: String,
+    /// The content id.
+    pub id: String,
+    /// The sender's identity.
+    pub from: String,
+    /// Sent from this identity.
+    pub mine: bool,
+    /// `text`, `audio`, …
+    pub kind: String,
+    /// Its text, for a text message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    /// When it was sent (the sender's clock).
+    pub sent_at: i64,
+}
+
+/// An introduction waiting for an answer (M§14.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RequestView {
+    /// Its id: what `accept_request` and `decline_request` name.
+    pub id: String,
+    /// Who asks.
+    pub from: String,
+    /// The name it gives (a claim, not verified).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 /// The identity and this device.
@@ -130,6 +196,34 @@ pub enum Change {
         /// The call as it is now.
         call: CallView,
     },
+    /// Messaging bound to its mailbox, or lost it.
+    Messaging {
+        /// The mailbox DID.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        mailbox: Option<String>,
+        /// Bound now.
+        connected: bool,
+    },
+    /// The conversations changed (one added, its members, its pending count).
+    Conversations {
+        /// All of them, as they are now.
+        conversations: Vec<ConversationView>,
+    },
+    /// A message arrived, or this app sent one.
+    Message {
+        /// The message.
+        message: MessageView,
+    },
+    /// The introductions waiting for an answer changed.
+    Requests {
+        /// All of them, as they are now.
+        requests: Vec<RequestView>,
+    },
+    /// An identity this one introduced itself to granted it permission to message (M§14.1): `message` it now.
+    Granted {
+        /// Who.
+        by: String,
+    },
     /// The app stopped: its phone unbound.
     Stopped,
 }
@@ -141,7 +235,13 @@ impl State {
             Change::CallAdded { call } | Change::CallChanged { call } => {
                 self.calls.insert(call.id, call.clone());
             }
-            Change::Stopped => {}
+            Change::Messaging { mailbox, connected } => {
+                self.messaging.mailbox = mailbox.clone();
+                self.messaging.connected = *connected;
+            }
+            Change::Conversations { conversations } => self.messaging.conversations = conversations.clone(),
+            Change::Requests { requests } => self.messaging.requests = requests.clone(),
+            Change::Message { .. } | Change::Granted { .. } | Change::Stopped => {}
         }
     }
 }

@@ -1,5 +1,6 @@
-//! `dsip-app`: run the client, or drive the one running. `dsip-app run` binds an identity to its relay and serves the
-//! control socket; `call`, `answer`, `decline`, `hangup`, `mute`, `unmute`, `state` and `watch` talk to it.
+//! `dsip-app`: run the client, or drive the one running. `dsip-app run` binds an identity to its relay (and, with
+//! `--mailbox`, to its mailbox) and serves the control socket; `call`, `answer`, `decline`, `hangup`, `mute`, `unmute`,
+//! `introduce`, `accept`, `decline-request`, `message`, `thread`, `state` and `watch` talk to it.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -46,6 +47,53 @@ enum Cmd {
         /// STUN server for the calls' media (repeatable): `stun:stun.example.com:3478`.
         #[arg(long)]
         stun: Vec<String>,
+        /// The identity's mailbox (`wss://host:9443/dsip`), for messages: one that serves it, or enrols identities that
+        /// bind. Without it, calls only.
+        #[arg(long, requires = "mailbox_did")]
+        mailbox: Option<String>,
+        /// The mailbox's DID (its `service.did`).
+        #[arg(long, requires = "mailbox")]
+        mailbox_did: Option<String>,
+        /// A hints node (`https://host:port`, repeatable): this device publishes its hint there, naming its relay and
+        /// mailbox, and finds other `did:key` identities' mailboxes there.
+        #[arg(long = "hints-node")]
+        hints_nodes: Vec<String>,
+        /// Where the messaging state lives. Default: `<identity>/messaging`.
+        #[arg(long)]
+        messaging_state: Option<PathBuf>,
+        /// Fetch `did:web` documents to find those identities' mailboxes.
+        #[arg(long)]
+        fetch_did_web: bool,
+    },
+    /// Ask an identity for permission to message it.
+    Introduce {
+        /// The identity.
+        to: String,
+        /// Why (shown to it).
+        purpose: String,
+    },
+    /// Grant a request (`state` lists them under messaging.requests).
+    Accept {
+        /// The request id.
+        id: String,
+    },
+    /// Forget a request, unanswered.
+    DeclineRequest {
+        /// The request id.
+        id: String,
+    },
+    /// Send a text to an identity (your direct conversation with it) or a conversation (its group id).
+    Message {
+        /// The identity DID or group id.
+        to: String,
+        /// The text.
+        #[arg(num_args = 1.., required = true)]
+        text: Vec<String>,
+    },
+    /// A conversation's messages.
+    Thread {
+        /// Its group id.
+        conversation: String,
     },
     /// Call an identity or a device.
     Call {
@@ -102,7 +150,7 @@ async fn main() -> Result<ExitCode> {
             println!("{}", id.meta.identity);
             return Ok(ExitCode::SUCCESS);
         }
-        Cmd::Run { identity, relay, ca, audio, stun } => {
+        Cmd::Run { identity, relay, ca, audio, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web } => {
             let id = dsip_phone::Identity::load(&identity).with_context(|| format!("loading {}", identity.display()))?;
             let mut cfg = Config::new(id, &relay);
             cfg.tls = dsip_transport::tls::client_config(ca.as_deref())?;
@@ -113,6 +161,15 @@ async fn main() -> Result<ExitCode> {
                 other => anyhow::bail!("--audio {other}: system, tone or none"),
             };
             cfg.stun = stun;
+            if let (Some(uri), Some(did)) = (mailbox, mailbox_did) {
+                cfg.messaging = Some(dsip_app::MessagingConfig {
+                    mailbox: (did, uri),
+                    hints_nodes,
+                    ca: ca.clone(),
+                    state_dir: messaging_state.unwrap_or_else(|| identity.join("messaging")),
+                    fetch_did_web,
+                });
+            }
             let app = App::start(cfg).await?;
             let s = app.state();
             tracing::info!("{} ({}) bound to {} as device {}", s.me.display_name, s.me.identity, s.relay, s.me.device);
@@ -135,6 +192,11 @@ async fn main() -> Result<ExitCode> {
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Call { to } => Command::Call { to },
+        Cmd::Introduce { to, purpose } => Command::Introduce { to, purpose },
+        Cmd::Accept { id } => Command::AcceptRequest { id },
+        Cmd::DeclineRequest { id } => Command::DeclineRequest { id },
+        Cmd::Message { to, text } => Command::Message { to, text: text.join(" ") },
+        Cmd::Thread { conversation } => Command::Thread { conversation },
         Cmd::Answer { call } => Command::Answer { call },
         Cmd::Decline { call } => Command::Decline { call },
         Cmd::Hangup { call } => Command::Hangup { call },
