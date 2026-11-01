@@ -7,9 +7,15 @@ Protocol) is an identity-first protocol for calls and messages: the spec and its
 [app plan](https://github.com/thevoiceguy/dsip-rs/blob/main/docs/dsip-app-plan.md).
 
 **Status: stage A2, the running client.** There is no UI yet. The `dsip-app` crate is the client the screens will
-sit on: it binds an identity to its relay, rings for incoming calls, places calls, carries their sound through the
-microphone and speaker, and serves a local control socket that the `dsip-app` CLI drives. Messaging, contacts and
-presence come next; the Flutter desktop app (A3) and the mobile apps (A5) after.
+sit on:
+- **Calls:** it binds an identity to its relay, rings for incoming calls, places calls, and carries their sound
+  through the microphone and speaker.
+- **Messages:** first contact (introduce, accept), then direct conversations, through the identity's mailbox. A
+  `did:key` identity's mailbox is found through its hint on the hints nodes, which the app publishes, as the browser
+  client does.
+- **Control:** a local control socket that the `dsip-app` CLI drives.
+
+Presence comes next; the Flutter desktop app (A3) and the mobile apps (A5) after.
 
 ```
 crates/dsip-app     the running client: State, Change, Command, the control socket, audio, and the CLI
@@ -24,6 +30,16 @@ dsip-app watch &                                               # the state, then
 dsip-app call did:key:z6Mk…                                    # Bob's DID
 dsip-app hangup
 dsip-app quit
+```
+
+With a mailbox, the same app messages:
+
+```sh
+dsip-app run --identity ~/.dsip/alice --relay wss://relay.example.com:8443/dsip \
+    --mailbox wss://mailbox.example.com:9443/dsip --mailbox-did did:key:z6Mk… --hints-node https://hints.example.com &
+dsip-app introduce did:key:z6Mk…bob "it's Alice"     # Bob's app lists the request; he runs `dsip-app accept <id>`
+dsip-app message did:key:z6Mk…bob hello              # once he has: the direct conversation is made on the way
+dsip-app thread <group id>                           # `state` lists the conversations
 ```
 
 On Bob's side, `dsip-app answer` takes the call that rings. `--audio tone` uses a test tone instead of the
@@ -43,15 +59,18 @@ self-signed certificate.
 - **Sound.** Anvil's `anvil-audio` provides the devices (cpal, plus echo cancellation and noise suppression in
   Rust). The microphone is encoded to 48 kHz Opus and fed to the call's WebRTC leg (dsip-media); what the leg
   receives is decoded to the speaker.
-- **dsip-rs by tag.** Every `dsip-*` crate is pinned to the same dsip-rs release tag (dsip-rs `RELEASING.md`,
-  "Downstream").
+- **Messages.** A `dsip-messenger` on a thread of its own (its store is SQLite). It uploads fresh KeyPackages and
+  syncs live on every binding, publishes the device's hint, and turns what the engine hears into changes.
+- **dsip-rs by one ref.** Every `dsip-*` crate is pinned to the same dsip-rs ref (dsip-rs `RELEASING.md`,
+  "Downstream"): a release tag, or between releases the commit carrying what the app needs.
 
 ## Build and test
 
 Rust as pinned in `rust-toolchain.toml`. On Linux, ALSA's headers (`libasound2-dev`).
 
 ```sh
-cargo test --workspace     # two apps on an in-process relay: a call rings, is answered, carries sound both ways
+cargo test --workspace     # two apps on an in-process relay: a call rings, is answered, carries sound both ways;
+                           # on Linux, two apps on two mailboxes introduce, grant and message through hints alone
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 

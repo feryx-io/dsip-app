@@ -46,6 +46,37 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         call: Option<u64>,
     },
+    /// Ask an identity for permission to message it (M§14.1); it sees a request, and its `accept_request` is the
+    /// grant.
+    Introduce {
+        /// The identity.
+        to: String,
+        /// Why: shown to it, sealed to it on the wire.
+        purpose: String,
+    },
+    /// Grant a request's sender permission to message (M§14.1).
+    AcceptRequest {
+        /// The request's id ([`RequestView::id`](crate::RequestView)).
+        id: String,
+    },
+    /// Forget a request, unanswered.
+    DeclineRequest {
+        /// The request's id.
+        id: String,
+    },
+    /// Send a text: to a conversation (its group id), or to an identity, in your direct conversation with it, made
+    /// when there is none yet (it must have granted you permission, or be in a conversation with you).
+    Message {
+        /// A group id or an identity DID.
+        to: String,
+        /// The text.
+        text: String,
+    },
+    /// A conversation's messages, oldest first.
+    Thread {
+        /// Its group id.
+        conversation: String,
+    },
     /// After the answer, every [`Change`](crate::Change), one per line, until the client goes (control socket only).
     Subscribe,
     /// Stop the app.
@@ -67,6 +98,16 @@ pub enum Response {
     Call {
         /// The app's call id.
         call: u64,
+    },
+    /// The conversation a message went to.
+    Conversation {
+        /// Its group id.
+        conversation: String,
+    },
+    /// A conversation's messages, for [`Command::Thread`].
+    Thread {
+        /// Oldest first.
+        messages: Vec<crate::MessageView>,
     },
     /// Not done, and why.
     Error {

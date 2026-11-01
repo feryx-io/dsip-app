@@ -26,6 +26,7 @@ pub mod audio;
 mod command;
 #[cfg(unix)]
 pub mod control;
+pub mod messaging;
 mod state;
 
 use std::collections::HashMap;
@@ -37,7 +38,10 @@ use tokio::sync::{broadcast, mpsc};
 
 pub use audio::HostKind;
 pub use command::{Command, Response};
-pub use state::{Audio as AudioState, AudioDevice, CallState, CallView, Change, Direction, Me, State};
+pub use messaging::MessagingConfig;
+pub use state::{
+    Audio as AudioState, AudioDevice, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, Messaging, RequestView, State,
+};
 
 /// Ended calls kept in [`State::calls`], the most recent.
 pub const ENDED_KEPT: usize = 20;
@@ -54,6 +58,9 @@ pub enum Error {
     /// The audio devices.
     #[error("audio: {0}")]
     Audio(String),
+    /// The messaging state, or its thread.
+    #[error("messaging: {0}")]
+    Messaging(String),
 }
 
 /// How the app runs.
@@ -70,12 +77,14 @@ pub struct Config {
     pub audio: Option<HostKind>,
     /// STUN servers for the calls' media.
     pub stun: Vec<String>,
+    /// Messages through the identity's mailbox; `None`: calls only.
+    pub messaging: Option<MessagingConfig>,
 }
 
 impl Config {
     /// `identity` bound to `relay`, with the platform's audio devices and no STUN.
     pub fn new(identity: dsip_phone::Identity, relay: &str) -> Config {
-        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![] }
+        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None }
     }
 }
 
@@ -92,20 +101,21 @@ struct CallCtl {
     muted: Arc<AtomicBool>,
 }
 
-struct Inner {
+pub(crate) struct Inner {
     phone: dsip_phone::Phone,
-    state: std::sync::Mutex<State>,
+    pub(crate) state: std::sync::Mutex<State>,
     changes: broadcast::Sender<Change>,
     calls: std::sync::Mutex<HashMap<u64, CallCtl>>,
     next_id: AtomicU64,
     audio: Option<audio::Audio>,
+    messaging: std::sync::OnceLock<mpsc::UnboundedSender<messaging::Req>>,
     stopped: tokio::sync::watch::Sender<bool>,
 }
 
 /// The running client. Cheap to clone; clones are the same app.
 #[derive(Clone)]
 pub struct App {
-    inner: Arc<Inner>,
+    pub(crate) inner: Arc<Inner>,
 }
 
 impl App {
@@ -120,6 +130,7 @@ impl App {
             device: cfg.identity.meta.device.clone(),
             display_name: cfg.identity.meta.display_name.clone(),
         };
+        let identity_dir = cfg.identity.dir.clone();
         let mut b = dsip_phone::Phone::builder().identity(cfg.identity).relay(&cfg.relay).answer(dsip_phone::AnswerPolicy::Ring);
         if let Some(t) = cfg.tls {
             b = b.tls(t);
@@ -131,8 +142,10 @@ impl App {
             b = b.media(dsip_phone::Media::Native(a.media(cfg.stun)));
         }
         let phone = b.build().await?;
+        let relay = cfg.relay.clone();
         let state = State {
             me,
+            messaging: Messaging::default(),
             relay: cfg.relay,
             calls: Default::default(),
             audio: AudioState {
@@ -149,9 +162,14 @@ impl App {
                 calls: Default::default(),
                 next_id: AtomicU64::new(1),
                 audio,
+                messaging: std::sync::OnceLock::new(),
                 stopped: tokio::sync::watch::channel(false).0,
             }),
         };
+        if let Some(m) = cfg.messaging {
+            let tx = messaging::spawn(app.clone(), m, identity_dir, relay).map_err(Error::Messaging)?;
+            let _ = app.inner.messaging.set(tx);
+        }
         let a = app.clone();
         tokio::spawn(async move {
             while let Some(inc) = a.inner.phone.incoming().await {
@@ -191,6 +209,11 @@ impl App {
             Command::Hangup { call } => self.act(call, Pick::Latest, Action::HangUp),
             Command::Mute { call } => self.mute(call, true),
             Command::Unmute { call } => self.mute(call, false),
+            Command::Introduce { to, purpose } => self.ask(|reply| messaging::Req::Introduce { to, purpose, reply }).await,
+            Command::AcceptRequest { id } => self.ask(|reply| messaging::Req::AcceptRequest { id, reply }).await,
+            Command::DeclineRequest { id } => self.ask(|reply| messaging::Req::DeclineRequest { id, reply }).await,
+            Command::Message { to, text } => self.ask(|reply| messaging::Req::Message { to, text, reply }).await,
+            Command::Thread { conversation } => self.ask(|reply| messaging::Req::Thread { conversation, reply }).await,
             Command::Subscribe => Response::error("subscribe is for the control socket"),
             Command::Quit => {
                 self.stop().await;
@@ -201,6 +224,9 @@ impl App {
 
     /// Unbind and stop: calls still up end. Resolves [`App::stopped`].
     pub async fn stop(&self) {
+        if let Some(m) = self.inner.messaging.get() {
+            let _ = m.send(messaging::Req::Stop);
+        }
         let _ = self.inner.phone.close().await;
         let _ = self.inner.changes.send(Change::Stopped);
         self.inner.stopped.send_replace(true);
@@ -210,6 +236,26 @@ impl App {
     pub async fn stopped(&self) {
         let mut rx = self.inner.stopped.subscribe();
         let _ = rx.wait_for(|s| *s).await;
+    }
+
+    /// Hand a request to the messaging thread and wait for its answer.
+    async fn ask(&self, req: impl FnOnce(tokio::sync::oneshot::Sender<Response>) -> messaging::Req) -> Response {
+        let Some(m) = self.inner.messaging.get() else { return Response::error("messaging is off: run with a mailbox") };
+        let (reply, answer) = tokio::sync::oneshot::channel();
+        if m.send(req(reply)).is_err() {
+            return Response::error("messaging has stopped");
+        }
+        answer.await.unwrap_or_else(|_| Response::error("messaging has stopped"))
+    }
+
+    /// Change the messaging state with `f` and publish it.
+    pub(crate) fn set_messaging(&self, f: impl FnOnce(&mut Messaging)) {
+        let (mailbox, connected) = {
+            let mut s = self.inner.state.lock().unwrap_or_else(|e| e.into_inner());
+            f(&mut s.messaging);
+            (s.messaging.mailbox.clone(), s.messaging.connected)
+        };
+        let _ = self.inner.changes.send(Change::Messaging { mailbox, connected });
     }
 
     fn act(&self, call: Option<u64>, pick: Pick, action: Action) -> Response {
@@ -323,7 +369,7 @@ impl App {
         let _ = self.inner.changes.send(Change::CallChanged { call: view });
     }
 
-    fn publish(&self, change: Change) {
+    pub(crate) fn publish(&self, change: Change) {
         self.inner.state.lock().unwrap_or_else(|e| e.into_inner()).apply(&change);
         let _ = self.inner.changes.send(change);
     }

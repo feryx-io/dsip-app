@@ -13,7 +13,12 @@ path = "src/main.rs"
 
 [dependencies]
 dsip-endpoint.workspace = true
+dsip-core.workspace = true
 dsip-media.workspace = true
+dsip-messaging.workspace = true
+dsip-messaging-device.workspace = true
+dsip-messenger.workspace = true
+dsip-mls.workspace = true
 dsip-phone.workspace = true
 dsip-transport.workspace = true
 anvil-audio.workspace = true
@@ -33,3 +38,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 dsip-testkit.workspace = true
+
+# tests/messages.rs runs mailboxes, which link OpenSSL: on Linux, where CI has it
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+dsip-mailbox.workspace = true
+tokio-rustls = "0.26"
