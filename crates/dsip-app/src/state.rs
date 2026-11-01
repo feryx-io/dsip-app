@@ -21,6 +21,37 @@ pub struct State {
     pub audio: Audio,
     /// Messages: the mailbox, the conversations, the requests to answer.
     pub messaging: Messaging,
+    /// This device's presence, and the identities it follows.
+    #[serde(default)]
+    pub presence: PresenceState,
+}
+
+/// Presence's part of the state (Presence Profile, draft).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct PresenceState {
+    /// The state this device publishes: `available`, `busy`, `away`, `dnd`, `offline` (invisible); `None`: automatic,
+    /// no record (its relay says available while it is bound).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mine: Option<String>,
+    /// The identities followed, in DID order.
+    pub following: Vec<PresenceView>,
+}
+
+/// A followed identity's presence.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PresenceView {
+    /// The identity.
+    pub identity: String,
+    /// Its state as P§4 combines its devices' records: `available`, `busy`, `away`, `dnd`, `offline`. `None` until its
+    /// relay admits us (it needs a grant of theirs, P§6), and while it refuses.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
+    /// The token that won, when it is not `state` (an unregistered token, shown raw beside its fallback, P§5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+    /// `record` (a device of theirs signed it), `assertion` (their relay's claim that they are bound, §9.3), `none`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 /// Messaging's part of the state.
@@ -222,10 +253,27 @@ pub enum Change {
         /// All of them, as they are now.
         requests: Vec<RequestView>,
     },
-    /// An identity this one introduced itself to granted it permission to message (M§14.1): `message` it now.
+    /// An identity this one introduced itself to granted it permission to message (M§14.1): `message` it now. The
+    /// grant shares its presence too, which the app now follows.
     Granted {
         /// Who.
         by: String,
+    },
+    /// The state this device publishes changed.
+    MyPresence {
+        /// The state; `None`: automatic.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        state: Option<String>,
+    },
+    /// A followed identity's presence changed, or it was followed.
+    Presence {
+        /// It, as it is now.
+        presence: PresenceView,
+    },
+    /// An identity is no longer followed.
+    Unfollowed {
+        /// The identity.
+        identity: String,
     },
     /// The app stopped: its phone unbound.
     Stopped,
@@ -244,6 +292,15 @@ impl State {
             }
             Change::Conversations { conversations } => self.messaging.conversations = conversations.clone(),
             Change::Requests { requests } => self.messaging.requests = requests.clone(),
+            Change::MyPresence { state } => self.presence.mine = state.clone(),
+            Change::Presence { presence } => {
+                let f = &mut self.presence.following;
+                match f.binary_search_by(|p| p.identity.cmp(&presence.identity)) {
+                    Ok(i) => f[i] = presence.clone(),
+                    Err(i) => f.insert(i, presence.clone()),
+                }
+            }
+            Change::Unfollowed { identity } => self.presence.following.retain(|p| &p.identity != identity),
             Change::Message { .. } | Change::Granted { .. } | Change::Stopped => {}
         }
     }

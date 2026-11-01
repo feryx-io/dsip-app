@@ -1,6 +1,7 @@
 //! `dsip-app`: run the client, or drive the one running. `dsip-app run` binds an identity to its relay (and, with
 //! `--mailbox`, to its mailbox) and serves the control socket; `call`, `answer`, `decline`, `hangup`, `mute`, `unmute`,
-//! `introduce`, `accept`, `decline-request`, `message`, `thread`, `state` and `watch` talk to it.
+//! `introduce`, `accept`, `decline-request`, `message`, `thread`, `presence`, `follow`, `unfollow`, `state` and `watch`
+//! talk to it.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -95,6 +96,21 @@ enum Cmd {
     Thread {
         /// Its group id.
         conversation: String,
+    },
+    /// Publish this device's presence: available, busy, away, dnd, offline (invisible), or auto (no record).
+    Presence {
+        /// The state.
+        state: String,
+    },
+    /// Follow an identity's presence (it must have granted you; accepting your introduction does).
+    Follow {
+        /// The identity.
+        identity: String,
+    },
+    /// Stop following an identity's presence.
+    Unfollow {
+        /// The identity.
+        identity: String,
     },
     /// Call an identity or a device.
     Call {
@@ -205,6 +221,9 @@ async fn main() -> Result<ExitCode> {
         Cmd::DeclineRequest { id } => Command::DeclineRequest { id },
         Cmd::Message { to, text } => Command::Message { to, text: text.join(" ") },
         Cmd::Thread { conversation } => Command::Thread { conversation },
+        Cmd::Presence { state } => Command::SetPresence { state: (state != "auto").then_some(state) },
+        Cmd::Follow { identity } => Command::WatchPresence { identity },
+        Cmd::Unfollow { identity } => Command::UnwatchPresence { identity },
         Cmd::Answer { call } => Command::Answer { call },
         Cmd::Decline { call } => Command::Decline { call },
         Cmd::Hangup { call } => Command::Hangup { call },

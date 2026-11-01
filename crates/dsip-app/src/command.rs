@@ -72,6 +72,24 @@ pub enum Command {
         /// The text.
         text: String,
     },
+    /// Publish this device's presence: `available`, `busy`, `away`, `dnd`, or `offline` (invisible); without `state`,
+    /// automatic (no record: the relay says available while bound). Spec: P§3, P§5.
+    SetPresence {
+        /// The state.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        state: Option<String>,
+    },
+    /// Follow an identity's presence. It shows once its relay admits us: it must have granted us (accepting our
+    /// introduction does). Spec: §9.3, P§6.
+    WatchPresence {
+        /// The identity.
+        identity: String,
+    },
+    /// Stop following an identity's presence.
+    UnwatchPresence {
+        /// The identity.
+        identity: String,
+    },
     /// A conversation's messages, oldest first.
     Thread {
         /// Its group id.
