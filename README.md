@@ -14,9 +14,14 @@ sit on:
 - **Messages:** first contact (introduce, accept), then direct conversations, through the identity's mailbox. A
   `did:key` identity's mailbox is found through its hint on the hints nodes, which the app publishes, as the browser
   client does.
+- **Presence:** it publishes the state you pick and follows other identities' presence. Accepting an introduction
+  grants calls, messages and presence in one grant. The app that asked holds that grant and follows the identity that
+  granted it, through whichever relay that identity's hint names. Presence is private unless granted. Records are
+  sent in the clear for now; sealing them comes next.
 - **Control:** a local control socket that the `dsip-app` CLI drives.
 
-Presence comes next; the Flutter desktop app (A3) and the mobile apps (A5) after.
+Group conversations and the Windows control channel come next; the Flutter desktop app (A3) and the mobile apps (A5)
+after.
 
 ```
 crates/dsip-app     the running client: State, Change, Command, the control socket, audio, and the CLI
@@ -41,6 +46,8 @@ dsip-app run --identity ~/.dsip/alice --relay wss://relay.example.com:8443/dsip 
 dsip-app introduce did:key:z6Mk…bob "it's Alice"     # Bob's app lists the request; he runs `dsip-app accept <id>`
 dsip-app message did:key:z6Mk…bob hello              # once he has: the direct conversation is made on the way
 dsip-app thread <group id>                           # `state` lists the conversations
+dsip-app presence busy                               # available, busy, away, dnd, offline (invisible), or auto
+dsip-app follow did:key:z6Mk…carol                   # shown under presence.following once Carol has granted you
 ```
 
 On Bob's side, `dsip-app answer` takes the call that rings. `--audio tone` uses a test tone instead of the
@@ -71,7 +78,8 @@ Rust as pinned in `rust-toolchain.toml`. On Linux, ALSA's headers (`libasound2-d
 
 ```sh
 cargo test --workspace     # two apps on an in-process relay: a call rings, is answered, carries sound both ways;
-                           # on Linux, two apps on two mailboxes introduce, grant and message through hints alone
+                           # on Linux, two apps on two mailboxes introduce, grant and message through hints alone,
+                           # and the grant shares presence
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 

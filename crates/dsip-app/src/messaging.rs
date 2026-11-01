@@ -9,7 +9,12 @@
 //!
 //! A conversation starts with first contact (M§14.1): `introduce` asks an identity for permission to message, it
 //! answers with `accept_request`, and the grant it sends lets `message` create the direct conversation (M§7.2,
-//! M§14.2). Every protocol decision is the messenger's.
+//! M§14.2). Every protocol decision is the messenger's, or the phone's.
+//!
+//! The grant is the phone's: one §19.4 grant lets the requester call, message and follow presence ([`GRANT_SCOPE`],
+//! P§6), issued by the phone's engine so it can be withdrawn later, and deposited at the requester's mailbox. The
+//! requester's app hands the grant it reads there to its phone, which presents it to follow the granter's presence,
+//! and follows it.
 //!
 //! Impl: the hint is re-signed every [`HINT_REFRESH_S`], two thirds of its life; `seq` is the issue time, never at or
 //! below the last one published.
@@ -31,6 +36,11 @@ use crate::{App, Change, Response};
 pub const HINT_TTL_S: i64 = dsip_core::HINT_MAX_VALIDITY_S;
 /// Seconds between re-signing the hint.
 pub const HINT_REFRESH_S: u64 = (HINT_TTL_S as u64) * 2 / 3;
+/// What accepting a request grants: calls (§19.4), messages (M§14.2) and presence (P§6), as the browser client's
+/// grant does.
+pub const GRANT_SCOPE: &[&str] = &["dsip.invite", "dsip.message", "dsip.subscribe"];
+/// How long a grant lasts: 30 days, as the messenger's own.
+pub const GRANT_VALID_S: i64 = 30 * 86_400;
 /// KeyPackages uploaded on every binding (M§5.5), as the browser client does.
 pub const KEY_PACKAGES_PER_BIND: usize = 2;
 
@@ -83,7 +93,17 @@ impl Host<SqliteProvider> for AppHost {
                 };
                 self.app.publish(Change::Message { message });
             }
-            Output::Event(Event::Ui(Ui::Granted { by, .. })) => self.app.publish(Change::Granted { by }),
+            Output::Event(Event::Ui(Ui::Granted { by, .. })) => {
+                // the phone holds it too, to present when following their presence (P§6)
+                if let Some(g) = engine.grant_held(&by) {
+                    match self.app.inner.phone.hold_grant(g).await {
+                        Ok(true) => self.app.follow(&by).await,
+                        Ok(false) => tracing::info!("the grant from {by} does not admit presence here"),
+                        Err(e) => tracing::warn!("holding the grant from {by}: {e}"),
+                    }
+                }
+                self.app.publish(Change::Granted { by });
+            }
             Output::Connected { mailbox, .. } => {
                 tracing::info!("messaging: bound to mailbox {mailbox}");
                 self.bound = true;
@@ -325,11 +345,18 @@ async fn introduce(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &
 
 /// M§14.1: answer request `id` with a grant, deposited at the requester's mailbox.
 async fn accept_request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, id: &str) -> Result<Response, String> {
-    let now = dsip_transport::now_s() as f64;
-    let r = mx.engine_mut().accept_request(id, now).map_err(|e| e.0)?;
-    let mut conn = mx.peer_connect(&r.requester).await.map_err(|e| e.to_string())?;
+    let now = dsip_transport::now_s();
+    let requester = mx.engine().requests().get(id).and_then(|p| p["from"].as_str()).map(String::from).ok_or_else(|| format!("no request {id}"))?;
+    let request = dsip_phone::GrantRequest {
+        introduction: id.to_string(),
+        requester: requester.clone(),
+        scope: GRANT_SCOPE.iter().map(|s| s.to_string()).collect(),
+        valid_until: now + GRANT_VALID_S,
+    };
+    let grant = host.app.inner.phone.grant_request(request).await.map_err(|e| e.to_string())?.ok_or("the phone issued no grant")?;
+    let mut conn = mx.peer_connect(&requester).await.map_err(|e| e.to_string())?;
     let did = conn.relay.did.clone();
-    let frame = mx.engine_mut().first_contact_frame(&did, "grant", &r.requester, &r.envelope, now);
+    let frame = mx.engine_mut().first_contact_frame(&did, "grant", &requester, &grant, now as f64);
     let answer = dsip_messenger::peer_exchange(&mut conn, &frame).await.map_err(|e| e.to_string())?;
     if answer["type"] != "accepted" {
         return Err(format!("grant refused: {}", answer["reason"]));

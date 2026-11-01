@@ -40,8 +40,12 @@ pub use audio::HostKind;
 pub use command::{Command, Response};
 pub use messaging::MessagingConfig;
 pub use state::{
-    Audio as AudioState, AudioDevice, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, Messaging, RequestView, State,
+    Audio as AudioState, AudioDevice, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, Messaging, PresenceState,
+    PresenceView, RequestView, State,
 };
+
+/// The presence states a device may publish (the `dsip-presence-state` registry, P§5).
+pub const PRESENCE_STATES: &[&str] = &["available", "busy", "away", "dnd", "offline"];
 
 /// Ended calls kept in [`State::calls`], the most recent.
 pub const ENDED_KEPT: usize = 20;
@@ -107,7 +111,7 @@ struct CallCtl {
 }
 
 pub(crate) struct Inner {
-    phone: dsip_phone::Phone,
+    pub(crate) phone: dsip_phone::Phone,
     pub(crate) state: std::sync::Mutex<State>,
     changes: broadcast::Sender<Change>,
     calls: std::sync::Mutex<HashMap<u64, CallCtl>>,
@@ -163,6 +167,7 @@ impl App {
         let state = State {
             me,
             messaging: Messaging::default(),
+            presence: PresenceState::default(),
             relay: cfg.relay,
             calls: Default::default(),
             audio: AudioState {
@@ -207,6 +212,18 @@ impl App {
                 }
             });
         }
+        // the followed identities' presence, as the phone shows it, into the state
+        let (a, mut shown, mut stopped) = (app.clone(), app.inner.phone.presence(), app.inner.stopped.subscribe());
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    changed = shown.changed() => if changed.is_err() { return },
+                    _ = stopped.wait_for(|s| *s) => return,
+                }
+                let now = shown.borrow_and_update().clone();
+                a.show_presence(&now);
+            }
+        });
         let a = app.clone();
         tokio::spawn(async move {
             while let Some(inc) = a.inner.phone.incoming().await {
@@ -251,6 +268,23 @@ impl App {
             Command::DeclineRequest { id } => self.ask(|reply| messaging::Req::DeclineRequest { id, reply }).await,
             Command::Message { to, text } => self.ask(|reply| messaging::Req::Message { to, text, reply }).await,
             Command::Thread { conversation } => self.ask(|reply| messaging::Req::Thread { conversation, reply }).await,
+            Command::SetPresence { state } => {
+                if let Some(s) = state.as_deref().filter(|s| !PRESENCE_STATES.contains(s)) {
+                    return Response::error(format!("{s}: one of {}", PRESENCE_STATES.join(", ")));
+                }
+                self.inner.phone.set_presence(state.as_deref());
+                self.publish(Change::MyPresence { state });
+                Response::Ok
+            }
+            Command::WatchPresence { identity } => {
+                self.follow(&identity).await;
+                Response::Ok
+            }
+            Command::UnwatchPresence { identity } => {
+                self.inner.phone.unwatch(&identity);
+                self.publish(Change::Unfollowed { identity });
+                Response::Ok
+            }
             Command::Subscribe => Response::error("subscribe is for the control socket"),
             Command::Quit => {
                 self.stop().await;
@@ -273,6 +307,32 @@ impl App {
     pub async fn stopped(&self) {
         let mut rx = self.inner.stopped.subscribe();
         let _ = rx.wait_for(|s| *s).await;
+    }
+
+    /// Follow `identity`'s presence (again: a renewed grant may admit us now).
+    pub(crate) async fn follow(&self, identity: &str) {
+        self.inner.phone.watch(identity).await;
+        let known = self.inner.state.lock().unwrap_or_else(|e| e.into_inner()).presence.following.iter().any(|p| p.identity == identity);
+        if !known {
+            self.publish(Change::Presence { presence: PresenceView { identity: identity.into(), state: None, token: None, source: None } });
+        }
+    }
+
+    /// Publish each followed identity whose presence differs from what the phone shows now.
+    fn show_presence(&self, shown: &std::collections::BTreeMap<String, dsip_phone::Presence>) {
+        let following: Vec<PresenceView> = self.inner.state.lock().unwrap_or_else(|e| e.into_inner()).presence.following.clone();
+        for old in following {
+            let p = shown.get(&old.identity);
+            let view = PresenceView {
+                identity: old.identity.clone(),
+                state: p.map(|p| p.state.clone()),
+                token: p.filter(|p| p.token != p.state).map(|p| p.token.clone()),
+                source: p.map(|p| p.source.clone()),
+            };
+            if view != old {
+                self.publish(Change::Presence { presence: view });
+            }
+        }
     }
 
     /// Hand a request to the messaging thread and wait for its answer.
