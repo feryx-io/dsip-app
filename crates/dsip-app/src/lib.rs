@@ -79,12 +79,17 @@ pub struct Config {
     pub stun: Vec<String>,
     /// Messages through the identity's mailbox; `None`: calls only.
     pub messaging: Option<MessagingConfig>,
+    /// The hints tier (§8.1): a `did:key` callee bound to another relay is called through it. Without messaging, the
+    /// app publishes its own hint here, naming its relay (with messaging, the messaging thread does, with the mailbox).
+    pub hints: Option<dsip_transport::hints::HintsClient>,
+    /// How to reach other relays without `wss` (tests: `dsip-testkit`'s `Network::peers`).
+    pub peer_dialer: Option<Arc<dyn dsip_transport::agent::PeerDialer>>,
 }
 
 impl Config {
     /// `identity` bound to `relay`, with the platform's audio devices and no STUN.
     pub fn new(identity: dsip_phone::Identity, relay: &str) -> Config {
-        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None }
+        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None }
     }
 }
 
@@ -131,6 +136,11 @@ impl App {
             display_name: cfg.identity.meta.display_name.clone(),
         };
         let identity_dir = cfg.identity.dir.clone();
+        // the relay-only hint, when no messaging thread publishes one with the mailbox
+        let relay_hint = match (&cfg.hints, cfg.messaging.is_none()) {
+            (Some(h), true) => Some((h.clone(), cfg.identity.device.clone(), cfg.identity.delegation.clone())),
+            _ => None,
+        };
         let mut b = dsip_phone::Phone::builder().identity(cfg.identity).relay(&cfg.relay).answer(dsip_phone::AnswerPolicy::Ring);
         if let Some(t) = cfg.tls {
             b = b.tls(t);
@@ -141,6 +151,13 @@ impl App {
         if let Some(a) = &audio {
             b = b.media(dsip_phone::Media::Native(a.media(cfg.stun)));
         }
+        if let Some(h) = &cfg.hints {
+            b = b.hints(h.clone());
+        }
+        if let Some(p) = cfg.peer_dialer {
+            b = b.configure(move |c| c.peer_dialer = Some(p));
+        }
+
         let phone = b.build().await?;
         let relay = cfg.relay.clone();
         let state = State {
@@ -167,8 +184,28 @@ impl App {
             }),
         };
         if let Some(m) = cfg.messaging {
-            let tx = messaging::spawn(app.clone(), m, identity_dir, relay).map_err(Error::Messaging)?;
+            let tx = messaging::spawn(app.clone(), m, identity_dir, relay.clone()).map_err(Error::Messaging)?;
             let _ = app.inner.messaging.set(tx);
+        }
+        if let Some((hints, device, delegation)) = relay_hint {
+            let (identity, mut stopped) = (app.state().me.identity, app.inner.stopped.subscribe());
+            tokio::spawn(async move {
+                let mut last_seq = 0i64;
+                loop {
+                    let now = dsip_transport::now_s();
+                    let seq = now.max(last_seq + 1);
+                    last_seq = seq;
+                    let endpoints = dsip_transport::hints::endpoints(Some(&relay), None);
+                    let hint = dsip_transport::hints::reachability(&identity, &device, &delegation, &endpoints, seq, now, messaging::HINT_TTL_S);
+                    for (node, r) in hints.publish(&hint).await {
+                        tracing::info!("hint seq {seq} → {node}: {r:?}");
+                    }
+                    tokio::select! {
+                        _ = tokio::time::sleep(Duration::from_secs(messaging::HINT_REFRESH_S)) => {}
+                        _ = stopped.wait_for(|s| *s) => return,
+                    }
+                }
+            });
         }
         let a = app.clone();
         tokio::spawn(async move {
@@ -307,6 +344,7 @@ impl App {
             state: view_state(call.state()),
             muted: false,
             media: false,
+            via: call.via().map(String::from),
             error: None,
         };
         self.publish(Change::CallAdded { call: view });
