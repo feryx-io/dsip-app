@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+defaults:
+  run:
+    shell: bash
+
+# The runner image's CMake 4 refuses projects declaring cmake_minimum_required < 3.5, which the Opus source vendored
+# by audiopus_sys does (dsip-rs's CI says the same).
+env:
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+
+jobs:
+  rust:
+    name: build, clippy, test (two apps on an in-process relay, sound both ways), docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # cpal's ALSA backend
+      - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libasound2-dev
+      - name: Rust, as pinned in rust-toolchain.toml
+        run: rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)" && rustc --version
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --all-targets --locked
+      - name: clippy, warnings are errors
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - name: docs, warnings are errors
+        run: cargo doc --workspace --no-deps
+        env: { RUSTDOCFLAGS: "-D warnings" }
+  macos:
+    name: build and test on macOS (CoreAudio)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust, as pinned in rust-toolchain.toml
+        run: rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)" && rustc --version
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --locked
