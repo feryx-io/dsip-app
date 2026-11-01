@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = ["crates/dsip-app"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.97"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/thevoiceguy/dsip-app"
+
+[workspace.dependencies]
+# dsip-rs, every crate at one tag (dsip-rs RELEASING.md, "Downstream")
+dsip-core = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
+dsip-endpoint = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
+dsip-media = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
+dsip-phone = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
+dsip-transport = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
+dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.02" }
+# Anvil's audio (app plan decision 4 (a)): cpal, echo cancellation
+anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", features = ["tone"] }
+anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", default-features = false }
