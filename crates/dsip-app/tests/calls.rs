@@ -147,3 +147,38 @@ async fn the_control_socket_drives_the_same_app() {
     assert!(!path.exists(), "the socket is removed when the app stops");
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_call_to_someone_on_another_relay_goes_through_theirs_and_carries_sound() {
+    // §8.1: each app publishes its hint naming its relay; Alice's finds Bob's, and the call goes through his relay
+    let (mine, theirs) = (Network::new(), Network::new());
+    let node = dsip_testkit::hints_node().await;
+    let start = |net: &Network, name: &str| {
+        let mut cfg = Config::new(net.identity(name), net.url());
+        cfg.dialer = Some(net.dialer());
+        cfg.audio = Some(HostKind::Tone);
+        cfg.hints = Some(dsip_transport::hints::HintsClient::new(vec![node.clone()], None).unwrap());
+        cfg.peer_dialer = Some(Network::peers(&[&mine, &theirs]));
+        App::start(cfg)
+    };
+    let alice = start(&mine, "Alice").await.unwrap();
+    let bob = start(&theirs, "Bob").await.unwrap();
+    tokio::time::sleep(Duration::from_millis(300)).await; // each has published its hint
+
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity }).await);
+    assert_eq!(alice.state().calls[&id].via.as_deref(), Some(theirs.url()), "through Bob's relay");
+    until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == CallState::Ringing)).await;
+    call_of(bob.command(Command::Answer { call: None }).await);
+    until(&alice, "answered at Alice", |s| matches!(s.calls[&id].state, CallState::Answered { .. })).await;
+    for (who, a) in [("Alice", &alice), ("Bob", &bob)] {
+        tokio::time::timeout(Duration::from_secs(15), async {
+            while !a.tone_heard().is_some_and(|(frames, peak)| frames > 25 && peak > 0.05) {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("{who} heard nothing: {:?}", a.tone_heard()));
+    }
+    call_of(alice.command(Command::Hangup { call: Some(id) }).await);
+    until(&bob, "ended at Bob", |s| s.calls.values().all(|c| c.state.ended())).await;
+}

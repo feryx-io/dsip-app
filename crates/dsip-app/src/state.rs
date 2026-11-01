@@ -118,6 +118,9 @@ pub struct CallView {
     pub muted: bool,
     /// Audio from the other side has arrived.
     pub media: bool,
+    /// The relay the call goes through when it is not this app's own: the one the callee's hint named (§8.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub via: Option<String>,
     /// The reason of a signed `error` about the call, when one came (a relay that could not route it).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
@@ -280,6 +283,7 @@ mod tests {
             state: CallState::Answered { answered_by: "user".into() },
             muted: false,
             media: true,
+            via: None,
             error: None,
         };
         state.apply(&Change::CallAdded { call });

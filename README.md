@@ -9,7 +9,8 @@ Protocol) is an identity-first protocol for calls and messages: the spec and its
 **Status: stage A2, the running client.** There is no UI yet. The `dsip-app` crate is the client the screens will
 sit on:
 - **Calls:** it binds an identity to its relay, rings for incoming calls, places calls, and carries their sound
-  through the microphone and speaker.
+  through the microphone and speaker. With `--hints-node`, it publishes its relay in its hint, and a call to
+  someone bound to another relay goes through theirs, as the browser client does.
 - **Messages:** first contact (introduce, accept), then direct conversations, through the identity's mailbox. A
   `did:key` identity's mailbox is found through its hint on the hints nodes, which the app publishes, as the browser
   client does.

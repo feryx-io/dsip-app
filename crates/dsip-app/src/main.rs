@@ -54,8 +54,9 @@ enum Cmd {
         /// The mailbox's DID (its `service.did`).
         #[arg(long, requires = "mailbox")]
         mailbox_did: Option<String>,
-        /// A hints node (`https://host:port`, repeatable): this device publishes its hint there, naming its relay and
-        /// mailbox, and finds other `did:key` identities' mailboxes there.
+        /// A hints node (`https://host:port`, repeatable): this device publishes its hint there, naming its relay (and
+        /// mailbox), and finds there the relays and mailboxes of other `did:key` identities: a call to one bound to
+        /// another relay goes through that relay.
         #[arg(long = "hints-node")]
         hints_nodes: Vec<String>,
         /// Where the messaging state lives. Default: `<identity>/messaging`.
@@ -161,6 +162,13 @@ async fn main() -> Result<ExitCode> {
                 other => anyhow::bail!("--audio {other}: system, tone or none"),
             };
             cfg.stun = stun;
+            if !hints_nodes.is_empty() {
+                let pem = match &ca {
+                    Some(p) => Some(std::fs::read(p).with_context(|| format!("reading {}", p.display()))?),
+                    None => None,
+                };
+                cfg.hints = Some(dsip_transport::hints::HintsClient::new(hints_nodes.clone(), pem.as_deref())?);
+            }
             if let (Some(uri), Some(did)) = (mailbox, mailbox_did) {
                 cfg.messaging = Some(dsip_app::MessagingConfig {
                     mailbox: (did, uri),
