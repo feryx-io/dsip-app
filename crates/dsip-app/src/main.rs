@@ -92,6 +92,31 @@ enum Cmd {
         #[arg(num_args = 1.., required = true)]
         text: Vec<String>,
     },
+    /// Make a group conversation with these identities (each must have granted you); prints its group id.
+    Group {
+        /// The other members' identity DIDs.
+        #[arg(num_args = 1.., required = true)]
+        members: Vec<String>,
+    },
+    /// Add an identity to a group conversation.
+    Add {
+        /// The group id.
+        conversation: String,
+        /// The identity DID.
+        identity: String,
+    },
+    /// Remove a member, every device of it, from a group conversation.
+    Remove {
+        /// The group id.
+        conversation: String,
+        /// The identity DID.
+        identity: String,
+    },
+    /// Leave a conversation.
+    Leave {
+        /// The group id.
+        conversation: String,
+    },
     /// A conversation's messages.
     Thread {
         /// Its group id.
@@ -226,6 +251,10 @@ async fn main() -> Result<ExitCode> {
         Cmd::DeclineRequest { id } => Command::DeclineRequest { id },
         Cmd::Message { to, text } => Command::Message { to, text: text.join(" ") },
         Cmd::Thread { conversation } => Command::Thread { conversation },
+        Cmd::Group { members } => Command::CreateGroup { members },
+        Cmd::Add { conversation, identity } => Command::AddMember { conversation, identity },
+        Cmd::Remove { conversation, identity } => Command::RemoveMember { conversation, identity },
+        Cmd::Leave { conversation } => Command::Leave { conversation },
         Cmd::Presence { state } => Command::SetPresence { state: (state != "auto").then_some(state) },
         Cmd::Follow { identity } => Command::WatchPresence { identity },
         Cmd::Unfollow { identity } => Command::UnwatchPresence { identity },

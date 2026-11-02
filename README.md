@@ -11,7 +11,8 @@ sit on:
 - **Calls:** it binds an identity to its relay, rings for incoming calls, places calls, and carries their sound
   through the microphone and speaker. With `--hints-node`, it publishes its relay in its hint, and a call to
   someone bound to another relay goes through theirs, as the browser client does.
-- **Messages:** first contact (introduce, accept), then direct conversations, through the identity's mailbox. A
+- **Messages:** first contact (introduce, accept), then direct and group conversations, through the identity's
+  mailbox. A group is made with identities that granted you; any member adds or removes another, and you leave one. A
   `did:key` identity's mailbox is found through its hint on the hints nodes, which the app publishes, as the browser
   client does.
 - **Presence:** it publishes the state you pick and follows other identities' presence. Accepting an introduction
@@ -22,7 +23,7 @@ sit on:
   identity directory) and followed again when the app starts.
 - **Control:** a local control socket that the `dsip-app` CLI drives.
 
-Group conversations and the Windows control channel come next; the Flutter desktop app (A3) and the mobile apps (A5)
+The Windows control channel comes next; the Flutter desktop app (A3) and the mobile apps (A5)
 after.
 
 ```
@@ -48,6 +49,8 @@ dsip-app run --identity ~/.dsip/alice --relay wss://relay.example.com:8443/dsip 
 dsip-app introduce did:key:z6Mk…bob "it's Alice"     # Bob's app lists the request; he runs `dsip-app accept <id>`
 dsip-app message did:key:z6Mk…bob hello              # once he has: the direct conversation is made on the way
 dsip-app thread <group id>                           # `state` lists the conversations
+dsip-app group did:key:z6Mk…bob did:key:z6Mk…carol   # a group conversation; prints its group id, then `message` it
+dsip-app add <group id> did:key:z6Mk…dave            # `remove <group id> <did>`, `leave <group id>`
 dsip-app presence busy                               # available, busy, away, dnd, offline (invisible), or auto
 dsip-app follow did:key:z6Mk…carol                   # shown under presence.following once Carol has granted you
 dsip-app revoke did:key:z6Mk…carol                   # withdraw what you granted Carol; the others get new keys

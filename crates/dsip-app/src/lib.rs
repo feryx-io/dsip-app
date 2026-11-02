@@ -297,6 +297,14 @@ impl App {
             Command::DeclineRequest { id } => self.ask(|reply| messaging::Req::DeclineRequest { id, reply }).await,
             Command::Message { to, text } => self.ask(|reply| messaging::Req::Message { to, text, reply }).await,
             Command::Thread { conversation } => self.ask(|reply| messaging::Req::Thread { conversation, reply }).await,
+            Command::CreateGroup { members } => self.ask(|reply| messaging::Req::CreateGroup { members, reply }).await,
+            Command::AddMember { conversation, identity } => {
+                self.ask(|reply| messaging::Req::AddMember { conversation, identity, reply }).await
+            }
+            Command::RemoveMember { conversation, identity } => {
+                self.ask(|reply| messaging::Req::RemoveMember { conversation, identity, reply }).await
+            }
+            Command::Leave { conversation } => self.ask(|reply| messaging::Req::Leave { conversation, reply }).await,
             Command::SetPresence { state } => {
                 if let Some(s) = state.as_deref().filter(|s| !PRESENCE_STATES.contains(s)) {
                     return Response::error(format!("{s}: one of {}", PRESENCE_STATES.join(", ")));

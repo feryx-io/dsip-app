@@ -72,6 +72,32 @@ pub enum Command {
         /// The text.
         text: String,
     },
+    /// Make a group conversation with these identities (M§7.3): each must have granted you permission to message
+    /// (accepting your introduction does). Answers with its group id.
+    CreateGroup {
+        /// The other members' identities.
+        members: Vec<String>,
+    },
+    /// Add an identity to a group conversation (it must have granted you; any member may add, M§7.3).
+    AddMember {
+        /// The group id.
+        conversation: String,
+        /// The identity.
+        identity: String,
+    },
+    /// Remove a member identity, every device of it, from a group conversation (any member may, M§7.3).
+    RemoveMember {
+        /// The group id.
+        conversation: String,
+        /// The identity.
+        identity: String,
+    },
+    /// Leave a conversation: the removal of your devices is proposed, another member commits it, and it is no longer
+    /// listed (M§7.3).
+    Leave {
+        /// The group id.
+        conversation: String,
+    },
     /// Publish this device's presence: `available`, `busy`, `away`, `dnd`, or `offline` (invisible); without `state`,
     /// automatic (no record: the relay says available while bound). Spec: P§3, P§5.
     SetPresence {

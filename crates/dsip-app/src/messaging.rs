@@ -9,7 +9,9 @@
 //!
 //! A conversation starts with first contact (M§14.1): `introduce` asks an identity for permission to message, it
 //! answers with `accept_request`, and the grant it sends lets `message` create the direct conversation (M§7.2,
-//! M§14.2). Every protocol decision is the messenger's, or the phone's.
+//! M§14.2). A group conversation (M§7.3) is made with identities that granted us, each one's KeyPackages fetched
+//! from its mailbox with that grant; any member adds or removes another, and this identity leaves one. Every protocol
+//! decision is the messenger's, or the phone's.
 //!
 //! The grant is the phone's: one §19.4 grant lets the requester call, message and follow presence ([`GRANT_SCOPE`],
 //! P§6), issued by the phone's engine so it can be withdrawn later, and deposited at the requester's mailbox. The
@@ -68,6 +70,10 @@ pub(crate) enum Req {
     DeclineRequest { id: String, reply: oneshot::Sender<Response> },
     Message { to: String, text: String, reply: oneshot::Sender<Response> },
     Thread { conversation: String, reply: oneshot::Sender<Response> },
+    CreateGroup { members: Vec<String>, reply: oneshot::Sender<Response> },
+    AddMember { conversation: String, identity: String, reply: oneshot::Sender<Response> },
+    RemoveMember { conversation: String, identity: String, reply: oneshot::Sender<Response> },
+    Leave { conversation: String, reply: oneshot::Sender<Response> },
     /// Deposit a grant the phone issued at its grantee's mailbox.
     Deliver { to: String, grant: String },
     Stop,
@@ -106,6 +112,9 @@ impl Host<SqliteProvider> for AppHost {
                     }
                 }
                 self.app.publish(Change::Granted { by });
+            }
+            Output::Event(Event::Ui(Ui::Removed { group, by, left: false, .. })) => {
+                self.app.publish(Change::Removed { conversation: group, by });
             }
             Output::Connected { mailbox, .. } => {
                 tracing::info!("messaging: bound to mailbox {mailbox}");
@@ -324,6 +333,29 @@ async fn request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, req: Re
                 .collect();
             let _ = reply.send(Response::Thread { messages });
         }
+        Req::CreateGroup { members, reply } => {
+            let _ = reply.send(create_group(mx, host, &members).await.unwrap_or_else(Response::error));
+        }
+        Req::AddMember { conversation, identity, reply } => {
+            let _ = reply.send(add_member(mx, host, &conversation, &identity).await.unwrap_or_else(Response::error));
+        }
+        Req::RemoveMember { conversation, identity, reply } => {
+            let now = dsip_transport::now_s() as f64;
+            let r = match mx.engine_mut().remove_member(&conversation, &identity, now) {
+                Ok(frame) => commit(mx, host, &frame).await,
+                Err(e) => Err(e.0),
+            };
+            let _ = reply.send(r.map(|()| Response::Ok).unwrap_or_else(Response::error));
+        }
+        Req::Leave { conversation, reply } => {
+            let now = dsip_transport::now_s() as f64;
+            let r = match mx.engine_mut().leave(&conversation, now) {
+                Ok(out) => mx.handle(host, out).await.map_err(|e| e.to_string()),
+                Err(e) => Err(e.0),
+            };
+            refresh(&host.app, mx.engine());
+            let _ = reply.send(r.map(|()| Response::Ok).unwrap_or_else(Response::error));
+        }
         Req::Deliver { to, grant } => {
             if let Err(e) = deliver(mx, &to, &grant).await {
                 tracing::warn!("the grant to {to} not deposited at its mailbox: {e}");
@@ -372,6 +404,59 @@ async fn accept_request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, 
     mx.engine_mut().forget_request(id);
     refresh(&host.app, mx.engine());
     Ok(Response::Ok)
+}
+
+/// `identity`'s KeyPackages from its mailbox (M§5.5), fetched with the grant we hold from it (M§14.2), its devices
+/// noted.
+async fn key_packages(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, identity: &str, now: f64) -> Result<Value, String> {
+    let answer = mx.fetch_key_packages(host, identity, None).await.map_err(|e| format!("{identity}: {e}"))?;
+    mx.engine_mut().key_package_devices(identity, &answer, now).map_err(|e| e.0)?;
+    Ok(answer)
+}
+
+/// M§7.3: a group conversation with `members`, hubbed at our mailbox, with our own other devices; every add in one
+/// commit, sent once the hub holds the group.
+async fn create_group(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, members: &[String]) -> Result<Response, String> {
+    let now = dsip_transport::now_s() as f64;
+    let me = host.me.clone();
+    let mut targets = std::collections::BTreeMap::new();
+    for m in members.iter().filter(|m| **m != me) {
+        let answer = key_packages(mx, host, m, now).await?;
+        targets.insert(m.clone(), answer);
+    }
+    let own = match mx.fetch_key_packages(host, &me, None).await {
+        Ok(a) => Some(a),
+        Err(e) => {
+            tracing::info!("our own devices: none added to the group ({e})");
+            None
+        }
+    };
+    let before: std::collections::HashSet<String> = mx.engine().conversations(now).into_iter().map(|c| c.group).collect();
+    let frames = mx.engine_mut().create_group(&targets, own.as_ref(), now).map_err(|e| e.0)?;
+    let gid = mx.engine().conversations(now).into_iter().map(|c| c.group).find(|g| !before.contains(g)).ok_or("no group created")?;
+    mx.save(host).map_err(|e| e.to_string())?;
+    mx.send_frames(host, &frames).await.map_err(|e| e.to_string())?;
+    mx.settle(host).await;
+    refresh(&host.app, mx.engine());
+    Ok(Response::Conversation { conversation: gid })
+}
+
+/// M§7.3: add `identity`'s devices to the group conversation `gid` (any member may, holding its grant, M§14.2).
+async fn add_member(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, gid: &str, identity: &str) -> Result<Response, String> {
+    let now = dsip_transport::now_s() as f64;
+    let answer = key_packages(mx, host, identity, now).await?;
+    let frame = mx.engine_mut().add_member(gid, identity, &answer, now).map_err(|e| e.0)?;
+    commit(mx, host, &frame).await?;
+    Ok(Response::Ok)
+}
+
+/// Send a commit to the conversation's hub, durably first (M§9.2), and take what follows.
+async fn commit(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, frame: &str) -> Result<(), String> {
+    mx.save(host).map_err(|e| e.to_string())?;
+    mx.send_frame(host, frame).await.map_err(|e| e.to_string())?;
+    mx.settle(host).await;
+    refresh(&host.app, mx.engine());
+    Ok(())
 }
 
 /// Deposit `grant` at `to`'s mailbox (M§14.1), as [`accept_request`] deposits the first.
