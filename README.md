@@ -21,10 +21,10 @@ sit on:
   sealed (P§12): only the identities you granted read them, never a relay. `revoke` withdraws a grant, and the
   others you granted get new keys at their mailboxes. The identities you follow are kept (`following.json` in the
   identity directory) and followed again when the app starts.
-- **Control:** a local control socket that the `dsip-app` CLI drives.
+- **Control:** a local control channel that the `dsip-app` CLI drives: a Unix socket on Linux and macOS, a named pipe
+  on Windows (`\\.\pipe\dsip-app-<user>`), each open to its user alone.
 
-The Windows control channel comes next; the Flutter desktop app (A3) and the mobile apps (A5)
-after.
+Next: the Flutter desktop app (A3), then the mobile apps (A5).
 
 ```
 crates/dsip-app     the running client: State, Change, Command, the control socket, audio, and the CLI
@@ -80,7 +80,9 @@ self-signed certificate.
 
 ## Build and test
 
-Rust as pinned in `rust-toolchain.toml`. On Linux, ALSA's headers (`libasound2-dev`).
+Rust as pinned in `rust-toolchain.toml`. On Linux, ALSA's headers (`libasound2-dev`). On Windows, the MSVC build
+tools, CMake, and a full Perl for OpenSSL's build from source ([Strawberry Perl](https://strawberryperl.com); set
+`OPENSSL_SRC_PERL` to its `perl.exe` if another Perl, such as Git Bash's, comes first on the `PATH`).
 
 ```sh
 cargo test --workspace     # two apps on an in-process relay: a call rings, is answered, carries sound both ways;

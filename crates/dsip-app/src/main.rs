@@ -13,7 +13,8 @@ use dsip_app::{control, App, Command, Config, HostKind, Response};
 #[derive(Parser)]
 #[command(name = "dsip-app", version, about = "The DSIP client: run it, or drive the one running")]
 struct Args {
-    /// The control socket. Default: `$XDG_RUNTIME_DIR/dsip-app/control.sock`.
+    /// The control socket. Default: `$XDG_RUNTIME_DIR/dsip-app/control.sock`; on Windows a named pipe,
+    /// `\\.\pipe\dsip-app-<user>`.
     #[arg(long, global = true)]
     control: Option<PathBuf>,
     #[command(subcommand)]

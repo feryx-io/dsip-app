@@ -24,10 +24,11 @@
 
 pub mod audio;
 mod command;
-#[cfg(unix)]
 pub mod control;
 pub mod messaging;
 mod state;
+#[cfg(windows)]
+mod user_only;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
