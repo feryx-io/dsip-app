@@ -26,6 +26,7 @@ pub mod audio;
 mod command;
 pub mod control;
 pub mod messaging;
+mod settings;
 mod state;
 #[cfg(windows)]
 mod user_only;
@@ -40,6 +41,7 @@ use tokio::sync::{broadcast, mpsc};
 pub use audio::HostKind;
 pub use command::{Command, Response};
 pub use messaging::MessagingConfig;
+pub use settings::{init_identity, Mailbox, Settings};
 pub use state::{
     Audio as AudioState, AudioDevice, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, Messaging, PresenceState,
     PresenceView, RequestView, State,
@@ -66,6 +68,9 @@ pub enum Error {
     /// The audio devices.
     #[error("audio: {0}")]
     Audio(String),
+    /// The settings: a value they hold, or a file they name.
+    #[error("settings: {0}")]
+    Settings(String),
     /// The messaging state, or its thread.
     #[error("messaging: {0}")]
     Messaging(String),

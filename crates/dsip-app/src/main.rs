@@ -8,7 +8,7 @@ use std::process::ExitCode;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use dsip_app::{control, App, Command, Config, HostKind, Response};
+use dsip_app::{control, App, Command, Mailbox, Response, Settings};
 
 #[derive(Parser)]
 #[command(name = "dsip-app", version, about = "The DSIP client: run it, or drive the one running")]
@@ -194,37 +194,22 @@ async fn main() -> Result<ExitCode> {
     let path = args.control.clone().unwrap_or_else(control::default_path);
     let cmd = match args.cmd {
         Cmd::Init { identity, name } => {
-            let id = dsip_phone::Identity::init(&identity, &name, None, None).context("making the identity")?;
-            println!("{}", id.meta.identity);
+            println!("{}", dsip_app::init_identity(&identity, &name).context("making the identity")?);
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Run { identity, relay, ca, audio, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web } => {
-            let id = dsip_phone::Identity::load(&identity).with_context(|| format!("loading {}", identity.display()))?;
-            let mut cfg = Config::new(id, &relay);
-            cfg.tls = dsip_transport::tls::client_config(ca.as_deref())?;
-            cfg.audio = match audio.as_str() {
-                "system" => Some(HostKind::System),
-                "tone" => Some(HostKind::Tone),
-                "none" => None,
-                other => anyhow::bail!("--audio {other}: system, tone or none"),
+            let settings = Settings {
+                identity,
+                relay,
+                ca,
+                audio: Some(audio),
+                stun,
+                mailbox: mailbox.zip(mailbox_did).map(|(uri, did)| Mailbox { uri, did }),
+                hints_nodes,
+                messaging_state,
+                fetch_did_web,
             };
-            cfg.stun = stun;
-            if !hints_nodes.is_empty() {
-                let pem = match &ca {
-                    Some(p) => Some(std::fs::read(p).with_context(|| format!("reading {}", p.display()))?),
-                    None => None,
-                };
-                cfg.hints = Some(dsip_transport::hints::HintsClient::new(hints_nodes.clone(), pem.as_deref())?);
-            }
-            if let (Some(uri), Some(did)) = (mailbox, mailbox_did) {
-                cfg.messaging = Some(dsip_app::MessagingConfig {
-                    mailbox: (did, uri),
-                    hints_nodes,
-                    ca: ca.clone(),
-                    state_dir: messaging_state.unwrap_or_else(|| identity.join("messaging")),
-                    fetch_did_web,
-                });
-            }
+            let cfg = settings.config()?;
             let app = App::start(cfg).await?;
             let s = app.state();
             tracing::info!("{} ({}) bound to {} as device {}", s.me.display_name, s.me.identity, s.relay, s.me.device);
