@@ -9,19 +9,18 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/thevoiceguy/dsip-app"
 
 [workspace.dependencies]
-# dsip-rs, every crate at one ref (dsip-rs RELEASING.md, "Downstream"): a merged commit with sealed presence on the
-# phone (dsip-rs #30, #31: main at 2005c2e) until a release carries it, then its tag
-dsip-core = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-endpoint = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-media = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-phone = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-transport = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-messenger = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-messaging-device = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342", features = ["sqlite"] }
-dsip-mls = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342", features = ["sqlite"] }
-dsip-mailbox = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-messaging = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
-dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "2005c2e456cd8bca30f3dd6af1fcf9d6fb748342" }
+# dsip-rs, every crate at one ref (dsip-rs RELEASING.md, "Downstream"): the release tag
+dsip-core = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-endpoint = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-media = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-phone = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-transport = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-messenger = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-messaging-device = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05", features = ["sqlite"] }
+dsip-mls = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05", features = ["sqlite"] }
+dsip-mailbox = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-messaging = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
+dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.05" }
 # Anvil's audio (app plan decision 4 (a)): cpal, echo cancellation
 anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", features = ["tone"] }
 anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", default-features = false }
