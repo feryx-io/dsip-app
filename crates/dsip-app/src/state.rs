@@ -52,6 +52,13 @@ pub struct PresenceView {
     /// `record` (a device of theirs signed it), `assertion` (their relay's claim that they are bound, §9.3), `none`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
+    /// How many of their devices' records are sealed under keys we do not hold (P§12.3): left out of `state`.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unreadable: usize,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 /// Messaging's part of the state.

@@ -90,6 +90,13 @@ pub enum Command {
         /// The identity.
         identity: String,
     },
+    /// Withdraw every grant we issued to an identity: what they admitted at our relay, calls and following our
+    /// presence, ends (P§7), and the presence keys rotate (P§12.5), sent to every other grantee. Spec: §19.4, P§7,
+    /// P§12.5.
+    RevokeGrants {
+        /// The grantee.
+        identity: String,
+    },
     /// A conversation's messages, oldest first.
     Thread {
         /// Its group id.
@@ -121,6 +128,11 @@ pub enum Response {
     Conversation {
         /// Its group id.
         conversation: String,
+    },
+    /// How many grants [`Command::RevokeGrants`] withdrew.
+    Revoked {
+        /// How many.
+        count: usize,
     },
     /// A conversation's messages, for [`Command::Thread`].
     Thread {

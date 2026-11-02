@@ -88,12 +88,15 @@ pub struct Config {
     pub hints: Option<dsip_transport::hints::HintsClient>,
     /// How to reach other relays without `wss` (tests: `dsip-testkit`'s `Network::peers`).
     pub peer_dialer: Option<Arc<dyn dsip_transport::agent::PeerDialer>>,
+    /// Seal this device's presence records (P§12): only the holders of its grants read them, never a relay. On by
+    /// default.
+    pub seal_presence: bool,
 }
 
 impl Config {
     /// `identity` bound to `relay`, with the platform's audio devices and no STUN.
     pub fn new(identity: dsip_phone::Identity, relay: &str) -> Config {
-        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None }
+        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None, seal_presence: true }
     }
 }
 
@@ -161,6 +164,9 @@ impl App {
         if let Some(p) = cfg.peer_dialer {
             b = b.configure(move |c| c.peer_dialer = Some(p));
         }
+        if cfg.seal_presence {
+            b = b.seal_presence();
+        }
 
         let phone = b.build().await?;
         let relay = cfg.relay.clone();
@@ -224,6 +230,15 @@ impl App {
                 a.show_presence(&now);
             }
         });
+        // P§12.5: a grant the phone issued with new presence keys, deposited at the grantee's mailbox as the first was
+        let a = app.clone();
+        tokio::spawn(async move {
+            while let Some(g) = a.inner.phone.issued_grant().await {
+                if let Some(m) = a.inner.messaging.get() {
+                    let _ = m.send(messaging::Req::Deliver { to: g.to, grant: g.grant });
+                }
+            }
+        });
         let a = app.clone();
         tokio::spawn(async move {
             while let Some(inc) = a.inner.phone.incoming().await {
@@ -285,6 +300,10 @@ impl App {
                 self.publish(Change::Unfollowed { identity });
                 Response::Ok
             }
+            Command::RevokeGrants { identity } => match self.inner.phone.revoke_grants_to(&identity).await {
+                Ok(count) => Response::Revoked { count },
+                Err(e) => Response::error(e.to_string()),
+            },
             Command::Subscribe => Response::error("subscribe is for the control socket"),
             Command::Quit => {
                 self.stop().await;
@@ -314,7 +333,7 @@ impl App {
         self.inner.phone.watch(identity).await;
         let known = self.inner.state.lock().unwrap_or_else(|e| e.into_inner()).presence.following.iter().any(|p| p.identity == identity);
         if !known {
-            self.publish(Change::Presence { presence: PresenceView { identity: identity.into(), state: None, token: None, source: None } });
+            self.publish(Change::Presence { presence: PresenceView { identity: identity.into(), state: None, token: None, source: None, unreadable: 0 } });
         }
     }
 
@@ -328,6 +347,7 @@ impl App {
                 state: p.map(|p| p.state.clone()),
                 token: p.filter(|p| p.token != p.state).map(|p| p.token.clone()),
                 source: p.map(|p| p.source.clone()),
+                unreadable: p.map_or(0, |p| p.unreadable),
             };
             if view != old {
                 self.publish(Change::Presence { presence: view });

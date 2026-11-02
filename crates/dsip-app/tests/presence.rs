@@ -107,3 +107,67 @@ async fn accepting_an_introduction_shares_presence_with_the_one_who_asked() {
     bob.stop().await;
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Introduce `from` to `to`, accept it there, and wait for the grant to reach `from`.
+async fn granted(from: &App, to: &App) {
+    let to_did = to.state().me.identity;
+    let mut changes = from.subscribe();
+    assert_eq!(from.command(Command::Introduce { to: to_did.clone(), purpose: "hello".into() }).await, Response::Ok);
+    let me = from.state().me.identity;
+    until(to, "the request", |s| s.messaging.requests.iter().any(|r| r.from == me)).await;
+    let id = to.state().messaging.requests.iter().find(|r| r.from == me).unwrap().id.clone();
+    assert_eq!(to.command(Command::AcceptRequest { id }).await, Response::Ok);
+    tokio::time::timeout(Duration::from_secs(20), async {
+        while !matches!(changes.recv().await, Ok(Change::Granted { by }) if by == to_did) {}
+    })
+    .await
+    .expect("the grant");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn revoking_a_grant_sends_the_others_new_keys_through_their_mailboxes() {
+    let dir = std::env::temp_dir().join(format!("dsip-app-sealed-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(&dir, &["127.0.0.1".into(), "localhost".into()]).unwrap();
+    let tls = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    let hints = dsip_testkit::hints_node().await;
+    let net = Network::new();
+    let alice = app(&net, &dir, "Alice", mailbox(&dir, "mailbox-a", &tls, &hints).await, &hints).await;
+    let bob = app(&net, &dir, "Bob", mailbox(&dir, "mailbox-b", &tls, &hints).await, &hints).await;
+    let carol = app(&net, &dir, "Carol", mailbox(&dir, "mailbox-c", &tls, &hints).await, &hints).await;
+    let (bob_did, carol_did) = (bob.state().me.identity, carol.state().me.identity);
+    for (who, a) in [("Alice", &alice), ("Bob", &bob), ("Carol", &carol)] {
+        until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
+    }
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    granted(&alice, &bob).await;
+    granted(&carol, &bob).await;
+
+    // P§12.3: Bob's record is sealed; the keys his grants carried open it for both
+    assert_eq!(bob.command(Command::SetPresence { state: Some("busy".into()) }).await, Response::Ok);
+    for (who, a) in [("Alice", &alice), ("Carol", &carol)] {
+        until(a, &format!("{who} reads Bob busy"), |_| {
+            shown(a, &bob_did).is_some_and(|p| p.state.as_deref() == Some("busy") && p.source.as_deref() == Some("record") && p.unreadable == 0)
+        })
+        .await;
+    }
+
+    // P§12.5: withdrawing Carol's grant rotates the keys; Alice's new grant is deposited at her mailbox
+    let mut a_changes = alice.subscribe();
+    assert_eq!(bob.command(Command::RevokeGrants { identity: carol_did.clone() }).await, Response::Revoked { count: 1 });
+    tokio::time::timeout(Duration::from_secs(20), async {
+        while !matches!(a_changes.recv().await, Ok(Change::Granted { by }) if by == bob_did) {}
+    })
+    .await
+    .expect("Alice's grant with the new keys, at her mailbox");
+    assert_eq!(bob.command(Command::SetPresence { state: Some("away".into()) }).await, Response::Ok);
+    until(&alice, "Alice reads Bob away", |_| shown(&alice, &bob_did).is_some_and(|p| p.state.as_deref() == Some("away") && p.unreadable == 0)).await;
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    assert_ne!(shown(&carol, &bob_did).and_then(|p| p.state).as_deref(), Some("away"), "Carol no longer reads Bob");
+    assert_eq!(bob.command(Command::RevokeGrants { identity: carol_did }).await, Response::Revoked { count: 0 });
+    for a in [&alice, &bob, &carol] {
+        a.stop().await;
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
