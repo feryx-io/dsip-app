@@ -98,30 +98,37 @@ async fn a_declined_call_ends_at_the_caller() {
     assert!(reason.starts_with("user."), "{reason}");
 }
 
-#[cfg(unix)]
 #[tokio::test(flavor = "multi_thread")]
-async fn the_control_socket_drives_the_same_app() {
+async fn the_control_channel_drives_the_same_app() {
     let net = Network::new();
     let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);
+    // a Unix socket in a directory of its own, or on Windows a named pipe
     let dir = std::env::temp_dir().join(format!("dsip-app-control-{}", std::process::id()));
-    let path = dir.join("control.sock");
+    let path = if cfg!(windows) { std::path::PathBuf::from(format!(r"\\.\pipe\dsip-app-test-{}", std::process::id())) } else { dir.join("control.sock") };
     let served = alice.clone();
     let p = path.clone();
     let server = tokio::spawn(async move { dsip_app::control::serve(served, &p).await });
-    tokio::time::timeout(Duration::from_secs(5), async {
-        while !path.exists() {
+    let state = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Ok(Response::State { state }) = dsip_app::control::request(&path, &Command::State).await {
+                return state;
+            }
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
     })
     .await
-    .unwrap();
-    use std::os::unix::fs::PermissionsExt;
-    assert_eq!(std::fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o700, "the directory is the user's alone");
-
-    let Response::State { state } = dsip_app::control::request(&path, &Command::State).await.unwrap() else { panic!() };
+    .expect("the app answers on its control channel");
     assert_eq!(state.me.identity, alice.state().me.identity);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o700, "the directory is the user's alone");
+    }
+    // a second app is refused the channel an app serves
+    let err = dsip_app::control::serve(bob.clone(), &path).await.expect_err("one app per channel");
+    assert_eq!(err.kind(), std::io::ErrorKind::AddrInUse, "{err}");
 
-    // a watcher sees the state, then the call it places through the socket
+    // a watcher sees the state, then the call it places through the channel
     let watch_path = path.clone();
     let watcher = tokio::spawn(async move {
         let mut lines = vec![];
@@ -144,7 +151,9 @@ async fn the_control_socket_drives_the_same_app() {
     assert!(matches!(r, Response::Error { .. }), "nothing rings at Alice: {r:?}");
     assert!(matches!(dsip_app::control::request(&path, &Command::Quit).await.unwrap(), Response::Ok));
     tokio::time::timeout(Duration::from_secs(10), server).await.unwrap().unwrap().unwrap();
+    #[cfg(unix)]
     assert!(!path.exists(), "the socket is removed when the app stops");
+    assert!(dsip_app::control::request(&path, &Command::State).await.is_err(), "nothing serves it once the app stops");
     let _ = std::fs::remove_dir_all(dir);
 }
 

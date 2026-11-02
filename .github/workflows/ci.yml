@@ -41,3 +41,15 @@ jobs:
         run: rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)" && rustc --version
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --locked
+  windows:
+    name: build, clippy and test on Windows (WASAPI, the control pipe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust, as pinned in rust-toolchain.toml
+        run: rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)" && rustc --version
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --all-targets --locked
+      - name: clippy, warnings are errors
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace

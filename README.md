@@ -21,10 +21,10 @@ sit on:
   sealed (P§12): only the identities you granted read them, never a relay. `revoke` withdraws a grant, and the
   others you granted get new keys at their mailboxes. The identities you follow are kept (`following.json` in the
   identity directory) and followed again when the app starts.
-- **Control:** a local control socket that the `dsip-app` CLI drives.
+- **Control:** a local control channel that the `dsip-app` CLI drives: a Unix socket on Linux and macOS, a named pipe
+  on Windows (`\\.\pipe\dsip-app-<user>`), each open to its user alone.
 
-The Windows control channel comes next; the Flutter desktop app (A3) and the mobile apps (A5)
-after.
+Next: the Flutter desktop app (A3), then the mobile apps (A5).
 
 ```
 crates/dsip-app     the running client: State, Change, Command, the control socket, audio, and the CLI
