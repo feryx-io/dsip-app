@@ -112,6 +112,11 @@ enum Cmd {
         /// The identity.
         identity: String,
     },
+    /// Withdraw what you granted an identity (calls, presence); the others you granted get new presence keys.
+    Revoke {
+        /// The identity.
+        identity: String,
+    },
     /// Call an identity or a device.
     Call {
         /// The DID.
@@ -224,6 +229,7 @@ async fn main() -> Result<ExitCode> {
         Cmd::Presence { state } => Command::SetPresence { state: (state != "auto").then_some(state) },
         Cmd::Follow { identity } => Command::WatchPresence { identity },
         Cmd::Unfollow { identity } => Command::UnwatchPresence { identity },
+        Cmd::Revoke { identity } => Command::RevokeGrants { identity },
         Cmd::Answer { call } => Command::Answer { call },
         Cmd::Decline { call } => Command::Decline { call },
         Cmd::Hangup { call } => Command::Hangup { call },

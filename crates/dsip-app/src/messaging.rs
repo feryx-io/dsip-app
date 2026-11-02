@@ -14,7 +14,8 @@
 //! The grant is the phone's: one §19.4 grant lets the requester call, message and follow presence ([`GRANT_SCOPE`],
 //! P§6), issued by the phone's engine so it can be withdrawn later, and deposited at the requester's mailbox. The
 //! requester's app hands the grant it reads there to its phone, which presents it to follow the granter's presence,
-//! and follows it.
+//! and follows it. A grant the phone issues later, carrying new presence keys when a grant was withdrawn (P§12.5),
+//! is deposited at its grantee's mailbox the same way: there it is an unsolicited grant (M§14.1).
 //!
 //! Impl: the hint is re-signed every [`HINT_REFRESH_S`], two thirds of its life; `seq` is the issue time, never at or
 //! below the last one published.
@@ -67,6 +68,8 @@ pub(crate) enum Req {
     DeclineRequest { id: String, reply: oneshot::Sender<Response> },
     Message { to: String, text: String, reply: oneshot::Sender<Response> },
     Thread { conversation: String, reply: oneshot::Sender<Response> },
+    /// Deposit a grant the phone issued at its grantee's mailbox.
+    Deliver { to: String, grant: String },
     Stop,
 }
 
@@ -321,6 +324,11 @@ async fn request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, req: Re
                 .collect();
             let _ = reply.send(Response::Thread { messages });
         }
+        Req::Deliver { to, grant } => {
+            if let Err(e) = deliver(mx, &to, &grant).await {
+                tracing::warn!("the grant to {to} not deposited at its mailbox: {e}");
+            }
+        }
         Req::Stop => {}
     }
 }
@@ -364,6 +372,18 @@ async fn accept_request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, 
     mx.engine_mut().forget_request(id);
     refresh(&host.app, mx.engine());
     Ok(Response::Ok)
+}
+
+/// Deposit `grant` at `to`'s mailbox (M§14.1), as [`accept_request`] deposits the first.
+async fn deliver(mx: &mut Messenger<SqliteProvider>, to: &str, grant: &str) -> Result<(), String> {
+    let mut conn = mx.peer_connect(to).await.map_err(|e| e.to_string())?;
+    let did = conn.relay.did.clone();
+    let frame = mx.engine_mut().first_contact_frame(&did, "grant", to, grant, dsip_transport::now_s() as f64);
+    let answer = dsip_messenger::peer_exchange(&mut conn, &frame).await.map_err(|e| e.to_string())?;
+    match answer["type"].as_str() {
+        Some("accepted") => Ok(()),
+        _ => Err(format!("refused: {} (retry after {})", answer["reason"], answer["retry_after"])),
+    }
 }
 
 /// Send `text` to `to`: a conversation's group id, or an identity — its direct conversation, created when there is

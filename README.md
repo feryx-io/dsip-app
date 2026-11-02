@@ -17,7 +17,8 @@ sit on:
 - **Presence:** it publishes the state you pick and follows other identities' presence. Accepting an introduction
   grants calls, messages and presence in one grant. The app that asked holds that grant and follows the identity that
   granted it, through whichever relay that identity's hint names. Presence is private unless granted. Records are
-  sent in the clear for now; sealing them comes next.
+  sealed (P§12): only the identities you granted read them, never a relay. `revoke` withdraws a grant, and the
+  others you granted get new keys at their mailboxes.
 - **Control:** a local control socket that the `dsip-app` CLI drives.
 
 Group conversations and the Windows control channel come next; the Flutter desktop app (A3) and the mobile apps (A5)
@@ -48,6 +49,7 @@ dsip-app message did:key:z6Mk…bob hello              # once he has: the direct
 dsip-app thread <group id>                           # `state` lists the conversations
 dsip-app presence busy                               # available, busy, away, dnd, offline (invisible), or auto
 dsip-app follow did:key:z6Mk…carol                   # shown under presence.following once Carol has granted you
+dsip-app revoke did:key:z6Mk…carol                   # withdraw what you granted Carol; the others get new keys
 ```
 
 On Bob's side, `dsip-app answer` takes the call that rings. `--audio tone` uses a test tone instead of the
