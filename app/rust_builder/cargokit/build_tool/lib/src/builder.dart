@@ -177,7 +177,12 @@ class RustBuilder {
         '--target-dir',
         environment.targetTempDir,
       ],
-      environment: await _buildEnvironment(),
+      environment: {
+        // dsip-app: the libopus that audiopus_sys builds declares CMake compatibility below 3.5, which CMake 4
+        // removed; Xcode runs cargo outside the environment CI sets (as Anvil's cargokit says).
+        'CMAKE_POLICY_VERSION_MINIMUM': '3.5',
+        ...await _buildEnvironment(),
+      },
     );
     return path.join(
       environment.targetTempDir,

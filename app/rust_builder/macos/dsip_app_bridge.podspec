@@ -22,6 +22,9 @@ A new Flutter FFI plugin project.
   s.dependency 'FlutterMacOS'
 
   s.platform = :osx, '10.11'
+  # The Rust library is static: the system frameworks its crates call (cpal's audio units, the resolver's
+  # configuration, rustls' trust store) are linked by the pod that carries it, as Anvil's.
+  s.frameworks = 'CoreAudio', 'AudioToolbox', 'CoreFoundation', 'SystemConfiguration', 'Security'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
   s.swift_version = '5.0'
 

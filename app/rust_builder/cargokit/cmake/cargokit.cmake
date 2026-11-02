@@ -25,7 +25,18 @@ function(apply_cargokit target manifest_dir lib_name any_symbol_name)
         set(CARGOKIT_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
         set(OUTPUT_LIB "${CMAKE_CURRENT_BINARY_DIR}/${CARGOKIT_LIB_FULL_NAME}")
     endif()
-    set(CARGOKIT_TEMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/cargokit_build")
+    # dsip-app: on Windows, cargo's build directory sits near the top of the build tree (or where
+    # CARGOKIT_TEMP_DIR says): under plugins/<crate>/cargokit_build, the C sources that audiopus_sys and
+    # openssl-src build passed MSVC's 260-character path limit.
+    if (WIN32)
+        if (DEFINED ENV{CARGOKIT_TEMP_DIR})
+            set(CARGOKIT_TEMP_DIR "$ENV{CARGOKIT_TEMP_DIR}")
+        else()
+            set(CARGOKIT_TEMP_DIR "${CMAKE_BINARY_DIR}/ck")
+        endif()
+    else()
+        set(CARGOKIT_TEMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/cargokit_build")
+    endif()
 
     if (FLUTTER_TARGET_PLATFORM)
         set(CARGOKIT_TARGET_PLATFORM "${FLUTTER_TARGET_PLATFORM}")

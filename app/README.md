@@ -24,7 +24,8 @@ flutter test integration_test/app_test.dart -d linux      # the app as built, it
 ```
 
 Building needs what `dsip-app` needs (`../README.md`), and on Linux Flutter's desktop tools: `clang cmake ninja-build
-pkg-config libgtk-3-dev`. After changing `rust/src/api`, make the bindings again:
+pkg-config libgtk-3-dev`. On Windows, cargo builds the Rust core in `build\windows\x64\ck`, short of MSVC's
+260-character paths; from a deep checkout, set `CARGOKIT_TEMP_DIR` to a short folder such as `C:\ck`. After changing `rust/src/api`, make the bindings again:
 
 ```bash
 flutter_rust_bridge_codegen generate   # 2.13.0
