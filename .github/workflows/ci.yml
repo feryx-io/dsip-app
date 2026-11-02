@@ -44,6 +44,10 @@ jobs:
   windows:
     name: build, clippy and test on Windows (WASAPI, the control pipe)
     runs-on: windows-latest
+    # forge-media's DTLS builds OpenSSL from source (openssl-src), whose Configure needs a full Perl: the runner's
+    # Strawberry Perl, not the one Git Bash finds first, which lacks Locale::Maketext::Simple
+    env:
+      OPENSSL_SRC_PERL: C:\Strawberry\perl\bin\perl.exe
     steps:
       - uses: actions/checkout@v4
       - name: Rust, as pinned in rust-toolchain.toml
