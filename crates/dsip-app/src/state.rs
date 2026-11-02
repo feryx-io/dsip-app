@@ -266,6 +266,13 @@ pub enum Change {
         /// Who.
         by: String,
     },
+    /// Another member removed this identity from a group conversation (M§7.3); it is no longer listed.
+    Removed {
+        /// The group id.
+        conversation: String,
+        /// Who removed it.
+        by: String,
+    },
     /// The state this device publishes changed.
     MyPresence {
         /// The state; `None`: automatic.
@@ -308,7 +315,7 @@ impl State {
                 }
             }
             Change::Unfollowed { identity } => self.presence.following.retain(|p| &p.identity != identity),
-            Change::Message { .. } | Change::Granted { .. } | Change::Stopped => {}
+            Change::Message { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }
 }
