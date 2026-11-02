@@ -44,6 +44,9 @@ pub use state::{
     PresenceView, RequestView, State,
 };
 
+/// Where the identities followed are kept, in the identity directory beside the phone's `contacts.json`.
+pub const FOLLOWING_FILE: &str = "following.json";
+
 /// The presence states a device may publish (the `dsip-presence-state` registry, P§5).
 pub const PRESENCE_STATES: &[&str] = &["available", "busy", "away", "dnd", "offline"];
 
@@ -122,6 +125,9 @@ pub(crate) struct Inner {
     audio: Option<audio::Audio>,
     messaging: std::sync::OnceLock<mpsc::UnboundedSender<messaging::Req>>,
     stopped: tokio::sync::watch::Sender<bool>,
+    /// The identities followed, kept across restarts ([`FOLLOWING_FILE`] in the identity directory); held while
+    /// writing it.
+    following_file: std::sync::Mutex<std::path::PathBuf>,
 }
 
 /// The running client. Cheap to clone; clones are the same app.
@@ -192,6 +198,7 @@ impl App {
                 audio,
                 messaging: std::sync::OnceLock::new(),
                 stopped: tokio::sync::watch::channel(false).0,
+                following_file: std::sync::Mutex::new(identity_dir.join(FOLLOWING_FILE)),
             }),
         };
         if let Some(m) = cfg.messaging {
@@ -237,6 +244,13 @@ impl App {
                 if let Some(m) = a.inner.messaging.get() {
                     let _ = m.send(messaging::Req::Deliver { to: g.to, grant: g.grant });
                 }
+            }
+        });
+        // follow again what was followed when the app last ran (the grants that admit us are the phone's, kept too)
+        let a = app.clone();
+        tokio::spawn(async move {
+            for identity in a.saved_following() {
+                a.follow(&identity).await;
             }
         });
         let a = app.clone();
@@ -298,6 +312,7 @@ impl App {
             Command::UnwatchPresence { identity } => {
                 self.inner.phone.unwatch(&identity);
                 self.publish(Change::Unfollowed { identity });
+                self.save_following();
                 Response::Ok
             }
             Command::RevokeGrants { identity } => match self.inner.phone.revoke_grants_to(&identity).await {
@@ -334,6 +349,26 @@ impl App {
         let known = self.inner.state.lock().unwrap_or_else(|e| e.into_inner()).presence.following.iter().any(|p| p.identity == identity);
         if !known {
             self.publish(Change::Presence { presence: PresenceView { identity: identity.into(), state: None, token: None, source: None, unreadable: 0 } });
+            self.save_following();
+        }
+    }
+
+    /// The identities followed when the app last ran.
+    fn saved_following(&self) -> Vec<String> {
+        let path = self.inner.following_file.lock().unwrap_or_else(|e| e.into_inner());
+        std::fs::read(&*path).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
+    }
+
+    /// Keep the identities followed now, for the next start.
+    fn save_following(&self) {
+        let path = self.inner.following_file.lock().unwrap_or_else(|e| e.into_inner());
+        let ids: Vec<String> = self.state().presence.following.into_iter().map(|p| p.identity).collect();
+        let tmp = path.with_extension("json.tmp");
+        let r = serde_json::to_vec(&ids).map_err(std::io::Error::other)
+            .and_then(|b| std::fs::write(&tmp, b))
+            .and_then(|()| std::fs::rename(&tmp, &*path));
+        if let Err(e) = r {
+            tracing::warn!("saving {}: {e}", path.display());
         }
     }
 

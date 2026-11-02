@@ -18,7 +18,8 @@ sit on:
   grants calls, messages and presence in one grant. The app that asked holds that grant and follows the identity that
   granted it, through whichever relay that identity's hint names. Presence is private unless granted. Records are
   sealed (P§12): only the identities you granted read them, never a relay. `revoke` withdraws a grant, and the
-  others you granted get new keys at their mailboxes.
+  others you granted get new keys at their mailboxes. The identities you follow are kept (`following.json` in the
+  identity directory) and followed again when the app starts.
 - **Control:** a local control socket that the `dsip-app` CLI drives.
 
 Group conversations and the Windows control channel come next; the Flutter desktop app (A3) and the mobile apps (A5)
