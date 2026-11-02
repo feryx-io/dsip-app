@@ -28,7 +28,11 @@ async fn mailbox(dir: &Path, name: &str, tls: &tokio_rustls::TlsAcceptor, hints:
 }
 
 async fn app(net: &Network, dir: &Path, name: &str, mailbox: (String, String), hints: &str) -> App {
-    let mut cfg = Config::new(net.identity(name), "wss://relay.invalid/dsip");
+    app_as(net, net.identity(name), dir, name, mailbox, hints).await
+}
+
+async fn app_as(net: &Network, identity: dsip_phone::Identity, dir: &Path, name: &str, mailbox: (String, String), hints: &str) -> App {
+    let mut cfg = Config::new(identity, "wss://relay.invalid/dsip");
     cfg.dialer = Some(net.dialer());
     cfg.audio = None;
     cfg.messaging = Some(MessagingConfig {
@@ -166,6 +170,47 @@ async fn revoking_a_grant_sends_the_others_new_keys_through_their_mailboxes() {
     tokio::time::sleep(Duration::from_secs(2)).await;
     assert_ne!(shown(&carol, &bob_did).and_then(|p| p.state).as_deref(), Some("away"), "Carol no longer reads Bob");
     assert_eq!(bob.command(Command::RevokeGrants { identity: carol_did }).await, Response::Revoked { count: 0 });
+    for a in [&alice, &bob, &carol] {
+        a.stop().await;
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn following_resumes_when_the_app_starts_again() {
+    let dir = std::env::temp_dir().join(format!("dsip-app-resume-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(&dir, &["127.0.0.1".into(), "localhost".into()]).unwrap();
+    let tls = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    let hints = dsip_testkit::hints_node().await;
+    let net = Network::new();
+    let alice_id = net.identity("Alice");
+    let alice_dir = alice_id.dir.clone();
+    let alice_mailbox = mailbox(&dir, "mailbox-a", &tls, &hints).await;
+    let alice = app_as(&net, alice_id, &dir, "Alice", alice_mailbox.clone(), &hints).await;
+    let bob = app(&net, &dir, "Bob", mailbox(&dir, "mailbox-b", &tls, &hints).await, &hints).await;
+    let carol = app(&net, &dir, "Carol", mailbox(&dir, "mailbox-c", &tls, &hints).await, &hints).await;
+    let (bob_did, carol_did) = (bob.state().me.identity, carol.state().me.identity);
+    for (who, a) in [("Alice", &alice), ("Bob", &bob), ("Carol", &carol)] {
+        until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
+    }
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    granted(&alice, &bob).await;
+    granted(&alice, &carol).await;
+    assert_eq!(bob.command(Command::SetPresence { state: Some("busy".into()) }).await, Response::Ok);
+    until(&alice, "Bob busy", |_| shown(&alice, &bob_did).is_some_and(|p| p.state.as_deref() == Some("busy"))).await;
+    // unfollowed, Carol is not followed again
+    assert_eq!(alice.command(Command::UnwatchPresence { identity: carol_did.clone() }).await, Response::Ok);
+    alice.stop().await;
+
+    // the same identity, started again: it follows Bob, with the grant its phone kept, and reads his sealed record
+    let alice = app_as(&net, dsip_phone::Identity::load(&alice_dir).unwrap(), &dir, "Alice", alice_mailbox, &hints).await;
+    until(&alice, "Bob busy, after the restart", |_| {
+        shown(&alice, &bob_did).is_some_and(|p| p.state.as_deref() == Some("busy") && p.source.as_deref() == Some("record"))
+    })
+    .await;
+    assert!(shown(&alice, &carol_did).is_none(), "{:?}", alice.state().presence);
     for a in [&alice, &bob, &carol] {
         a.stop().await;
     }
