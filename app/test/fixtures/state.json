@@ -1,0 +1,110 @@
+{
+  "state": {
+    "me": {
+      "identity": "did:key:z6MkAlice",
+      "device": "did:key:z6MkAliceLaptop",
+      "display_name": "Alice"
+    },
+    "relay": "wss://relay.example.com:8443/dsip",
+    "calls": [
+      {
+        "id": 1,
+        "session": "01M6BTTMQ9QMKY9SYTY8415VZ1",
+        "peer": "did:key:z6MkBob",
+        "direction": "outgoing",
+        "state": {
+          "state": "ended",
+          "reason": "user.hangup"
+        },
+        "muted": false,
+        "media": false
+      },
+      {
+        "id": 2,
+        "session": "01M6BTTMQ9QMKY9SYTY8415VZ2",
+        "peer": "did:key:z6MkBob",
+        "direction": "outgoing",
+        "state": {
+          "state": "answered",
+          "answered_by": "user"
+        },
+        "muted": true,
+        "media": true,
+        "via": "wss://relay.bob.example:8443/dsip"
+      },
+      {
+        "id": 3,
+        "session": "01M6BTTMQ9QMKY9SYTY8415VZ3",
+        "peer": "did:key:z6MkBob",
+        "peer_name": "Bob",
+        "direction": "incoming",
+        "state": {
+          "state": "ringing"
+        },
+        "muted": false,
+        "media": false
+      }
+    ],
+    "audio": {
+      "host": "system",
+      "devices": [
+        {
+          "id": "mic-1",
+          "name": "Built-in microphone",
+          "kind": "input",
+          "default": true
+        }
+      ]
+    },
+    "messaging": {
+      "mailbox": "did:key:z6MkMailbox",
+      "connected": true,
+      "conversations": [
+        {
+          "group": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+          "conversation": "01M6EKRTVG3C55DFMQ401G3MA9",
+          "kind": "direct",
+          "peer": "did:key:z6MkBob",
+          "members": [
+            "did:key:z6MkAlice",
+            "did:key:z6MkBob"
+          ],
+          "pending": 1
+        }
+      ],
+      "requests": [
+        {
+          "id": "01M6EKRTVG3C55DFMQ401G3MB0",
+          "from": "did:key:z6MkCarol",
+          "name": "Carol"
+        }
+      ]
+    },
+    "presence": {
+      "mine": "busy",
+      "following": [
+        {
+          "identity": "did:key:z6MkBob",
+          "state": "away",
+          "source": "record",
+          "unreadable": 1
+        }
+      ]
+    }
+  },
+  "change": {
+    "change": "call_changed",
+    "call": {
+      "id": 3,
+      "session": "01M6BTTMQ9QMKY9SYTY8415VZ3",
+      "peer": "did:key:z6MkBob",
+      "peer_name": "Bob",
+      "direction": "incoming",
+      "state": {
+        "state": "ringing"
+      },
+      "muted": false,
+      "media": false
+    }
+  }
+}
