@@ -22,7 +22,13 @@
   "firstRunHintsHint": "https://hints.example.com",
   "firstRunStart": "Start",
   "firstRunFailed": "Could not start: {reason}",
-  "@firstRunFailed": {"placeholders": {"reason": {"type": "String"}}},
+  "@firstRunFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "navCalls": "Calls",
   "navMe": "Me",
   "callTo": "Identity to call",
@@ -38,12 +44,30 @@
   "callRingingHere": "Incoming call",
   "callAnswered": "In call",
   "callAnsweredBy": "Answered by {by}",
-  "@callAnsweredBy": {"placeholders": {"by": {"type": "String"}}},
+  "@callAnsweredBy": {
+    "placeholders": {
+      "by": {
+        "type": "String"
+      }
+    }
+  },
   "callEnded": "Ended: {reason}",
-  "@callEnded": {"placeholders": {"reason": {"type": "String"}}},
+  "@callEnded": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "callNoSound": "No sound yet",
   "callVia": "Through {relay}",
-  "@callVia": {"placeholders": {"relay": {"type": "String"}}},
+  "@callVia": {
+    "placeholders": {
+      "relay": {
+        "type": "String"
+      }
+    }
+  },
   "callsNone": "No calls. Enter an identity above to call it.",
   "callsRecent": "Recent",
   "meIdentity": "Identity",
@@ -56,6 +80,88 @@
   "meCopy": "Copy",
   "meCopied": "Copied",
   "commandFailed": "{reason}",
-  "@commandFailed": {"placeholders": {"reason": {"type": "String"}}},
-  "appStopped": "The app stopped."
+  "@commandFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "appStopped": "The app stopped.",
+  "navMessages": "Messages",
+  "messagingOff": "Messaging is off: this app has no mailbox. Add one in its settings to message.",
+  "messagingOffline": "Not connected to your mailbox: messages go out once it is back.",
+  "requestsTitle": "Asking to message you",
+  "requestFrom": "{name} (says they are)",
+  "@requestFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "requestAccept": "Accept",
+  "requestDecline": "Decline",
+  "conversationsTitle": "Conversations",
+  "conversationsNone": "No conversations yet. Introduce yourself to someone, and message them once they accept.",
+  "conversationGroup": "Group of {count}",
+  "@conversationGroup": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conversationPending": "{count, plural, =1{1 message not yet at the hub} other{{count} messages not yet at the hub}}",
+  "@conversationPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "actionIntroduce": "Introduce yourself",
+  "actionNewMessage": "New message",
+  "actionNewGroup": "New group",
+  "introduceTitle": "Introduce yourself",
+  "introduceTo": "Their identity",
+  "introducePurpose": "Why you are writing",
+  "introducePurposeHint": "Only they can read it",
+  "introduceSent": "Asked. You can message them once they accept.",
+  "newMessageTo": "To (an identity that accepted you)",
+  "newGroupMembers": "Members, one identity per line",
+  "newGroupHint": "Each must have accepted you",
+  "send": "Send",
+  "cancel": "Cancel",
+  "messageHint": "Message",
+  "threadEmpty": "No messages yet.",
+  "threadNotText": "({kind} message)",
+  "@threadNotText": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "threadMembers": "Members",
+  "threadAddMember": "Add someone",
+  "threadRemove": "Remove",
+  "threadLeave": "Leave",
+  "threadLeaveConfirm": "Leave this conversation? The others keep it; you no longer see it.",
+  "noticeGranted": "{who} accepted: you can message them, call them and see their presence.",
+  "@noticeGranted": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeRemoved": "{who} removed you from a conversation.",
+  "@noticeRemoved": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  }
 }

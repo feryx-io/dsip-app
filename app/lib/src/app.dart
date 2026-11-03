@@ -7,6 +7,7 @@ import 'controller.dart';
 import 'screens/calls.dart';
 import 'screens/first_run.dart';
 import 'screens/me.dart';
+import 'screens/messages.dart';
 
 /// The app: the first run until there are settings, then the home screen over the running app's state.
 class DsipApp extends StatelessWidget {
@@ -47,9 +48,15 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final error = widget.controller.takeError();
-    if (error != null) {
+    final notice = widget.controller.takeNotice();
+    final told = switch (notice?['change']) {
+      'granted' => s.noticeGranted(shortDid(notice!['by'] as String)),
+      'removed' => s.noticeRemoved(shortDid(notice!['by'] as String)),
+      _ => null,
+    };
+    for (final text in [if (error != null) s.commandFailed(error), ?told]) {
       WidgetsBinding.instance.addPostFrameCallback(
-        (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.commandFailed(error)))),
+        (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text))),
       );
     }
     final state = widget.state;
@@ -62,6 +69,14 @@ class _HomeState extends State<Home> {
             labelType: NavigationRailLabelType.all,
             destinations: [
               NavigationRailDestination(icon: const Icon(Icons.call), label: Text(s.navCalls)),
+              NavigationRailDestination(
+                icon: Badge(
+                  isLabelVisible: state.messaging.requests.isNotEmpty,
+                  label: Text('${state.messaging.requests.length}'),
+                  child: const Icon(Icons.chat),
+                ),
+                label: Text(s.navMessages),
+              ),
               NavigationRailDestination(icon: const Icon(Icons.person), label: Text(s.navMe)),
             ],
           ),
@@ -69,6 +84,7 @@ class _HomeState extends State<Home> {
           Expanded(
             child: switch (_tab) {
               0 => CallsScreen(controller: widget.controller, state: state),
+              1 => MessagesScreen(controller: widget.controller, state: state),
               _ => MeScreen(state: state),
             },
           ),

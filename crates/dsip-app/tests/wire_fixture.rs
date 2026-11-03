@@ -4,7 +4,8 @@
 //! again.
 
 use dsip_app::{
-    AudioDevice, AudioState, CallState, CallView, Change, ConversationView, Direction, Me, PresenceView, RequestView, State,
+    AudioDevice, AudioState, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, PresenceView, RequestView,
+    Response, State,
 };
 
 fn state() -> State {
@@ -55,14 +56,45 @@ fn state() -> State {
     s
 }
 
-#[test]
-fn the_state_the_desktop_app_reads() {
-    let update = serde_json::json!({"state": state(), "change": Change::CallChanged { call: state().calls[&3].clone() }});
-    let made = serde_json::to_string_pretty(&update).unwrap() + "\n";
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../app/test/fixtures/state.json");
+/// `value` as `app/test/fixtures/<name>`, held to the file (or written to it with `UPDATE_FIXTURES=1`).
+fn holds(name: &str, value: serde_json::Value) {
+    let made = serde_json::to_string_pretty(&value).unwrap() + "\n";
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../app/test/fixtures").join(name);
     if std::env::var_os("UPDATE_FIXTURES").is_some() {
         std::fs::write(&path, &made).unwrap();
     }
     let held = std::fs::read_to_string(&path).unwrap_or_default().replace("\r\n", "\n");
-    assert_eq!(held, made, "app/test/fixtures/state.json is not what the app sends: UPDATE_FIXTURES=1 cargo test --test wire_fixture");
+    assert_eq!(held, made, "app/test/fixtures/{name} is not what the app sends: UPDATE_FIXTURES=1 cargo test --test wire_fixture");
+}
+
+#[test]
+fn the_state_the_desktop_app_reads() {
+    holds("state.json", serde_json::json!({"state": state(), "change": Change::CallChanged { call: state().calls[&3].clone() }}));
+}
+
+#[test]
+fn the_messages_the_desktop_app_reads() {
+    let message = |id: &str, from: &str, mine, text: Option<&str>, kind: &str, sent_at| MessageView {
+        conversation: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into(),
+        id: id.into(),
+        from: from.into(),
+        mine,
+        kind: kind.into(),
+        text: text.map(String::from),
+        sent_at,
+    };
+    let thread = Response::Thread {
+        messages: vec![
+            message("01M6EKRTVG3C55DFMQ401G3MC1", "did:key:z6MkAlice", true, Some("hello Bob"), "text", 1_793_600_000),
+            message("01M6EKRTVG3C55DFMQ401G3MC2", "did:key:z6MkBob", false, None, "audio", 1_793_600_060),
+        ],
+    };
+    let arrived = Change::Message { message: message("01M6EKRTVG3C55DFMQ401G3MC3", "did:key:z6MkBob", false, Some("hi Alice"), "text", 1_793_600_120) };
+    holds("messages.json", serde_json::json!({
+        "thread": thread,
+        "message": arrived,
+        "conversation": Response::Conversation { conversation: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into() },
+        "granted": Change::Granted { by: "did:key:z6MkBob".into() },
+        "removed": Change::Removed { conversation: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into(), by: "did:key:z6MkCarol".into() },
+    }));
 }

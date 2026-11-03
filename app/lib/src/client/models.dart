@@ -222,3 +222,47 @@ class Update {
   factory Update.fromJson(Map<String, dynamic> j) =>
       Update(AppState.fromJson(j['state'] as Map<String, dynamic>), j['change'] as Map<String, dynamic>?);
 }
+
+/// A message in a conversation.
+class MessageView {
+  const MessageView({
+    required this.conversation,
+    required this.id,
+    required this.from,
+    required this.mine,
+    required this.kind,
+    this.text,
+    required this.sentAt,
+  });
+
+  /// The conversation's group id.
+  final String conversation;
+  final String id;
+  final String from;
+  final bool mine;
+
+  /// `text`, `audio`, …
+  final String kind;
+  final String? text;
+
+  /// Unix seconds, the sender's clock.
+  final int sentAt;
+
+  factory MessageView.fromJson(Map<String, dynamic> j) => MessageView(
+    conversation: j['conversation'] as String,
+    id: j['id'] as String,
+    from: j['from'] as String,
+    mine: j['mine'] as bool,
+    kind: j['kind'] as String,
+    text: j['text'] as String?,
+    sentAt: j['sent_at'] as int,
+  );
+}
+
+/// A DID short enough for a list: its method and the start and end of its key.
+String shortDid(String did) {
+  final i = did.lastIndexOf(':');
+  final key = i < 0 ? did : did.substring(i + 1);
+  final method = i < 0 ? '' : did.substring(0, i + 1);
+  return key.length <= 14 ? did : '$method${key.substring(0, 8)}…${key.substring(key.length - 4)}';
+}
