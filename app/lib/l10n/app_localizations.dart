@@ -410,6 +410,210 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'The app stopped.'**
   String get appStopped;
+
+  /// No description provided for @navMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get navMessages;
+
+  /// No description provided for @messagingOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Messaging is off: this app has no mailbox. Add one in its settings to message.'**
+  String get messagingOff;
+
+  /// No description provided for @messagingOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected to your mailbox: messages go out once it is back.'**
+  String get messagingOffline;
+
+  /// No description provided for @requestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Asking to message you'**
+  String get requestsTitle;
+
+  /// No description provided for @requestFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (says they are)'**
+  String requestFrom(String name);
+
+  /// No description provided for @requestAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get requestAccept;
+
+  /// No description provided for @requestDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get requestDecline;
+
+  /// No description provided for @conversationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get conversationsTitle;
+
+  /// No description provided for @conversationsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet. Introduce yourself to someone, and message them once they accept.'**
+  String get conversationsNone;
+
+  /// No description provided for @conversationGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Group of {count}'**
+  String conversationGroup(int count);
+
+  /// No description provided for @conversationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 message not yet at the hub} other{{count} messages not yet at the hub}}'**
+  String conversationPending(int count);
+
+  /// No description provided for @actionIntroduce.
+  ///
+  /// In en, this message translates to:
+  /// **'Introduce yourself'**
+  String get actionIntroduce;
+
+  /// No description provided for @actionNewMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'New message'**
+  String get actionNewMessage;
+
+  /// No description provided for @actionNewGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'New group'**
+  String get actionNewGroup;
+
+  /// No description provided for @introduceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Introduce yourself'**
+  String get introduceTitle;
+
+  /// No description provided for @introduceTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Their identity'**
+  String get introduceTo;
+
+  /// No description provided for @introducePurpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Why you are writing'**
+  String get introducePurpose;
+
+  /// No description provided for @introducePurposeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only they can read it'**
+  String get introducePurposeHint;
+
+  /// No description provided for @introduceSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Asked. You can message them once they accept.'**
+  String get introduceSent;
+
+  /// No description provided for @newMessageTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To (an identity that accepted you)'**
+  String get newMessageTo;
+
+  /// No description provided for @newGroupMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members, one identity per line'**
+  String get newGroupMembers;
+
+  /// No description provided for @newGroupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Each must have accepted you'**
+  String get newGroupHint;
+
+  /// No description provided for @send.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @messageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get messageHint;
+
+  /// No description provided for @threadEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet.'**
+  String get threadEmpty;
+
+  /// No description provided for @threadNotText.
+  ///
+  /// In en, this message translates to:
+  /// **'({kind} message)'**
+  String threadNotText(String kind);
+
+  /// No description provided for @threadMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get threadMembers;
+
+  /// No description provided for @threadAddMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Add someone'**
+  String get threadAddMember;
+
+  /// No description provided for @threadRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get threadRemove;
+
+  /// No description provided for @threadLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get threadLeave;
+
+  /// No description provided for @threadLeaveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave this conversation? The others keep it; you no longer see it.'**
+  String get threadLeaveConfirm;
+
+  /// No description provided for @noticeGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'{who} accepted: you can message them, call them and see their presence.'**
+  String noticeGranted(String who);
+
+  /// No description provided for @noticeRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'{who} removed you from a conversation.'**
+  String noticeRemoved(String who);
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

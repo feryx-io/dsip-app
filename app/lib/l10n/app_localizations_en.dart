@@ -181,4 +181,128 @@ class StringsEn extends Strings {
 
   @override
   String get appStopped => 'The app stopped.';
+
+  @override
+  String get navMessages => 'Messages';
+
+  @override
+  String get messagingOff =>
+      'Messaging is off: this app has no mailbox. Add one in its settings to message.';
+
+  @override
+  String get messagingOffline =>
+      'Not connected to your mailbox: messages go out once it is back.';
+
+  @override
+  String get requestsTitle => 'Asking to message you';
+
+  @override
+  String requestFrom(String name) {
+    return '$name (says they are)';
+  }
+
+  @override
+  String get requestAccept => 'Accept';
+
+  @override
+  String get requestDecline => 'Decline';
+
+  @override
+  String get conversationsTitle => 'Conversations';
+
+  @override
+  String get conversationsNone =>
+      'No conversations yet. Introduce yourself to someone, and message them once they accept.';
+
+  @override
+  String conversationGroup(int count) {
+    return 'Group of $count';
+  }
+
+  @override
+  String conversationPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count messages not yet at the hub',
+      one: '1 message not yet at the hub',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get actionIntroduce => 'Introduce yourself';
+
+  @override
+  String get actionNewMessage => 'New message';
+
+  @override
+  String get actionNewGroup => 'New group';
+
+  @override
+  String get introduceTitle => 'Introduce yourself';
+
+  @override
+  String get introduceTo => 'Their identity';
+
+  @override
+  String get introducePurpose => 'Why you are writing';
+
+  @override
+  String get introducePurposeHint => 'Only they can read it';
+
+  @override
+  String get introduceSent => 'Asked. You can message them once they accept.';
+
+  @override
+  String get newMessageTo => 'To (an identity that accepted you)';
+
+  @override
+  String get newGroupMembers => 'Members, one identity per line';
+
+  @override
+  String get newGroupHint => 'Each must have accepted you';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get messageHint => 'Message';
+
+  @override
+  String get threadEmpty => 'No messages yet.';
+
+  @override
+  String threadNotText(String kind) {
+    return '($kind message)';
+  }
+
+  @override
+  String get threadMembers => 'Members';
+
+  @override
+  String get threadAddMember => 'Add someone';
+
+  @override
+  String get threadRemove => 'Remove';
+
+  @override
+  String get threadLeave => 'Leave';
+
+  @override
+  String get threadLeaveConfirm =>
+      'Leave this conversation? The others keep it; you no longer see it.';
+
+  @override
+  String noticeGranted(String who) {
+    return '$who accepted: you can message them, call them and see their presence.';
+  }
+
+  @override
+  String noticeRemoved(String who) {
+    return '$who removed you from a conversation.';
+  }
 }

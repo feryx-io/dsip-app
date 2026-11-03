@@ -8,6 +8,11 @@ import 'package:dsip_app/src/client/models.dart';
 /// The fixture `dsip-app`'s own test makes (`crates/dsip-app/tests/wire_fixture.rs`): an update as the app sends it.
 Map<String, dynamic> fixture() => jsonDecode(File('test/fixtures/state.json').readAsStringSync()) as Map<String, dynamic>;
 
+/// The messages fixture, from the same test: a `thread` response, a `message` change, a `conversation` response, a
+/// `granted` and a `removed` change.
+Map<String, dynamic> messagesFixture() =>
+    jsonDecode(File('test/fixtures/messages.json').readAsStringSync()) as Map<String, dynamic>;
+
 /// A client with no app behind it: it records what it is asked, answers as told, and sends the updates a test pushes.
 class FakeClient implements Client {
   final commands = <Map<String, dynamic>>[];
@@ -17,8 +22,9 @@ class FakeClient implements Client {
   Map<String, dynamic> Function(Map<String, dynamic>) answer = (_) => {'response': 'ok'};
   Object? startFails;
 
-  /// Send an update with [state] (JSON, as the app's).
-  void push(Map<String, dynamic> state) => _updates.add(Update.fromJson({'state': state, 'change': null}));
+  /// Send an update with [state] (JSON, as the app's), after [change] if one is given.
+  void push(Map<String, dynamic> state, [Map<String, dynamic>? change]) =>
+      _updates.add(Update.fromJson({'state': state, 'change': change}));
 
   @override
   Future<String> initIdentity(String dir, String displayName) async {

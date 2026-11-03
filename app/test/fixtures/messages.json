@@ -1,0 +1,49 @@
+{
+  "thread": {
+    "response": "thread",
+    "messages": [
+      {
+        "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+        "id": "01M6EKRTVG3C55DFMQ401G3MC1",
+        "from": "did:key:z6MkAlice",
+        "mine": true,
+        "kind": "text",
+        "text": "hello Bob",
+        "sent_at": 1793600000
+      },
+      {
+        "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+        "id": "01M6EKRTVG3C55DFMQ401G3MC2",
+        "from": "did:key:z6MkBob",
+        "mine": false,
+        "kind": "audio",
+        "sent_at": 1793600060
+      }
+    ]
+  },
+  "message": {
+    "change": "message",
+    "message": {
+      "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+      "id": "01M6EKRTVG3C55DFMQ401G3MC3",
+      "from": "did:key:z6MkBob",
+      "mine": false,
+      "kind": "text",
+      "text": "hi Alice",
+      "sent_at": 1793600120
+    }
+  },
+  "conversation": {
+    "response": "conversation",
+    "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk"
+  },
+  "granted": {
+    "change": "granted",
+    "by": "did:key:z6MkBob"
+  },
+  "removed": {
+    "change": "removed",
+    "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+    "by": "did:key:z6MkCarol"
+  }
+}

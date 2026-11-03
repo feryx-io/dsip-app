@@ -1,0 +1,361 @@
+import 'package:flutter/material.dart';
+
+import '../../l10n/app_localizations.dart';
+import '../client/models.dart';
+import '../controller.dart';
+
+/// Messages: the requests to answer, the conversations, and the one open; first contact (introduce yourself), a new
+/// message to someone who accepted you, a new group.
+class MessagesScreen extends StatefulWidget {
+  const MessagesScreen({super.key, required this.controller, required this.state});
+  final Controller controller;
+  final AppState state;
+
+  @override
+  State<MessagesScreen> createState() => _MessagesScreenState();
+}
+
+class _MessagesScreenState extends State<MessagesScreen> {
+  String? _open;
+
+  Controller get c => widget.controller;
+
+  Future<void> _select(String group) async {
+    setState(() => _open = group);
+    await c.openThread(group);
+  }
+
+  Future<void> _introduce() async {
+    final s = Strings.of(context);
+    final v = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => _FormDialog(title: s.introduceTitle, fields: [s.introduceTo, s.introducePurpose], hints: [null, s.introducePurposeHint]),
+    );
+    if (v == null) return;
+    final response = await c.run({'command': 'introduce', 'to': v[0], 'purpose': v[1]});
+    if (response['response'] == 'ok' && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.introduceSent)));
+    }
+  }
+
+  Future<void> _newMessage() async {
+    final s = Strings.of(context);
+    final v = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => _FormDialog(title: s.actionNewMessage, fields: [s.newMessageTo, s.messageHint], action: s.send),
+    );
+    if (v == null) return;
+    final r = await c.run({'command': 'message', 'to': v[0], 'text': v[1]});
+    if (r['response'] == 'conversation') await _select(r['conversation'] as String);
+  }
+
+  Future<void> _newGroup() async {
+    final s = Strings.of(context);
+    final v = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => _FormDialog(title: s.actionNewGroup, fields: [s.newGroupMembers], hints: [s.newGroupHint], lines: 4),
+    );
+    if (v == null) return;
+    final members = v[0].split(RegExp(r'\s+')).where((m) => m.isNotEmpty).toList();
+    final r = await c.run({'command': 'create_group', 'members': members});
+    if (r['response'] == 'conversation') await _select(r['conversation'] as String);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final m = widget.state.messaging;
+    if (m.mailbox == null) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(s.messagingOff)));
+    final open = m.conversations.where((x) => x.group == _open).firstOrNull;
+    return Row(
+      children: [
+        SizedBox(
+          width: 340,
+          child: ListView(
+            children: [
+              if (!m.connected)
+                MaterialBanner(content: Text(s.messagingOffline), actions: const [SizedBox.shrink()]),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.tonalIcon(onPressed: _introduce, icon: const Icon(Icons.waving_hand), label: Text(s.actionIntroduce)),
+                    OutlinedButton.icon(onPressed: _newMessage, icon: const Icon(Icons.edit), label: Text(s.actionNewMessage)),
+                    OutlinedButton.icon(onPressed: _newGroup, icon: const Icon(Icons.group_add), label: Text(s.actionNewGroup)),
+                  ],
+                ),
+              ),
+              if (m.requests.isNotEmpty) ...[
+                _Heading(s.requestsTitle),
+                for (final r in m.requests)
+                  ListTile(
+                    key: Key('request-${r.id}'),
+                    title: Text(r.name == null ? shortDid(r.from) : s.requestFrom(r.name!)),
+                    subtitle: Text(shortDid(r.from)),
+                    trailing: Wrap(
+                      spacing: 4,
+                      children: [
+                        IconButton(
+                          tooltip: s.requestAccept,
+                          icon: const Icon(Icons.check),
+                          onPressed: () => c.run({'command': 'accept_request', 'id': r.id}),
+                        ),
+                        IconButton(
+                          tooltip: s.requestDecline,
+                          icon: const Icon(Icons.close),
+                          onPressed: () => c.run({'command': 'decline_request', 'id': r.id}),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              _Heading(s.conversationsTitle),
+              if (m.conversations.isEmpty) Padding(padding: const EdgeInsets.all(16), child: Text(s.conversationsNone)),
+              for (final x in m.conversations)
+                ListTile(
+                  key: Key('conversation-${x.group}'),
+                  selected: x.group == _open,
+                  leading: Icon(x.kind == 'group' ? Icons.group : Icons.person),
+                  title: Text(_title(s, x, widget.state.me.identity)),
+                  subtitle: x.pending > 0 ? Text(s.conversationPending(x.pending)) : null,
+                  onTap: () => _select(x.group),
+                ),
+            ],
+          ),
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(
+          child: open == null
+              ? const SizedBox.shrink()
+              : _Thread(
+                  key: ValueKey(open.group),
+                  controller: c,
+                  conversation: open,
+                  me: widget.state.me.identity,
+                  onLeft: () => setState(() => _open = null),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+String _title(Strings s, ConversationView x, String me) => x.kind == 'group'
+    ? '${s.conversationGroup(x.members.length)}: ${x.members.where((m) => m != me).map(shortDid).join(', ')}'
+    : shortDid(x.peer ?? x.members.firstWhere((m) => m != me, orElse: () => x.group));
+
+class _Heading extends StatelessWidget {
+  const _Heading(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 4), child: Text(text, style: Theme.of(context).textTheme.titleSmall));
+}
+
+class _Thread extends StatefulWidget {
+  const _Thread({super.key, required this.controller, required this.conversation, required this.me, required this.onLeft});
+  final Controller controller;
+  final ConversationView conversation;
+  final String me;
+  final VoidCallback onLeft;
+
+  @override
+  State<_Thread> createState() => _ThreadState();
+}
+
+class _ThreadState extends State<_Thread> {
+  final _text = TextEditingController();
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  String get group => widget.conversation.group;
+
+  Future<void> _send() async {
+    final text = _text.text.trim();
+    if (text.isEmpty) return;
+    final r = await widget.controller.run({'command': 'message', 'to': group, 'text': text});
+    if (r['response'] == 'conversation') _text.clear();
+  }
+
+  Future<void> _add() async {
+    final s = Strings.of(context);
+    final v = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => _FormDialog(title: s.threadAddMember, fields: [s.introduceTo], hints: [s.newGroupHint]),
+    );
+    if (v != null) await widget.controller.run({'command': 'add_member', 'conversation': group, 'identity': v[0]});
+  }
+
+  Future<void> _leave() async {
+    final s = Strings.of(context);
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Text(s.threadLeaveConfirm),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(s.threadLeave)),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    final r = await widget.controller.run({'command': 'leave', 'conversation': group});
+    if (r['response'] == 'ok') widget.onLeft();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final x = widget.conversation;
+    final messages = widget.controller.threads[group] ?? const <MessageView>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ListTile(
+          title: Text(_title(s, x, widget.me)),
+          trailing: x.kind != 'group'
+              ? null
+              : Wrap(
+                  spacing: 4,
+                  children: [
+                    IconButton(tooltip: s.threadAddMember, icon: const Icon(Icons.person_add), onPressed: _add),
+                    PopupMenuButton<String>(
+                      key: const Key('members'),
+                      tooltip: s.threadMembers,
+                      icon: const Icon(Icons.group),
+                      itemBuilder: (_) => [
+                        for (final m in x.members.where((m) => m != widget.me))
+                          PopupMenuItem(value: m, child: Text('${s.threadRemove} ${shortDid(m)}')),
+                      ],
+                      onSelected: (m) => widget.controller.run({'command': 'remove_member', 'conversation': group, 'identity': m}),
+                    ),
+                    IconButton(tooltip: s.threadLeave, icon: const Icon(Icons.logout), onPressed: _leave),
+                  ],
+                ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: messages.isEmpty
+              ? Center(child: Text(s.threadEmpty))
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [for (final m in messages) _Bubble(message: m, group: x.kind == 'group')],
+                ),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('compose'),
+                  controller: _text,
+                  decoration: InputDecoration(hintText: s.messageHint),
+                  onSubmitted: (_) => _send(),
+                ),
+              ),
+              IconButton(tooltip: s.send, icon: const Icon(Icons.send), onPressed: _send),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Bubble extends StatelessWidget {
+  const _Bubble({required this.message, required this.group});
+  final MessageView message;
+  final bool group;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: message.mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: const BoxConstraints(maxWidth: 480),
+        decoration: BoxDecoration(
+          color: message.mine ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (group && !message.mine) Text(shortDid(message.from), style: Theme.of(context).textTheme.labelSmall),
+            Text(message.text ?? s.threadNotText(message.kind)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A dialog of text fields; pops their values, trimmed, once every one is filled.
+class _FormDialog extends StatefulWidget {
+  const _FormDialog({required this.title, required this.fields, this.hints = const [], this.action, this.lines = 1});
+  final String title;
+  final List<String> fields;
+  final List<String?> hints;
+  final String? action;
+  final int lines;
+
+  @override
+  State<_FormDialog> createState() => _FormDialogState();
+}
+
+class _FormDialogState extends State<_FormDialog> {
+  late final _controllers = [for (final _ in widget.fields) TextEditingController()];
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final values = [for (final c in _controllers) c.text.trim()];
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < widget.fields.length; i++)
+              TextField(
+                key: Key('field-$i'),
+                controller: _controllers[i],
+                minLines: i == 0 ? widget.lines : 1,
+                maxLines: i == 0 ? widget.lines : 3,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(labelText: widget.fields[i], helperText: i < widget.hints.length ? widget.hints[i] : null),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.cancel)),
+        FilledButton(
+          onPressed: values.every((v) => v.isNotEmpty) ? () => Navigator.pop(context, values) : null,
+          child: Text(widget.action ?? widget.title),
+        ),
+      ],
+    );
+  }
+}
