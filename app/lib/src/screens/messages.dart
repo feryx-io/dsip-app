@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import 'form_dialog.dart';
 
 /// Messages: the requests to answer, the conversations, and the one open; first contact (introduce yourself), a new
 /// message to someone who accepted you, a new group.
@@ -29,7 +30,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final s = Strings.of(context);
     final v = await showDialog<List<String>>(
       context: context,
-      builder: (_) => _FormDialog(title: s.introduceTitle, fields: [s.introduceTo, s.introducePurpose], hints: [null, s.introducePurposeHint]),
+      builder: (_) => FormDialog(title: s.introduceTitle, fields: [s.introduceTo, s.introducePurpose], hints: [null, s.introducePurposeHint]),
     );
     if (v == null) return;
     final response = await c.run({'command': 'introduce', 'to': v[0], 'purpose': v[1]});
@@ -42,7 +43,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final s = Strings.of(context);
     final v = await showDialog<List<String>>(
       context: context,
-      builder: (_) => _FormDialog(title: s.actionNewMessage, fields: [s.newMessageTo, s.messageHint], action: s.send),
+      builder: (_) => FormDialog(title: s.actionNewMessage, fields: [s.newMessageTo, s.messageHint], action: s.send),
     );
     if (v == null) return;
     final r = await c.run({'command': 'message', 'to': v[0], 'text': v[1]});
@@ -53,7 +54,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final s = Strings.of(context);
     final v = await showDialog<List<String>>(
       context: context,
-      builder: (_) => _FormDialog(title: s.actionNewGroup, fields: [s.newGroupMembers], hints: [s.newGroupHint], lines: 4),
+      builder: (_) => FormDialog(title: s.actionNewGroup, fields: [s.newGroupMembers], hints: [s.newGroupHint], lines: 4),
     );
     if (v == null) return;
     final members = v[0].split(RegExp(r'\s+')).where((m) => m.isNotEmpty).toList();
@@ -188,7 +189,7 @@ class _ThreadState extends State<_Thread> {
     final s = Strings.of(context);
     final v = await showDialog<List<String>>(
       context: context,
-      builder: (_) => _FormDialog(title: s.threadAddMember, fields: [s.introduceTo], hints: [s.newGroupHint]),
+      builder: (_) => FormDialog(title: s.threadAddMember, fields: [s.introduceTo], hints: [s.newGroupHint]),
     );
     if (v != null) await widget.controller.run({'command': 'add_member', 'conversation': group, 'identity': v[0]});
   }
@@ -303,59 +304,3 @@ class _Bubble extends StatelessWidget {
 }
 
 /// A dialog of text fields; pops their values, trimmed, once every one is filled.
-class _FormDialog extends StatefulWidget {
-  const _FormDialog({required this.title, required this.fields, this.hints = const [], this.action, this.lines = 1});
-  final String title;
-  final List<String> fields;
-  final List<String?> hints;
-  final String? action;
-  final int lines;
-
-  @override
-  State<_FormDialog> createState() => _FormDialogState();
-}
-
-class _FormDialogState extends State<_FormDialog> {
-  late final _controllers = [for (final _ in widget.fields) TextEditingController()];
-
-  @override
-  void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = Strings.of(context);
-    final values = [for (final c in _controllers) c.text.trim()];
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < widget.fields.length; i++)
-              TextField(
-                key: Key('field-$i'),
-                controller: _controllers[i],
-                minLines: i == 0 ? widget.lines : 1,
-                maxLines: i == 0 ? widget.lines : 3,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(labelText: widget.fields[i], helperText: i < widget.hints.length ? widget.hints[i] : null),
-              ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.cancel)),
-        FilledButton(
-          onPressed: values.every((v) => v.isNotEmpty) ? () => Navigator.pop(context, values) : null,
-          child: Text(widget.action ?? widget.title),
-        ),
-      ],
-    );
-  }
-}

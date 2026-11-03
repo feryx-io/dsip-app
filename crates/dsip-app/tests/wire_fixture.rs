@@ -98,3 +98,23 @@ fn the_messages_the_desktop_app_reads() {
         "removed": Change::Removed { conversation: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into(), by: "did:key:z6MkCarol".into() },
     }));
 }
+
+#[test]
+fn the_presence_the_desktop_app_reads() {
+    let view = |identity: &str, state: Option<&str>, token: Option<&str>, source: Option<&str>, unreadable| PresenceView {
+        identity: identity.into(),
+        state: state.map(String::from),
+        token: token.map(String::from),
+        source: source.map(String::from),
+        unreadable,
+    };
+    holds("presence.json", serde_json::json!({
+        "following": [
+            view("did:key:z6MkBob", Some("away"), None, Some("record"), 1),
+            view("did:key:z6MkCarol", Some("available"), None, Some("assertion"), 0),
+            view("did:key:z6MkDave", Some("busy"), Some("in-a-meeting"), Some("record"), 0),
+            view("did:key:z6MkErin", None, None, None, 0),
+        ],
+        "revoked": Response::Revoked { count: 2 },
+    }));
+}

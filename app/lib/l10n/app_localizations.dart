@@ -614,6 +614,144 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'{who} removed you from a conversation.'**
   String noticeRemoved(String who);
+
+  /// No description provided for @navPresence.
+  ///
+  /// In en, this message translates to:
+  /// **'Presence'**
+  String get navPresence;
+
+  /// No description provided for @presenceMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your presence'**
+  String get presenceMine;
+
+  /// No description provided for @presenceAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get presenceAutomatic;
+
+  /// No description provided for @presenceAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get presenceAvailable;
+
+  /// No description provided for @presenceBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Busy'**
+  String get presenceBusy;
+
+  /// No description provided for @presenceAway.
+  ///
+  /// In en, this message translates to:
+  /// **'Away'**
+  String get presenceAway;
+
+  /// No description provided for @presenceDnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Do not disturb'**
+  String get presenceDnd;
+
+  /// No description provided for @presenceOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Invisible'**
+  String get presenceOffline;
+
+  /// No description provided for @presenceAutomaticExplained.
+  ///
+  /// In en, this message translates to:
+  /// **'Those who follow you see you available while this app is connected, and offline when it is not.'**
+  String get presenceAutomaticExplained;
+
+  /// No description provided for @presenceSetExplained.
+  ///
+  /// In en, this message translates to:
+  /// **'Those who follow you see this, sealed so that only they can read it: not your relay.'**
+  String get presenceSetExplained;
+
+  /// No description provided for @presenceOfflineExplained.
+  ///
+  /// In en, this message translates to:
+  /// **'Those who follow you see you offline. Calls still reach you.'**
+  String get presenceOfflineExplained;
+
+  /// No description provided for @presenceFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get presenceFollowing;
+
+  /// No description provided for @presenceFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow someone'**
+  String get presenceFollow;
+
+  /// No description provided for @presenceFollowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'They see that you follow them; their presence shows once they have accepted you'**
+  String get presenceFollowHint;
+
+  /// No description provided for @presenceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'You follow no one. Those who accept you are followed for you.'**
+  String get presenceNone;
+
+  /// No description provided for @presenceWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Not shown: they have not accepted you, or their relay is out of reach'**
+  String get presenceWaiting;
+
+  /// No description provided for @presenceByRelay.
+  ///
+  /// In en, this message translates to:
+  /// **'their relay says they are connected'**
+  String get presenceByRelay;
+
+  /// No description provided for @presenceSealed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 device sealed to others} other{{count} devices sealed to others}}'**
+  String presenceSealed(int count);
+
+  /// No description provided for @presenceMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get presenceMore;
+
+  /// No description provided for @presenceUnfollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop following'**
+  String get presenceUnfollow;
+
+  /// No description provided for @presenceStopSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop sharing with them'**
+  String get presenceStopSharing;
+
+  /// No description provided for @presenceStopSharingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw what you granted {who}? They can no longer call you or follow your presence, and your presence keys change for everyone else who follows you.'**
+  String presenceStopSharingConfirm(String who);
+
+  /// No description provided for @presenceRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{{who} held no grant of yours.} =1{Withdrew 1 grant from {who}.} other{Withdrew {count} grants from {who}.}}'**
+  String presenceRevoked(int count, String who);
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

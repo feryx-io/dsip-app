@@ -163,5 +163,52 @@
         "type": "String"
       }
     }
+  },
+  "navPresence": "Presence",
+  "presenceMine": "Your presence",
+  "presenceAutomatic": "Automatic",
+  "presenceAvailable": "Available",
+  "presenceBusy": "Busy",
+  "presenceAway": "Away",
+  "presenceDnd": "Do not disturb",
+  "presenceOffline": "Invisible",
+  "presenceAutomaticExplained": "Those who follow you see you available while this app is connected, and offline when it is not.",
+  "presenceSetExplained": "Those who follow you see this, sealed so that only they can read it: not your relay.",
+  "presenceOfflineExplained": "Those who follow you see you offline. Calls still reach you.",
+  "presenceFollowing": "Following",
+  "presenceFollow": "Follow someone",
+  "presenceFollowHint": "They see that you follow them; their presence shows once they have accepted you",
+  "presenceNone": "You follow no one. Those who accept you are followed for you.",
+  "presenceWaiting": "Not shown: they have not accepted you, or their relay is out of reach",
+  "presenceByRelay": "their relay says they are connected",
+  "presenceSealed": "{count, plural, =1{1 device sealed to others} other{{count} devices sealed to others}}",
+  "@presenceSealed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "presenceMore": "More",
+  "presenceUnfollow": "Stop following",
+  "presenceStopSharing": "Stop sharing with them",
+  "presenceStopSharingConfirm": "Withdraw what you granted {who}? They can no longer call you or follow your presence, and your presence keys change for everyone else who follows you.",
+  "@presenceStopSharingConfirm": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "presenceRevoked": "{count, plural, =0{{who} held no grant of yours.} =1{Withdrew 1 grant from {who}.} other{Withdrew {count} grants from {who}.}}",
+  "@presenceRevoked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
   }
 }
