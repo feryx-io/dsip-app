@@ -305,4 +305,98 @@ class StringsEn extends Strings {
   String noticeRemoved(String who) {
     return '$who removed you from a conversation.';
   }
+
+  @override
+  String get navPresence => 'Presence';
+
+  @override
+  String get presenceMine => 'Your presence';
+
+  @override
+  String get presenceAutomatic => 'Automatic';
+
+  @override
+  String get presenceAvailable => 'Available';
+
+  @override
+  String get presenceBusy => 'Busy';
+
+  @override
+  String get presenceAway => 'Away';
+
+  @override
+  String get presenceDnd => 'Do not disturb';
+
+  @override
+  String get presenceOffline => 'Invisible';
+
+  @override
+  String get presenceAutomaticExplained =>
+      'Those who follow you see you available while this app is connected, and offline when it is not.';
+
+  @override
+  String get presenceSetExplained =>
+      'Those who follow you see this, sealed so that only they can read it: not your relay.';
+
+  @override
+  String get presenceOfflineExplained =>
+      'Those who follow you see you offline. Calls still reach you.';
+
+  @override
+  String get presenceFollowing => 'Following';
+
+  @override
+  String get presenceFollow => 'Follow someone';
+
+  @override
+  String get presenceFollowHint =>
+      'They see that you follow them; their presence shows once they have accepted you';
+
+  @override
+  String get presenceNone =>
+      'You follow no one. Those who accept you are followed for you.';
+
+  @override
+  String get presenceWaiting =>
+      'Not shown: they have not accepted you, or their relay is out of reach';
+
+  @override
+  String get presenceByRelay => 'their relay says they are connected';
+
+  @override
+  String presenceSealed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count devices sealed to others',
+      one: '1 device sealed to others',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get presenceMore => 'More';
+
+  @override
+  String get presenceUnfollow => 'Stop following';
+
+  @override
+  String get presenceStopSharing => 'Stop sharing with them';
+
+  @override
+  String presenceStopSharingConfirm(String who) {
+    return 'Withdraw what you granted $who? They can no longer call you or follow your presence, and your presence keys change for everyone else who follows you.';
+  }
+
+  @override
+  String presenceRevoked(int count, String who) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Withdrew $count grants from $who.',
+      one: 'Withdrew 1 grant from $who.',
+      zero: '$who held no grant of yours.',
+    );
+    return '$_temp0';
+  }
 }

@@ -1,0 +1,28 @@
+{
+  "following": [
+    {
+      "identity": "did:key:z6MkBob",
+      "state": "away",
+      "source": "record",
+      "unreadable": 1
+    },
+    {
+      "identity": "did:key:z6MkCarol",
+      "state": "available",
+      "source": "assertion"
+    },
+    {
+      "identity": "did:key:z6MkDave",
+      "state": "busy",
+      "token": "in-a-meeting",
+      "source": "record"
+    },
+    {
+      "identity": "did:key:z6MkErin"
+    }
+  ],
+  "revoked": {
+    "response": "revoked",
+    "count": 2
+  }
+}

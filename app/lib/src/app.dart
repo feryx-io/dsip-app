@@ -8,6 +8,7 @@ import 'screens/calls.dart';
 import 'screens/first_run.dart';
 import 'screens/me.dart';
 import 'screens/messages.dart';
+import 'screens/presence.dart';
 
 /// The app: the first run until there are settings, then the home screen over the running app's state.
 class DsipApp extends StatelessWidget {
@@ -77,6 +78,10 @@ class _HomeState extends State<Home> {
                 ),
                 label: Text(s.navMessages),
               ),
+              NavigationRailDestination(
+                icon: PresenceDot(state.presence.mine ?? 'available'),
+                label: Text(s.navPresence),
+              ),
               NavigationRailDestination(icon: const Icon(Icons.person), label: Text(s.navMe)),
             ],
           ),
@@ -85,6 +90,7 @@ class _HomeState extends State<Home> {
             child: switch (_tab) {
               0 => CallsScreen(controller: widget.controller, state: state),
               1 => MessagesScreen(controller: widget.controller, state: state),
+              2 => PresenceScreen(controller: widget.controller, state: state),
               _ => MeScreen(state: state),
             },
           ),
