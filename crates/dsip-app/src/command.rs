@@ -123,6 +123,19 @@ pub enum Command {
         /// The grantee.
         identity: String,
     },
+    /// Use these audio devices (their [`AudioDevice::id`](crate::AudioDevice)s; without one, the system's default of
+    /// its kind) for calls from now on, and the call that has the devices moves to them. The platform's host only.
+    ChooseAudio {
+        /// The microphone.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        input: Option<String>,
+        /// The speaker.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        output: Option<String>,
+    },
+    /// Look at the audio devices again (one plugged in or out); answers with [`Response::Ok`] after a
+    /// [`Change::Audio`](crate::Change).
+    AudioDevices,
     /// A conversation's messages, oldest first.
     Thread {
         /// Its group id.

@@ -9,6 +9,7 @@ import 'screens/first_run.dart';
 import 'screens/me.dart';
 import 'screens/messages.dart';
 import 'screens/presence.dart';
+import 'screens/settings.dart';
 
 /// The app: the first run until there are settings, then the home screen over the running app's state.
 class DsipApp extends StatelessWidget {
@@ -43,7 +44,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  int _tab = 0;
+  int get _tab => widget.controller.tab;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +67,7 @@ class _HomeState extends State<Home> {
         children: [
           NavigationRail(
             selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
+            onDestinationSelected: (i) => setState(() => widget.controller.tab = i),
             labelType: NavigationRailLabelType.all,
             destinations: [
               NavigationRailDestination(icon: const Icon(Icons.call), label: Text(s.navCalls)),
@@ -83,6 +84,7 @@ class _HomeState extends State<Home> {
                 label: Text(s.navPresence),
               ),
               NavigationRailDestination(icon: const Icon(Icons.person), label: Text(s.navMe)),
+              NavigationRailDestination(icon: const Icon(Icons.settings), label: Text(s.navSettings)),
             ],
           ),
           const VerticalDivider(width: 1),
@@ -91,7 +93,8 @@ class _HomeState extends State<Home> {
               0 => CallsScreen(controller: widget.controller, state: state),
               1 => MessagesScreen(controller: widget.controller, state: state),
               2 => PresenceScreen(controller: widget.controller, state: state),
-              _ => MeScreen(state: state),
+              3 => MeScreen(state: state),
+              _ => SettingsScreen(controller: widget.controller, state: state),
             },
           ),
         ],

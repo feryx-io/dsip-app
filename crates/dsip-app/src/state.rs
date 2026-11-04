@@ -208,6 +208,12 @@ pub struct Audio {
     pub host: String,
     /// The microphones and speakers the host offers.
     pub devices: Vec<AudioDevice>,
+    /// The microphone chosen (its [`AudioDevice::id`]); `None`: the system's default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input: Option<String>,
+    /// The speaker chosen; `None`: the system's default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<String>,
 }
 
 /// A microphone or speaker.
@@ -289,6 +295,11 @@ pub enum Change {
         /// The identity.
         identity: String,
     },
+    /// The audio devices changed: those offered, or those chosen.
+    Audio {
+        /// The audio as it is now.
+        audio: Audio,
+    },
     /// The app stopped: its phone unbound.
     Stopped,
 }
@@ -315,6 +326,7 @@ impl State {
                 }
             }
             Change::Unfollowed { identity } => self.presence.following.retain(|p| &p.identity != identity),
+            Change::Audio { audio } => self.audio = audio.clone(),
             Change::Message { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }

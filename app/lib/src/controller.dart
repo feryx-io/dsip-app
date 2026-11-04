@@ -20,6 +20,12 @@ class Controller extends ChangeNotifier {
   /// Whether the app has settings to start from; null until [load] knows.
   bool? configured;
 
+  /// The settings the app runs with (`dsip-app`'s `Settings` as JSON), as saved.
+  Map<String, dynamic>? settings;
+
+  /// The home screen's tab: kept here, so that the app starting again (new settings) comes back to it.
+  int tab = 0;
+
   /// The latest command that failed, for the screen to show once.
   String? error;
 
@@ -35,7 +41,7 @@ class Controller extends ChangeNotifier {
 
   /// Read the settings; start the app when there are some.
   Future<void> load() async {
-    final settings = await store.load();
+    final settings = this.settings = await store.load();
     configured = settings != null;
     notifyListeners();
     if (settings != null) await _start(settings);
@@ -46,8 +52,40 @@ class Controller extends ChangeNotifier {
   Future<void> setUp({required Map<String, dynamic> settings, String? displayName}) async {
     if (displayName != null) await client.initIdentity(settings['identity'] as String, displayName);
     await store.save(settings);
+    this.settings = settings;
     configured = true;
     await _start(settings);
+  }
+
+  /// Stop the app, save [settings], start it again with them: what changing the relay, mailbox or hints nodes takes.
+  /// Calls up end. If it does not start, the state stays empty and [error] says why.
+  Future<void> restart(Map<String, dynamic> settings) async {
+    await _updates?.cancel();
+    _updates = null;
+    await client.stop();
+    state = null;
+    threads.clear();
+    notifyListeners();
+    await store.save(settings);
+    this.settings = settings;
+    try {
+      await _start(settings);
+    } catch (e) {
+      error = '$e';
+      notifyListeners();
+    }
+  }
+
+  /// Use the microphone [input] and the speaker [output] (device ids; null: the system's default), and keep the
+  /// choice in the settings for the next start.
+  Future<void> chooseAudio({String? input, String? output}) async {
+    final r = await run({'command': 'choose_audio', 'input': ?input, 'output': ?output});
+    if (errorOf(r) != null || settings == null) return;
+    final s = {...settings!}
+      ..remove('audio_input')
+      ..remove('audio_output');
+    settings = {...s, 'audio_input': ?input, 'audio_output': ?output};
+    await store.save(settings!);
   }
 
   Future<void> _start(Map<String, dynamic> settings) async {

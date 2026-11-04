@@ -92,6 +92,23 @@ impl Audio {
             .collect()
     }
 
+    /// Use these devices (by id; `None`: the system's default) for the streams opened from now on; the open ones move.
+    /// The tone host has no choice of device and refuses.
+    pub fn choose(&self, input: Option<&str>, output: Option<&str>) -> Result<(), String> {
+        self.host.choose_devices(input, output).map_err(|e| e.to_string())
+    }
+
+    /// The devices chosen, `None` for the system's default.
+    pub fn chosen(&self) -> (Option<String>, Option<String>) {
+        self.host.chosen_devices()
+    }
+
+    /// The audio's part of the state: the host, its devices, those chosen.
+    pub fn view(&self) -> crate::state::Audio {
+        let (input, output) = self.chosen();
+        crate::state::Audio { host: self.kind.name().into(), devices: self.devices(), input, output }
+    }
+
     /// With the tone host: frames the speaker was given and their peak level (0–1), to see sound arrive.
     pub fn tone_heard(&self) -> Option<(u64, f32)> {
         self.tone.as_ref().map(|s| (s.frames(), s.peak_rms()))

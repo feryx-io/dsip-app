@@ -20,6 +20,12 @@ pub struct Settings {
     /// `system` (the microphone and speaker), `tone` (a test tone), `none` (calls without sound). Default: `system`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audio: Option<String>,
+    /// The microphone to use (an [`AudioDevice::id`](crate::AudioDevice)); without it, the system's default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio_input: Option<String>,
+    /// The speaker to use; without it, the system's default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio_output: Option<String>,
     /// STUN servers for the calls' media.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stun: Vec<String>,
@@ -59,6 +65,7 @@ impl Settings {
             "none" => None,
             other => return Err(bad(format!("audio {other}: system, tone or none"))),
         };
+        cfg.audio_devices = (self.audio_input.clone(), self.audio_output.clone());
         cfg.stun = self.stun.clone();
         if !self.hints_nodes.is_empty() {
             let pem = match &self.ca {

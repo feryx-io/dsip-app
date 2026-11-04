@@ -210,5 +210,30 @@
         "type": "String"
       }
     }
-  }
+  },
+  "navSettings": "Settings",
+  "settingsSound": "Sound",
+  "settingsSoundTone": "This app plays a test tone instead of using a microphone and speaker.",
+  "settingsSoundNone": "Calls have no sound in this app.",
+  "settingsMicrophone": "Microphone",
+  "settingsSpeaker": "Speaker",
+  "settingsSoundDefault": "The system's default",
+  "settingsSoundSystemDefault": "{name} (the system's default)",
+  "@settingsSoundSystemDefault": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSoundRefresh": "Look for devices again",
+  "settingsConnection": "Connection",
+  "settingsIdentityFolder": "Identity folder",
+  "settingsStun": "STUN server (optional)",
+  "settingsStunHint": "stun:stun.example.com:3478",
+  "settingsSave": "Save and restart",
+  "settingsRestartTitle": "Restart the app?",
+  "settingsRestartBody": "The app disconnects and connects again with these settings.",
+  "settingsRestartCalls": "The app disconnects and connects again with these settings. Calls in progress end.",
+  "settingsRestart": "Restart"
 }

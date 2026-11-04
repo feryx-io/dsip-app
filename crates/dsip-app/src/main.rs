@@ -1,7 +1,7 @@
 //! `dsip-app`: run the client, or drive the one running. `dsip-app run` binds an identity to its relay (and, with
 //! `--mailbox`, to its mailbox) and serves the control socket; `call`, `answer`, `decline`, `hangup`, `mute`, `unmute`,
-//! `introduce`, `accept`, `decline-request`, `message`, `thread`, `presence`, `follow`, `unfollow`, `state` and `watch`
-//! talk to it.
+//! `introduce`, `accept`, `decline-request`, `message`, `group`, `add`, `remove`, `leave`, `thread`, `presence`,
+//! `follow`, `unfollow`, `revoke`, `audio`, `state` and `watch` talk to it.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -22,6 +22,8 @@ struct Args {
 }
 
 #[derive(Subcommand)]
+// parsed once per run: `run`'s many flags cost nothing worth a box
+#[allow(clippy::large_enum_variant)]
 enum Cmd {
     /// Make an identity: a controller key, a device key and the delegation between them, in `dir` (a `did:key`).
     Init {
@@ -46,6 +48,12 @@ enum Cmd {
         /// Audio: `system` (the microphone and speaker), `tone` (a test tone, headless), `none` (calls without sound).
         #[arg(long, default_value = "system")]
         audio: String,
+        /// The microphone to use (an id `dsip-app state` lists under audio.devices); default: the system's.
+        #[arg(long)]
+        input: Option<String>,
+        /// The speaker to use; default: the system's.
+        #[arg(long)]
+        output: Option<String>,
         /// STUN server for the calls' media (repeatable): `stun:stun.example.com:3478`.
         #[arg(long)]
         stun: Vec<String>,
@@ -178,6 +186,16 @@ enum Cmd {
         #[arg(long)]
         call: Option<u64>,
     },
+    /// Use this microphone and speaker for calls (ids from `state`'s audio.devices; one left out: the system's
+    /// default). Without either, list the devices again.
+    Audio {
+        /// The microphone.
+        #[arg(long)]
+        input: Option<String>,
+        /// The speaker.
+        #[arg(long)]
+        output: Option<String>,
+    },
     /// Print the state (JSON).
     State,
     /// Print the state, then every change, one JSON line each, until the app stops.
@@ -197,12 +215,14 @@ async fn main() -> Result<ExitCode> {
             println!("{}", dsip_app::init_identity(&identity, &name).context("making the identity")?);
             return Ok(ExitCode::SUCCESS);
         }
-        Cmd::Run { identity, relay, ca, audio, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web } => {
+        Cmd::Run { identity, relay, ca, audio, input, output, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web } => {
             let settings = Settings {
                 identity,
                 relay,
                 ca,
                 audio: Some(audio),
+                audio_input: input,
+                audio_output: output,
                 stun,
                 mailbox: mailbox.zip(mailbox_did).map(|(uri, did)| Mailbox { uri, did }),
                 hints_nodes,
@@ -250,6 +270,8 @@ async fn main() -> Result<ExitCode> {
         Cmd::Hangup { call } => Command::Hangup { call },
         Cmd::Mute { call } => Command::Mute { call },
         Cmd::Unmute { call } => Command::Unmute { call },
+        Cmd::Audio { input: None, output: None } => Command::AudioDevices,
+        Cmd::Audio { input, output } => Command::ChooseAudio { input, output },
         Cmd::State => Command::State,
         Cmd::Quit => Command::Quit,
     };

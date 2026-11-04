@@ -5,7 +5,7 @@
 
 use dsip_app::{
     AudioDevice, AudioState, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, PresenceView, RequestView,
-    Response, State,
+    Mailbox, Response, Settings, State,
 };
 
 fn state() -> State {
@@ -15,6 +15,7 @@ fn state() -> State {
         audio: AudioState {
             host: "system".into(),
             devices: vec![AudioDevice { id: "mic-1".into(), name: "Built-in microphone".into(), kind: "input".into(), default: true }],
+            ..AudioState::default()
         },
         ..State::default()
     };
@@ -117,4 +118,35 @@ fn the_presence_the_desktop_app_reads() {
         ],
         "revoked": Response::Revoked { count: 2 },
     }));
+}
+
+#[test]
+fn the_settings_the_desktop_app_reads_and_writes() {
+    let device = |id: &str, name: &str, kind: &str, default| AudioDevice { id: id.into(), name: name.into(), kind: kind.into(), default };
+    let audio = AudioState {
+        host: "system".into(),
+        devices: vec![
+            device("mic-1", "Built-in microphone", "input", true),
+            device("mic-2", "USB headset", "input", false),
+            device("spk-1", "Built-in speakers", "output", true),
+            device("spk-2", "USB headset", "output", false),
+        ],
+        input: None,
+        output: Some("spk-2".into()),
+    };
+    // what the settings screen saves: `Settings` with every field it edits
+    let settings = Settings {
+        identity: "/home/alice/.local/share/dsip/identity".into(),
+        relay: "wss://relay.example.com:8443/dsip".into(),
+        audio_input: Some("mic-2".into()),
+        audio_output: Some("spk-2".into()),
+        stun: vec!["stun:stun.example.com:3478".into()],
+        mailbox: Some(Mailbox { uri: "wss://mailbox.example.com:9443/dsip".into(), did: "did:key:z6MkMailbox".into() }),
+        hints_nodes: vec!["https://hints.example.com:8090".into()],
+        ..Settings::default()
+    };
+    let value = serde_json::json!({"audio": Change::Audio { audio }, "settings": settings});
+    holds("settings.json", value.clone());
+    // and what the app saves, the app reads
+    assert_eq!(serde_json::from_value::<Settings>(value["settings"].clone()).unwrap(), settings);
 }

@@ -399,4 +399,63 @@ class StringsEn extends Strings {
     );
     return '$_temp0';
   }
+
+  @override
+  String get navSettings => 'Settings';
+
+  @override
+  String get settingsSound => 'Sound';
+
+  @override
+  String get settingsSoundTone =>
+      'This app plays a test tone instead of using a microphone and speaker.';
+
+  @override
+  String get settingsSoundNone => 'Calls have no sound in this app.';
+
+  @override
+  String get settingsMicrophone => 'Microphone';
+
+  @override
+  String get settingsSpeaker => 'Speaker';
+
+  @override
+  String get settingsSoundDefault => 'The system\'s default';
+
+  @override
+  String settingsSoundSystemDefault(String name) {
+    return '$name (the system\'s default)';
+  }
+
+  @override
+  String get settingsSoundRefresh => 'Look for devices again';
+
+  @override
+  String get settingsConnection => 'Connection';
+
+  @override
+  String get settingsIdentityFolder => 'Identity folder';
+
+  @override
+  String get settingsStun => 'STUN server (optional)';
+
+  @override
+  String get settingsStunHint => 'stun:stun.example.com:3478';
+
+  @override
+  String get settingsSave => 'Save and restart';
+
+  @override
+  String get settingsRestartTitle => 'Restart the app?';
+
+  @override
+  String get settingsRestartBody =>
+      'The app disconnects and connects again with these settings.';
+
+  @override
+  String get settingsRestartCalls =>
+      'The app disconnects and connects again with these settings. Calls in progress end.';
+
+  @override
+  String get settingsRestart => 'Restart';
 }

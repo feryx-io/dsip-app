@@ -1,0 +1,51 @@
+{
+  "audio": {
+    "change": "audio",
+    "audio": {
+      "host": "system",
+      "devices": [
+        {
+          "id": "mic-1",
+          "name": "Built-in microphone",
+          "kind": "input",
+          "default": true
+        },
+        {
+          "id": "mic-2",
+          "name": "USB headset",
+          "kind": "input",
+          "default": false
+        },
+        {
+          "id": "spk-1",
+          "name": "Built-in speakers",
+          "kind": "output",
+          "default": true
+        },
+        {
+          "id": "spk-2",
+          "name": "USB headset",
+          "kind": "output",
+          "default": false
+        }
+      ],
+      "output": "spk-2"
+    }
+  },
+  "settings": {
+    "identity": "/home/alice/.local/share/dsip/identity",
+    "relay": "wss://relay.example.com:8443/dsip",
+    "audio_input": "mic-2",
+    "audio_output": "spk-2",
+    "stun": [
+      "stun:stun.example.com:3478"
+    ],
+    "mailbox": {
+      "uri": "wss://mailbox.example.com:9443/dsip",
+      "did": "did:key:z6MkMailbox"
+    },
+    "hints_nodes": [
+      "https://hints.example.com:8090"
+    ]
+  }
+}

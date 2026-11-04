@@ -18,6 +18,7 @@ class FakeClient implements Client {
   final commands = <Map<String, dynamic>>[];
   final identities = <(String, String)>[];
   Map<String, dynamic>? started;
+  int stops = 0;
   final _updates = StreamController<Update>.broadcast();
   Map<String, dynamic> Function(Map<String, dynamic>) answer = (_) => {'response': 'ok'};
   Object? startFails;
@@ -48,5 +49,5 @@ class FakeClient implements Client {
   Stream<Update> updates() => _updates.stream;
 
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async => stops++;
 }
