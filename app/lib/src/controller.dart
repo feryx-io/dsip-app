@@ -5,15 +5,24 @@ import 'package:flutter/foundation.dart';
 
 import 'client/client.dart';
 import 'client/models.dart';
+import 'mobile/platform.dart';
 import 'settings.dart';
 
 /// The app as the screens see it: first run until there are settings, then the running app's state, one update at a
 /// time. Every action is a `dsip-app` command; nothing here decides what the protocol does.
 class Controller extends ChangeNotifier {
-  Controller(this.client, this.store, {this.checkUpdates = false, void Function()? quit}) : quit = quit ?? (() => exit(0));
+  Controller(this.client, this.store, {this.checkUpdates = false, this.mobile, void Function()? quit})
+    : quit = quit ?? (() => exit(0));
 
   final Client client;
   final SettingsStore store;
+
+  /// The phone around the app, on Android and iOS; null on a desktop. A phone's app is updated by its store, not by
+  /// itself.
+  final MobilePlatform? mobile;
+
+  /// The system said no to the microphone: calls still ring and connect, but the other side hears nothing.
+  bool microphoneRefused = false;
 
   /// Look for a newer release half a minute after the start and every hour (the app does; tests do not).
   final bool checkUpdates;
@@ -116,6 +125,16 @@ class Controller extends ChangeNotifier {
   }
 
   Future<void> _start(Map<String, dynamic> settings) async {
+    final mobile = this.mobile;
+    if (mobile != null) {
+      // Before the app starts, as on Anvil: a refusal is told, and the app still starts.
+      microphoneRefused = !await mobile.requestMicrophone();
+      try {
+        await mobile.startAudio();
+      } catch (e) {
+        error = '$e';
+      }
+    }
     await client.start(settings);
     _updates = client.updates().listen((u) {
       state = u.state;

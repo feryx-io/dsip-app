@@ -63,6 +63,8 @@ class AboutSettings extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(s.settingsVersion(controller.client.appVersion()), key: const Key('app-version')),
+        // A phone's store updates its app.
+        if (controller.mobile == null) ...[
         const SizedBox(height: 8),
         Wrap(
           spacing: 16,
@@ -78,6 +80,7 @@ class AboutSettings extends StatelessWidget {
             if (status != null) Text(status, key: const Key('update-status')),
           ],
         ),
+        ],
       ],
     );
   }

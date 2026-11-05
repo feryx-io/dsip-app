@@ -1,7 +1,7 @@
-# The DSIP desktop app
+# The DSIP app
 
 Flutter over [`dsip-app`](../crates/dsip-app) through `flutter_rust_bridge` (app plan stage A3), on Linux, Windows and
-macOS. The bridge (`rust/src/api/app.rs`) is five functions: `init_identity`, `start` (with `dsip-app`'s `Settings`),
+macOS, and on Android and iOS (A5). The bridge (`rust/src/api/app.rs`) is five functions: `init_identity`, `start` (with `dsip-app`'s `Settings`),
 `command` and `updates`, each carrying `dsip-app`'s own `Command`, `Response`, `State` and `Change` as JSON, the
 values the control socket carries, so the app and the CLI cannot behave differently, and `stop`. Each update holds
 the whole state after a change, so Dart never applies a change itself.
@@ -48,6 +48,26 @@ pkg-config libgtk-3-dev`. On Windows, cargo builds the Rust core in `build\windo
 ```bash
 flutter_rust_bridge_codegen generate   # 2.13.0
 ```
+
+## On a phone
+
+The same app on Android (8.0 and later) and iOS, with the same id as the desktop's, `com.thevoiceguy.dsip` (A5a, as
+Anvil's U4a). Cargokit cross-builds the Rust core for each Android ABI and for iOS devices and simulators.
+`MainActivity` loads the core and hands it the JVM and the application context, which cpal's Android audio needs and a
+Flutter app does not set up (`rust/src/android.rs`); `rust/build.rs` links the NDK's C++ ABI for oboe. Before the app
+starts it asks for the microphone (refused, it still starts and says why) and, on iOS, sets the audio session to play
+and record for voice chat (`lib/src/mobile/platform.dart`, the `dsip/mobile` channel). Below 600 points wide the tabs
+run along the bottom and a conversation opens over the list; the goldens hold each screen at a phone's size too
+(`phone-*.png`). A phone does not update itself: its store does (A7). The system's call screen (CallKit, Telecom),
+the call's audio route and ringing a sleeping phone (A1's push) come next (A5b–A5d).
+
+```bash
+flutter build apk --release                                   # debug-signed until there is an upload key (A7)
+flutter build ios --release --no-codesign                     # unsigned until there is an Apple account
+flutter test integration_test/mobile_test.dart -d <device>    # an emulator or a simulator: the core, the audio
+```
+
+The launcher icons are drawn by `tool/icons.py` with the desktop's.
 
 ## Releases
 

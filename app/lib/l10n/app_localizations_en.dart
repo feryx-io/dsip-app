@@ -512,4 +512,8 @@ class StringsEn extends Strings {
 
   @override
   String get updateNotes => 'What\'s new';
+
+  @override
+  String get microphoneRefused =>
+      'DSIP may not use the microphone, so the people you call will not hear you. Allow it in the system\'s settings for DSIP.';
 }

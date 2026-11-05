@@ -1,5 +1,6 @@
-// Golden screenshots of every screen, light and dark (app plan A3): one set, made on Linux, compared on Linux, Windows
-// and macOS. "The same on every desktop" is this test passing on all three.
+// Golden screenshots of every screen, light and dark (app plan A3), at a desktop's size and a phone's (A5, `phone-`):
+// one set, made on Linux, compared on Linux, Windows and macOS. "The same on every desktop" is this test passing on
+// all three; at a phone's size, a screen that does not fit fails it (an overflow is an error in a test).
 //
 // Drawn with the app's own fonts (Inter, Material Icons), from the fixtures `dsip-app`'s `wire_fixture` test makes, so
 // what is shown is what the app sends. Made again after a deliberate change to a screen:
@@ -52,8 +53,7 @@ void main() {
   setUp(() => dir = Directory.systemTemp.createTempSync('dsip-app-golden'));
   tearDown(() => dir.deleteSync(recursive: true));
 
-  const size = Size(1100, 760);
-
+  for (final (prefix, size) in [('', const Size(1100, 760)), ('phone-', const Size(390, 844))]) {
   for (final brightness in Brightness.values) {
     final theme = brightness.name;
 
@@ -89,14 +89,14 @@ void main() {
       await tester.pumpAndSettle();
       if (arrange != null) await arrange(tester);
       await tester.pumpAndSettle();
-      await expectLater(find.byType(DsipApp), matchesGoldenFile('$name-$theme.png'));
+      await expectLater(find.byType(DsipApp), matchesGoldenFile('$prefix$name-$theme.png'));
     }
 
-    testWidgets('first run, $theme', (tester) => shot(tester, 'first_run'));
+    testWidgets('first run, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'first_run'));
 
-    testWidgets('calls, $theme', (tester) => shot(tester, 'calls', tab: 'Calls'));
+    testWidgets('calls, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'calls', tab: 'Calls'));
 
-    testWidgets('messages, $theme', (tester) async {
+    testWidgets('messages, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) async {
       await shot(
         tester,
         'messages',
@@ -105,13 +105,13 @@ void main() {
       );
     });
 
-    testWidgets('presence, $theme', (tester) => shot(tester, 'presence', tab: 'Presence'));
+    testWidgets('presence, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'presence', tab: 'Presence'));
 
-    testWidgets('me, $theme', (tester) => shot(tester, 'me', tab: 'Me'));
+    testWidgets('me, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'me', tab: 'Me'));
 
-    testWidgets('settings, $theme', (tester) => shot(tester, 'settings', tab: 'Settings'));
+    testWidgets('settings, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'settings', tab: 'Settings'));
 
-    testWidgets('an update, $theme', (tester) async {
+    testWidgets('an update, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) async {
       await shot(
         tester,
         'update',
@@ -123,5 +123,6 @@ void main() {
         ),
       );
     });
+  }
   }
 }

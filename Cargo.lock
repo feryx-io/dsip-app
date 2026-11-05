@@ -1763,6 +1763,8 @@ dependencies = [
  "anyhow",
  "dsip-app",
  "flutter_rust_bridge",
+ "jni 0.21.1",
+ "ndk-context",
  "serde_json",
  "tokio",
  "tracing",

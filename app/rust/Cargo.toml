@@ -21,5 +21,10 @@ tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+[target.'cfg(target_os = "android")'.dependencies]
+# The JVM and context cpal's Android backend needs (src/android.rs); the versions cpal 0.15 uses.
+jni         = "0.21"
+ndk-context = "0.1"
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

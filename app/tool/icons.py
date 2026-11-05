@@ -2,8 +2,9 @@
 """DSIP's app icon, drawn in pure Python so anyone can draw it again: `python3 tool/icons.py`.
 
 A white key (your identity is a key you hold, not an account) on a rounded square in the app's teal, for macOS (the
-AppIcon set), Windows (app_icon.ico) and Linux (linux/packaging/dsip.png, the installers' icon). The approach is
-Anvil's (its app/tool/icons.py)."""
+AppIcon set), Windows (app_icon.ico), Linux (linux/packaging/dsip.png, the installers' icon) and Android (the launcher's
+mipmaps); on a full, opaque square for iOS (the AppIcon set), which rounds the corners itself and refuses an alpha
+channel. The approach is Anvil's (its app/tool/icons.py)."""
 
 import math
 import os
@@ -34,7 +35,12 @@ def tile(x, y):
     return math.hypot(dx, dy) <= radius
 
 
-def render(size, ss=SS):
+def square(x, y):
+    """The whole square: iOS draws its own corners."""
+    return True
+
+
+def render(size, ss=SS, shape=tile, scale=1.3, opaque=False):
     rows = []
     for py in range(size):
         row = bytearray([0])  # PNG filter: none
@@ -44,23 +50,24 @@ def render(size, ss=SS):
                 for sx in range(ss):
                     x = (px + (sx + 0.5) / ss) / size - 0.5
                     y = (py + (sy + 0.5) / ss) / size - 0.5
-                    if tile(x, y):
+                    if shape(x, y):
                         inside += 1
-                        if key(x * 1.3, y * 1.3):
+                        if key(x * scale, y * scale):
                             white += 1
             alpha = inside / (ss * ss)
             w = white / inside if inside else 0
-            row += bytes([round(c * (1 - w) + 255 * w) for c in TEAL] + [round(alpha * 255)])
+            rgb = [round(c * (1 - w) + 255 * w) for c in TEAL]
+            row += bytes(rgb if opaque else rgb + [round(alpha * 255)])
         rows.append(bytes(row))
-    return png(size, b"".join(rows))
+    return png(size, b"".join(rows), opaque)
 
 
-def png(size, raw):
+def png(size, raw, opaque=False):
     def chunk(kind, data):
         body = kind + data
         return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
 
-    header = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)  # 8-bit RGBA
+    header = struct.pack(">IIBBBBB", size, size, 8, 2 if opaque else 6, 0, 0, 0)  # 8-bit RGB, or RGBA
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
 
 
@@ -88,6 +95,19 @@ def main():
     os.makedirs(linux, exist_ok=True)
     with open(os.path.join(linux, "dsip.png"), "wb") as f:
         f.write(icons[512])
+    res = os.path.join(app, "android", "app", "src", "main", "res")
+    for density, size in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)):
+        with open(os.path.join(res, f"mipmap-{density}", "ic_launcher.png"), "wb") as f:
+            f.write(render(size))
+    ios = os.path.join(app, "ios", "Runner", "Assets.xcassets", "AppIcon.appiconset")
+    for name in sorted(os.listdir(ios)):
+        if name.startswith("Icon-App-") and name.endswith(".png"):
+            # Icon-App-83.5x83.5@2x.png: 83.5 points at 2x is 167 pixels. The key a little larger: the square has no
+            # margin.
+            points, scale = name[len("Icon-App-"):-len(".png")].split("@")
+            size = round(float(points.split("x")[0]) * int(scale[:-1]))
+            with open(os.path.join(ios, name), "wb") as f:
+                f.write(render(size, ss=4 if size <= 256 else 2, shape=square, scale=1.05, opaque=True))
 
 
 if __name__ == "__main__":

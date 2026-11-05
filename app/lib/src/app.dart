@@ -64,48 +64,66 @@ class _HomeState extends State<Home> {
       );
     }
     final state = widget.state;
+    final destinations = <(Widget, String)>[
+      (const Icon(Icons.call), s.navCalls),
+      (
+        Badge(
+          isLabelVisible: state.messaging.requests.isNotEmpty,
+          label: Text('${state.messaging.requests.length}'),
+          child: const Icon(Icons.chat),
+        ),
+        s.navMessages,
+      ),
+      (PresenceDot(state.presence.mine ?? 'available'), s.navPresence),
+      (const Icon(Icons.person), s.navMe),
+      (const Icon(Icons.settings), s.navSettings),
+    ];
+    void select(int i) => setState(() => widget.controller.tab = i);
+    final body = Column(
+      children: [
+        UpdateBanner(controller: widget.controller),
+        if (widget.controller.microphoneRefused)
+          MaterialBanner(
+            key: const Key('microphone-refused'),
+            leading: const Icon(Icons.mic_off),
+            content: Text(s.microphoneRefused),
+            actions: const [SizedBox.shrink()],
+          ),
+        Expanded(
+          child: switch (_tab) {
+            0 => CallsScreen(controller: widget.controller, state: state),
+            1 => MessagesScreen(controller: widget.controller, state: state),
+            2 => PresenceScreen(controller: widget.controller, state: state),
+            3 => MeScreen(state: state),
+            _ => SettingsScreen(controller: widget.controller, state: state),
+          },
+        ),
+      ],
+    );
+    // A phone (or a narrow window): the tabs along the bottom, clear of the system's bars; else down the side.
+    if (MediaQuery.sizeOf(context).width < 600) {
+      return Scaffold(
+        body: SafeArea(bottom: false, child: body),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _tab,
+          onDestinationSelected: select,
+          destinations: [for (final (icon, label) in destinations) NavigationDestination(icon: icon, label: label)],
+        ),
+      );
+    }
     return Scaffold(
       body: Row(
         children: [
           NavigationRail(
             selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => widget.controller.tab = i),
+            onDestinationSelected: select,
             labelType: NavigationRailLabelType.all,
             destinations: [
-              NavigationRailDestination(icon: const Icon(Icons.call), label: Text(s.navCalls)),
-              NavigationRailDestination(
-                icon: Badge(
-                  isLabelVisible: state.messaging.requests.isNotEmpty,
-                  label: Text('${state.messaging.requests.length}'),
-                  child: const Icon(Icons.chat),
-                ),
-                label: Text(s.navMessages),
-              ),
-              NavigationRailDestination(
-                icon: PresenceDot(state.presence.mine ?? 'available'),
-                label: Text(s.navPresence),
-              ),
-              NavigationRailDestination(icon: const Icon(Icons.person), label: Text(s.navMe)),
-              NavigationRailDestination(icon: const Icon(Icons.settings), label: Text(s.navSettings)),
+              for (final (icon, label) in destinations) NavigationRailDestination(icon: icon, label: Text(label)),
             ],
           ),
           const VerticalDivider(width: 1),
-          Expanded(
-            child: Column(
-              children: [
-                UpdateBanner(controller: widget.controller),
-                Expanded(
-                  child: switch (_tab) {
-              0 => CallsScreen(controller: widget.controller, state: state),
-              1 => MessagesScreen(controller: widget.controller, state: state),
-              2 => PresenceScreen(controller: widget.controller, state: state),
-              3 => MeScreen(state: state),
-              _ => SettingsScreen(controller: widget.controller, state: state),
-                  },
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: body),
         ],
       ),
     );
