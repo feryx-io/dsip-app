@@ -26,3 +26,8 @@ dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11
 anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32", features = ["tone"] }
 anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32", default-features = false }
 anvil-update = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32" }
+
+# nix 0.26.4 (under webrtc-util, under dsip-media) does not compile for iOS with libc 0.2.190 and later; this copy keeps
+# macOS's kernel-control sockets to macOS (patches/README.md).
+[patch.crates-io]
+nix = { path = "patches/nix-0.26.4" }
