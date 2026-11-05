@@ -228,7 +228,7 @@ dependencies = [
 [[package]]
 name = "anvil-audio"
 version = "0.2.32"
-source = "git+https://github.com/thevoiceguy/anvil?rev=e13c3f7d7e41201ac95eb750f5e76f5546b57274#e13c3f7d7e41201ac95eb750f5e76f5546b57274"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
 dependencies = [
  "anvil-core",
  "async-trait",
@@ -245,7 +245,7 @@ dependencies = [
 [[package]]
 name = "anvil-core"
 version = "0.2.32"
-source = "git+https://github.com/thevoiceguy/anvil?rev=e13c3f7d7e41201ac95eb750f5e76f5546b57274#e13c3f7d7e41201ac95eb750f5e76f5546b57274"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -285,7 +285,7 @@ dependencies = [
 [[package]]
 name = "anvil-update"
 version = "0.2.32"
-source = "git+https://github.com/thevoiceguy/anvil?rev=e13c3f7d7e41201ac95eb750f5e76f5546b57274#e13c3f7d7e41201ac95eb750f5e76f5546b57274"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
 dependencies = [
  "futures",
  "reqwest",
