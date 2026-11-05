@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dsip_app/src/app.dart';
+import 'package:dsip_app/src/client/models.dart';
 import 'package:dsip_app/src/controller.dart';
 import 'package:dsip_app/src/settings.dart';
 import 'package:flutter/material.dart';
@@ -62,6 +63,7 @@ void main() {
       String name, {
       String? tab,
       Future<void> Function(WidgetTester tester)? arrange,
+      UpdateInfo? release,
     }) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
@@ -73,6 +75,7 @@ void main() {
           'thread' => _fixture('messages')['thread'] as Map<String, dynamic>,
           _ => {'response': 'ok'},
         };
+      client.release = release;
       final controller = Controller(client, SettingsStore(dir));
       if (tab != null) await tester.runAsync(() => SettingsStore(dir).save(_fixture('settings')['settings'] as Map<String, dynamic>));
       await tester.pumpWidget(DsipApp(controller: controller));
@@ -80,6 +83,7 @@ void main() {
       if (tab != null) {
         client.push(seeded());
         await tester.pumpAndSettle();
+        if (release != null) await controller.checkForUpdate();
         await tester.tap(find.text(tab).last);
       }
       await tester.pumpAndSettle();
@@ -106,5 +110,18 @@ void main() {
     testWidgets('me, $theme', (tester) => shot(tester, 'me', tab: 'Me'));
 
     testWidgets('settings, $theme', (tester) => shot(tester, 'settings', tab: 'Settings'));
+
+    testWidgets('an update, $theme', (tester) async {
+      await shot(
+        tester,
+        'update',
+        tab: 'Presence',
+        release: const UpdateInfo(
+          version: '0.2.0',
+          notes: 'https://github.com/thevoiceguy/dsip-app/releases/tag/v0.2.0',
+          canInstall: true,
+        ),
+      );
+    });
   }
 }

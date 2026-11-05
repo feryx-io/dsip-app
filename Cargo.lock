@@ -227,8 +227,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-audio"
-version = "0.2.31"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.31#a2361c385a8625b10fd2f8ab24ab88e66ee5ca90"
+version = "0.2.32"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
 dependencies = [
  "anvil-core",
  "async-trait",
@@ -244,8 +244,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-core"
-version = "0.2.31"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.31#a2361c385a8625b10fd2f8ab24ab88e66ee5ca90"
+version = "0.2.32"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -280,6 +280,22 @@ dependencies = [
  "tokio-rustls",
  "tracing",
  "webpki-roots 0.26.11",
+]
+
+[[package]]
+name = "anvil-update"
+version = "0.2.32"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
+dependencies = [
+ "futures",
+ "reqwest",
+ "ring",
+ "semver",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1743,6 +1759,7 @@ dependencies = [
 name = "dsip_app_bridge"
 version = "0.1.0"
 dependencies = [
+ "anvil-update",
  "anyhow",
  "dsip-app",
  "flutter_rust_bridge",
@@ -4733,6 +4750,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "futures-core",
+ "futures-util",
  "http",
  "http-body",
  "http-body-util",
@@ -4753,12 +4771,14 @@ dependencies = [
  "sync_wrapper",
  "tokio",
  "tokio-rustls",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots 1.0.11",
 ]
@@ -6422,6 +6442,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b1f9c3798725016c6ee5f2f57869ec0831e8bbc0ab0310a86e787e97f41389e"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

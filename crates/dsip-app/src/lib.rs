@@ -47,6 +47,9 @@ pub use state::{
     PresenceView, RequestView, State,
 };
 
+/// This build's version: the release's (a tag `vX.Y.Z` is this crate's version, `.github/workflows/release.yml`).
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// Where the identities followed are kept, in the identity directory beside the phone's `contacts.json`.
 pub const FOLLOWING_FILE: &str = "following.json";
 

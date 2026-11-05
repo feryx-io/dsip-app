@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../l10n/app_localizations.dart';
 import 'client/models.dart';
 import 'controller.dart';
+import 'screens/update.dart';
 import 'screens/calls.dart';
 import 'screens/first_run.dart';
 import 'screens/me.dart';
@@ -90,13 +91,20 @@ class _HomeState extends State<Home> {
           ),
           const VerticalDivider(width: 1),
           Expanded(
-            child: switch (_tab) {
+            child: Column(
+              children: [
+                UpdateBanner(controller: widget.controller),
+                Expanded(
+                  child: switch (_tab) {
               0 => CallsScreen(controller: widget.controller, state: state),
               1 => MessagesScreen(controller: widget.controller, state: state),
               2 => PresenceScreen(controller: widget.controller, state: state),
               3 => MeScreen(state: state),
               _ => SettingsScreen(controller: widget.controller, state: state),
-            },
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),

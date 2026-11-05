@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import 'update.dart';
 
 /// The settings: the sound devices calls use (chosen at once, kept for the next start), and where the app connects
 /// (its relay, mailbox, hints node and STUN server: saved, then the app starts again with them).
@@ -25,6 +26,10 @@ class SettingsScreen extends StatelessWidget {
         Text(s.settingsConnection, style: heading),
         const SizedBox(height: 8),
         ConnectionSettings(controller: controller),
+        const Divider(height: 32),
+        Text(s.settingsAbout, style: heading),
+        const SizedBox(height: 8),
+        AboutSettings(controller: controller),
       ],
     );
   }

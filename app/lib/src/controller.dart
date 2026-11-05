@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
@@ -9,10 +10,30 @@ import 'settings.dart';
 /// The app as the screens see it: first run until there are settings, then the running app's state, one update at a
 /// time. Every action is a `dsip-app` command; nothing here decides what the protocol does.
 class Controller extends ChangeNotifier {
-  Controller(this.client, this.store);
+  Controller(this.client, this.store, {this.checkUpdates = false, void Function()? quit}) : quit = quit ?? (() => exit(0));
 
   final Client client;
   final SettingsStore store;
+
+  /// Look for a newer release half a minute after the start and every hour (the app does; tests do not).
+  final bool checkUpdates;
+
+  /// End this process, for an update to install: [exit] in the app.
+  final void Function() quit;
+
+  /// A newer release, once a check found one.
+  UpdateInfo? update;
+
+  /// The version the user said "Later" to: its banner is not shown again.
+  String? updateDismissed;
+
+  /// Where updating is: `idle`, `checking`, `latest` (a check found nothing newer), `downloading`, `failed`.
+  String updateStatus = 'idle';
+
+  /// Why the last check or update failed.
+  String? updateError;
+
+  Timer? _updateTimer;
 
   /// Null before the app runs (first run, or starting).
   AppState? state;
@@ -44,6 +65,12 @@ class Controller extends ChangeNotifier {
     final settings = this.settings = await store.load();
     configured = settings != null;
     notifyListeners();
+    if (checkUpdates) {
+      _updateTimer = Timer(const Duration(seconds: 30), () {
+        checkForUpdate();
+        _updateTimer = Timer.periodic(const Duration(hours: 1), (_) => checkForUpdate());
+      });
+    }
     if (settings != null) await _start(settings);
   }
 
@@ -123,6 +150,59 @@ class Controller extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether a call is placed, ringing or up: no update restarts the app then.
+  bool get inCall => state?.calls.any((c) => !c.state.ended) ?? false;
+
+  /// Look for a newer release.
+  Future<void> checkForUpdate() async {
+    if (updateStatus == 'checking' || updateStatus == 'downloading') return;
+    updateStatus = 'checking';
+    notifyListeners();
+    try {
+      update = await client.checkForUpdate();
+      updateStatus = update == null ? 'latest' : 'idle';
+      updateError = null;
+    } catch (e) {
+      updateStatus = 'failed';
+      updateError = '$e';
+    }
+    notifyListeners();
+  }
+
+  /// Not now: the banner for [update]'s version goes until a newer one.
+  void dismissUpdate() {
+    updateDismissed = update?.version;
+    notifyListeners();
+  }
+
+  /// Update and restart: look again (an offer made hours ago installs the release out now, as Anvil learnt), fetch
+  /// it, stop the app, and quit for the installer, which starts the app again. Not during a call.
+  Future<void> installUpdate() async {
+    if (inCall) return;
+    await checkForUpdate();
+    final u = update;
+    if (u == null || !u.canInstall || updateStatus == 'failed') return;
+    updateStatus = 'downloading';
+    notifyListeners();
+    var stopped = false;
+    try {
+      await client.downloadUpdate();
+      await _updates?.cancel();
+      _updates = null;
+      await client.stop();
+      stopped = true;
+      await client.installUpdate();
+    } catch (e) {
+      updateStatus = 'failed';
+      updateError = '$e';
+      notifyListeners();
+      // the app stopped for an install that did not start: it runs again as it was
+      if (stopped && settings != null) await _start(settings!);
+      return;
+    }
+    quit();
+  }
+
   /// The notice shown: cleared once read.
   Map<String, dynamic>? takeNotice() {
     final n = notice;
@@ -139,6 +219,7 @@ class Controller extends ChangeNotifier {
 
   @override
   void dispose() {
+    _updateTimer?.cancel();
     _updates?.cancel();
     super.dispose();
   }

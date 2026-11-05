@@ -48,6 +48,9 @@ Name: "{autodesktop}\DSIP"; Filename: "{app}\dsip.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\dsip.exe"; Description: "{cm:LaunchProgram,DSIP}"; Flags: nowait postinstall skipifsilent
+; The app updating itself runs this setup silently with /relaunch=1 (anvil-update, app/rust/src/api/update.rs): it
+; starts again once installed.
+Filename: "{app}\dsip.exe"; Flags: nowait; Check: Relaunch
 
 [Code]
 // The app's folder: path_provider's application support directory, named from the exe's CompanyName and ProductName
@@ -69,4 +72,9 @@ begin
     DelTree(DataDir, True, True, True);
     RemoveDir(ExpandConstant('{userappdata}\com.thevoiceguy.dsip'));
   end;
+end;
+
+function Relaunch: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:relaunch|0}') = '1');
 end;

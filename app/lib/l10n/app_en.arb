@@ -235,5 +235,64 @@
   "settingsRestartTitle": "Restart the app?",
   "settingsRestartBody": "The app disconnects and connects again with these settings.",
   "settingsRestartCalls": "The app disconnects and connects again with these settings. Calls in progress end.",
-  "settingsRestart": "Restart"
+  "settingsRestart": "Restart",
+  "settingsAbout": "About",
+  "settingsVersion": "DSIP {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCheck": "Check for updates",
+  "updateChecking": "Checking…",
+  "updateLatest": "This is the latest version.",
+  "updateAvailable": "DSIP {version} is out.",
+  "@updateAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAfterCall": "DSIP {version} is out: update once your call is over.",
+  "@updateAfterCall": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateByHand": "DSIP {version} is out. This copy does not update itself ({reason}).",
+  "@updateByHand": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "updateDownloading": "Getting DSIP {version}…",
+  "@updateDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateFailed": "Could not update: {reason}",
+  "@updateFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "updateInstall": "Update and restart",
+  "updateDownload": "Download",
+  "updateLater": "Later",
+  "updateNotes": "What's new"
 }
