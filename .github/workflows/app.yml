@@ -1,8 +1,9 @@
 name: app
 
-# The desktop app (app/): analysed and its widget tests run; its golden screenshots compared on all three desktops; its
+# The app (app/): analysed and its widget tests run; its golden screenshots compared on all three desktops; its
 # bindings held to the Rust API; built for Linux, Windows and macOS, and its integration test run on each with its Rust
-# core loaded.
+# core loaded; built for Android and iOS, and its mobile integration test run in an emulator and a simulator (A5, as
+# Anvil's U4a).
 
 on:
   push:
@@ -112,3 +113,156 @@ jobs:
           else
             flutter test integration_test/app_test.dart -d ${{ matrix.target }}
           fi
+
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      # Three ABIs of the Rust core, then an emulator: more than the runner's free disk without what Android does not
+      # need.
+      - name: Free disk space
+        working-directory: .
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Rust, as pinned in rust-toolchain.toml, for Android
+        working-directory: .
+        run: |
+          rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> app/build"
+      - run: flutter pub get
+      # Phones (arm64, older arm) and the emulator (x86_64); 32-bit x86 is only old emulators. Signed with the debug
+      # key until there is an upload key (A7).
+      - run: flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsip-app-android
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+      # The emulator's debug build needs only its own ABI; the release build's go.
+      - run: rm -rf build
+      - name: The emulator may use KVM
+        working-directory: .
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: The app starts with its Rust core on a phone
+        timeout-minutes: 45
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          working-directory: app
+          script: tool/android_test.sh
+      - name: The emulator's log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-logcat
+          path: app/logcat.txt
+          if-no-files-found: ignore
+
+  ios:
+    name: iOS
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Rust, as pinned in rust-toolchain.toml, for iOS
+        working-directory: .
+        run: |
+          rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> app/build"
+      - run: flutter pub get
+      # Unsigned until there is an Apple Developer account (A4c, A7).
+      - name: flutter build ios --release --no-codesign
+        # Flutter hides Xcode's errors behind a generic message; the verbose log has them.
+        run: |
+          if ! flutter build ios --release --no-codesign -v > ios-build.log 2>&1; then
+            # Cargokit's own lines (the Rust build), then Xcode's errors.
+            grep "SEVERE" ios-build.log | grep -vE "Compiling|Downloaded|Checking" | head -200
+            grep -nE "error:|\*\* BUILD FAILED" ios-build.log | head -40
+            exit 1
+          fi
+      - name: The iOS build's log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: app/ios-build.log
+          if-no-files-found: ignore
+      - name: A simulator
+        id: sim
+        run: |
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          for runtime, devices in json.load(sys.stdin)["devices"].items():
+              if "iOS" in runtime:
+                  for d in devices:
+                      if d["name"].startswith("iPhone"):
+                          print(d["udid"]); sys.exit()
+          sys.exit("no iPhone simulator")')
+          xcrun simctl boot "$udid"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      - name: The test app, built for the simulator
+        # Xcode builds the Rust core for the simulator from scratch here (its build folder is not the cache's): built
+        # apart from the run, so the run below rebuilds nothing.
+        timeout-minutes: 60
+        run: flutter build ios --simulator --debug -t integration_test/mobile_test.dart
+      - name: The app starts with its Rust core on a phone
+        # Now and then the run hangs once the app is built, before any test (Anvil found it): each try gets ten
+        # minutes, on a simulator booted again, three tries.
+        timeout-minutes: 40
+        env:
+          UDID: ${{ steps.sim.outputs.udid }}
+        run: |
+          for attempt in 1 2 3; do
+            xcrun simctl spawn "$UDID" log stream --level debug \
+              --predicate 'process == "Runner"' >> simulator.log 2>&1 &
+            flutter test integration_test/mobile_test.dart -d "$UDID" &
+            test=$!
+            ( sleep 600; touch hung; echo "::warning::try $attempt hung"
+              kill -TERM "$test"; sleep 10; kill -KILL "$test" ) 2>/dev/null &
+            watchdog=$!
+            wait "$test" && status=0 || status=$?
+            kill "$watchdog" 2>/dev/null || true
+            # Passed, or ran and failed: that is the job's answer. Only a hang is tried again.
+            if [ ! -e hung ]; then exit "$status"; fi
+            rm hung
+            xcrun simctl shutdown "$UDID" || true
+            xcrun simctl boot "$UDID"
+          done
+          exit 1
+      - name: The simulator's log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-log
+          path: app/simulator.log
+          if-no-files-found: ignore

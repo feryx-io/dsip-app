@@ -294,5 +294,7 @@
   "updateInstall": "Update and restart",
   "updateDownload": "Download",
   "updateLater": "Later",
-  "updateNotes": "What's new"
+  "updateNotes": "What's new",
+  "microphoneRefused": "DSIP may not use the microphone, so the people you call will not hear you. Allow it in the system's settings for DSIP.",
+  "@microphoneRefused": {"description": "On a phone, when the system refused the microphone."}
 }

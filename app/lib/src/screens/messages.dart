@@ -68,11 +68,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final m = widget.state.messaging;
     if (m.mailbox == null) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(s.messagingOff)));
     final open = m.conversations.where((x) => x.group == _open).firstOrNull;
-    return Row(
-      children: [
-        SizedBox(
-          width: 340,
-          child: ListView(
+    final list = ListView(
             children: [
               if (!m.connected)
                 MaterialBanner(content: Text(s.messagingOffline), actions: const [SizedBox.shrink()]),
@@ -124,20 +120,23 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   onTap: () => _select(x.group),
                 ),
             ],
-          ),
-        ),
+          );
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+    Widget thread(ConversationView open) => _Thread(
+      key: ValueKey(open.group),
+      controller: c,
+      conversation: open,
+      me: widget.state.me.identity,
+      onLeft: () => setState(() => _open = null),
+      onBack: narrow ? () => setState(() => _open = null) : null,
+    );
+    // A phone: the list, or the conversation open over it with a way back. Wider: both, side by side.
+    if (narrow) return open == null ? list : thread(open);
+    return Row(
+      children: [
+        SizedBox(width: 340, child: list),
         const VerticalDivider(width: 1),
-        Expanded(
-          child: open == null
-              ? const SizedBox.shrink()
-              : _Thread(
-                  key: ValueKey(open.group),
-                  controller: c,
-                  conversation: open,
-                  me: widget.state.me.identity,
-                  onLeft: () => setState(() => _open = null),
-                ),
-        ),
+        Expanded(child: open == null ? const SizedBox.shrink() : thread(open)),
       ],
     );
   }
@@ -157,11 +156,21 @@ class _Heading extends StatelessWidget {
 }
 
 class _Thread extends StatefulWidget {
-  const _Thread({super.key, required this.controller, required this.conversation, required this.me, required this.onLeft});
+  const _Thread({
+    super.key,
+    required this.controller,
+    required this.conversation,
+    required this.me,
+    required this.onLeft,
+    this.onBack,
+  });
   final Controller controller;
   final ConversationView conversation;
   final String me;
   final VoidCallback onLeft;
+
+  /// Back to the list, on a phone (the list is not beside the conversation there).
+  final VoidCallback? onBack;
 
   @override
   State<_Thread> createState() => _ThreadState();
@@ -220,6 +229,7 @@ class _ThreadState extends State<_Thread> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ListTile(
+          leading: widget.onBack == null ? null : BackButton(key: const Key('thread-back'), onPressed: widget.onBack),
           title: Text(_title(s, x, widget.me)),
           trailing: x.kind != 'group'
               ? null

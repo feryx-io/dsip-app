@@ -25,7 +25,7 @@ sit on:
   on Windows (`\\.\pipe\dsip-app-<user>`), each open to its user alone.
 
 The desktop app (`app/`, A3) is built on Flutter over this crate; its installers are made on a release tag (A4,
-`app/README.md`). The app updates itself from signed releases. Builds are not code-signed yet (A4c waits for the certificates, as Anvil's); next: the mobile apps (A5).
+`app/README.md`). The app updates itself from signed releases. Builds are not code-signed yet (A4c waits for the certificates, as Anvil's); the mobile apps are under way (A5: Android and iOS builds first, then the system's call screen, the call's audio route and push).
 
 ```
 crates/dsip-app     the running client: State, Change, Command, the control socket, audio, and the CLI

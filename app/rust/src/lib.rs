@@ -5,5 +5,7 @@
 #![deny(missing_docs)]
 
 pub mod api;
+#[cfg(target_os = "android")]
+mod android;
 #[allow(missing_docs)] // generated
 mod frb_generated;

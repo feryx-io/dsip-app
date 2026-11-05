@@ -35,6 +35,14 @@ pub fn init_identity(dir: String, display_name: String) -> anyhow::Result<String
     Ok(dsip_app::init_identity(std::path::Path::new(&dir), &display_name)?)
 }
 
+/// The system's microphones and speakers, as `dsip-app` lists them (`{"host", "devices": [{"id", "name", "kind",
+/// "default"}]}`), without the app running: what the phone's own test checks Rust reaches (on Android, through the
+/// JVM `MainActivity` hands over).
+pub fn system_audio() -> anyhow::Result<String> {
+    let audio = dsip_app::audio::Audio::new(dsip_app::HostKind::System).map_err(anyhow::Error::msg)?;
+    Ok(serde_json::to_string(&audio.view())?)
+}
+
 /// Start the app from `settings` ([`dsip_app::Settings`] as JSON): the identity bound to its relay, its mailbox when
 /// it has one. Refused while one runs.
 pub async fn start(settings: String) -> anyhow::Result<()> {

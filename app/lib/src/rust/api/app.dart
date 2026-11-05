@@ -18,6 +18,11 @@ Future<String> initIdentity({
   displayName: displayName,
 );
 
+/// The system's microphones and speakers, as `dsip-app` lists them (`{"host", "devices": [{"id", "name", "kind",
+/// "default"}]}`), without the app running: what the phone's own test checks Rust reaches (on Android, through the
+/// JVM `MainActivity` hands over).
+Future<String> systemAudio() => RustLib.instance.api.crateApiAppSystemAudio();
+
 /// Start the app from `settings` ([`dsip_app::Settings`] as JSON): the identity bound to its relay, its mailbox when
 /// it has one. Refused while one runs.
 Future<void> start({required String settings}) =>

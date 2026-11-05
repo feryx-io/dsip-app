@@ -944,6 +944,12 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'What\'s new'**
   String get updateNotes;
+
+  /// On a phone, when the system refused the microphone.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP may not use the microphone, so the people you call will not hear you. Allow it in the system\'s settings for DSIP.'**
+  String get microphoneRefused;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {
