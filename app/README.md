@@ -8,7 +8,7 @@ the whole state after a change, so Dart never applies a change itself.
 
 The screens are in `lib/src/screens`, what they drive is `lib/src/controller.dart` over a `Client`
 (`lib/src/client`; the real one is `RustClient`), and every string is in `lib/l10n/app_en.arb`. The Dart readers of
-the state (`lib/src/client/models.dart`) are held to `test/fixtures/state.json`, `messages.json` and `presence.json`, which `dsip-app`'s own test makes
+the state (`lib/src/client/models.dart`) are held to `test/fixtures/state.json`, `messages.json`, `presence.json` and `settings.json`, which `dsip-app`'s own test makes
 (`crates/dsip-app/tests/wire_fixture.rs`): when the Rust types change, `UPDATE_FIXTURES=1 cargo test --test
 wire_fixture` writes it again and the Dart test says what to follow.
 
@@ -16,8 +16,10 @@ So far: the first run (make an identity, or use an identity folder; the relay, a
 answer, decline, hang up, mute), messages (first contact: introduce yourself, answer the requests that come; direct
 and group conversations, their threads kept up as messages arrive; add, remove, leave), presence (the state you publish,
 automatic or picked; following others, and what is known of each: their state, whether it is their relay's word or a
-record of theirs, how many of their devices are sealed to you; stop following, stop sharing), and who you are. Devices
-and settings come next; joining as another device of an identity on another machine after that.
+record of theirs, how many of their devices are sealed to you; stop following, stop sharing), who you are, and the
+settings: the microphone and speaker (chosen at once, kept for the next start) and the connection (relay, mailbox,
+hints node, STUN server; saved, then the app starts again with them). Golden screenshots come next; joining as another
+device of an identity on another machine after that.
 
 ```bash
 flutter pub get

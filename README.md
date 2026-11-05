@@ -54,11 +54,13 @@ dsip-app add <group id> did:key:z6Mk…dave            # `remove <group id> <did
 dsip-app presence busy                               # available, busy, away, dnd, offline (invisible), or auto
 dsip-app follow did:key:z6Mk…carol                   # shown under presence.following once Carol has granted you
 dsip-app revoke did:key:z6Mk…carol                   # withdraw what you granted Carol; the others get new keys
+dsip-app audio --input <id> --output <id>            # ids from `state`'s audio.devices; `audio` alone looks again
 ```
 
 On Bob's side, `dsip-app answer` takes the call that rings. `--audio tone` uses a test tone instead of the
 microphone (headless machines); `--audio none` signals calls with no sound. `--ca relay.pem` trusts a relay's
-self-signed certificate.
+self-signed certificate. `--input` and `--output` pick the microphone and speaker at the start (the system's default
+otherwise; a device gone since leaves the default).
 
 ## How it is built
 

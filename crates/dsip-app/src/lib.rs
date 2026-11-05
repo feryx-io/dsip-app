@@ -100,12 +100,15 @@ pub struct Config {
     /// Seal this device's presence records (P§12): only the holders of its grants read them, never a relay. On by
     /// default.
     pub seal_presence: bool,
+    /// The microphone and speaker to use (their [`AudioDevice::id`]s), `None` for the system's default of the kind.
+    /// One no longer there is left for the default, with a warning.
+    pub audio_devices: (Option<String>, Option<String>),
 }
 
 impl Config {
     /// `identity` bound to `relay`, with the platform's audio devices and no STUN.
     pub fn new(identity: dsip_phone::Identity, relay: &str) -> Config {
-        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None, seal_presence: true }
+        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None, seal_presence: true, audio_devices: (None, None) }
     }
 }
 
@@ -149,6 +152,14 @@ impl App {
             Some(kind) => Some(audio::Audio::new(kind).map_err(Error::Audio)?),
             None => None,
         };
+        if let (Some(a), (input, output)) = (&audio, &cfg.audio_devices) {
+            if input.is_some() || output.is_some() {
+                // Impl: a device chosen before and gone now (unplugged) is no reason not to start: the default serves
+                if let Err(e) = a.choose(input.as_deref(), output.as_deref()) {
+                    tracing::warn!("audio devices {input:?}, {output:?}: {e}; the system's defaults instead");
+                }
+            }
+        }
         let me = Me {
             identity: cfg.identity.meta.identity.clone(),
             device: cfg.identity.meta.device.clone(),
@@ -188,10 +199,7 @@ impl App {
             presence: PresenceState::default(),
             relay: cfg.relay,
             calls: Default::default(),
-            audio: AudioState {
-                host: audio.as_ref().map_or("none", |a| a.kind().name()).into(),
-                devices: audio.as_ref().map(|a| a.devices()).unwrap_or_default(),
-            },
+            audio: audio.as_ref().map(|a| a.view()).unwrap_or_else(|| AudioState { host: "none".into(), ..Default::default() }),
         };
         let (changes, _) = broadcast::channel(256);
         let app = App {
@@ -333,6 +341,20 @@ impl App {
                 Ok(count) => Response::Revoked { count },
                 Err(e) => Response::error(e.to_string()),
             },
+            Command::ChooseAudio { input, output } => {
+                let Some(a) = &self.inner.audio else { return Response::error("calls have no sound (audio none)") };
+                let r = a.choose(input.as_deref(), output.as_deref());
+                self.publish(Change::Audio { audio: a.view() });
+                match r {
+                    Ok(()) => Response::Ok,
+                    Err(e) => Response::error(e),
+                }
+            }
+            Command::AudioDevices => {
+                let Some(a) = &self.inner.audio else { return Response::error("calls have no sound (audio none)") };
+                self.publish(Change::Audio { audio: a.view() });
+                Response::Ok
+            }
             Command::Subscribe => Response::error("subscribe is for the control socket"),
             Command::Quit => {
                 self.stop().await;

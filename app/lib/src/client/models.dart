@@ -86,13 +86,21 @@ class AudioDevice {
 }
 
 class AudioState {
-  const AudioState({required this.host, required this.devices});
+  const AudioState({required this.host, required this.devices, this.input, this.output});
+
+  /// `system`, `tone` or `none`.
   final String host;
   final List<AudioDevice> devices;
+
+  /// The microphone and speaker chosen (device ids); null: the system's default.
+  final String? input;
+  final String? output;
 
   factory AudioState.fromJson(Map<String, dynamic> j) => AudioState(
     host: j['host'] as String,
     devices: [for (final d in j['devices'] as List) AudioDevice.fromJson(d as Map<String, dynamic>)],
+    input: j['input'] as String?,
+    output: j['output'] as String?,
   );
 }
 

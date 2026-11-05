@@ -752,6 +752,114 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'{count, plural, =0{{who} held no grant of yours.} =1{Withdrew 1 grant from {who}.} other{Withdrew {count} grants from {who}.}}'**
   String presenceRevoked(int count, String who);
+
+  /// No description provided for @navSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get navSettings;
+
+  /// No description provided for @settingsSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get settingsSound;
+
+  /// No description provided for @settingsSoundTone.
+  ///
+  /// In en, this message translates to:
+  /// **'This app plays a test tone instead of using a microphone and speaker.'**
+  String get settingsSoundTone;
+
+  /// No description provided for @settingsSoundNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Calls have no sound in this app.'**
+  String get settingsSoundNone;
+
+  /// No description provided for @settingsMicrophone.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone'**
+  String get settingsMicrophone;
+
+  /// No description provided for @settingsSpeaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaker'**
+  String get settingsSpeaker;
+
+  /// No description provided for @settingsSoundDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'The system\'s default'**
+  String get settingsSoundDefault;
+
+  /// No description provided for @settingsSoundSystemDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (the system\'s default)'**
+  String settingsSoundSystemDefault(String name);
+
+  /// No description provided for @settingsSoundRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Look for devices again'**
+  String get settingsSoundRefresh;
+
+  /// No description provided for @settingsConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get settingsConnection;
+
+  /// No description provided for @settingsIdentityFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity folder'**
+  String get settingsIdentityFolder;
+
+  /// No description provided for @settingsStun.
+  ///
+  /// In en, this message translates to:
+  /// **'STUN server (optional)'**
+  String get settingsStun;
+
+  /// No description provided for @settingsStunHint.
+  ///
+  /// In en, this message translates to:
+  /// **'stun:stun.example.com:3478'**
+  String get settingsStunHint;
+
+  /// No description provided for @settingsSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and restart'**
+  String get settingsSave;
+
+  /// No description provided for @settingsRestartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart the app?'**
+  String get settingsRestartTitle;
+
+  /// No description provided for @settingsRestartBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The app disconnects and connects again with these settings.'**
+  String get settingsRestartBody;
+
+  /// No description provided for @settingsRestartCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'The app disconnects and connects again with these settings. Calls in progress end.'**
+  String get settingsRestartCalls;
+
+  /// No description provided for @settingsRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get settingsRestart;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {
