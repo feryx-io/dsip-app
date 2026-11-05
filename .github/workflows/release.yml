@@ -369,6 +369,8 @@ jobs:
 
           The app looks for new releases and updates itself (the Windows setup, an AppImage); a .deb, or a Mac app in a
           folder you cannot write, is told of the release and given the file. Your identity's keys live in the app's folder; uninstalling keeps them unless you say otherwise. Nothing is
-          code-signed yet: Windows SmartScreen asks before the first run, and macOS needs a right-click → Open the first
-          time. Check downloads against \`SHA256SUMS\`.
+          code-signed yet (it will be once there are certificates), so the first run warns: on Windows, SmartScreen's "More
+          info" → "Run anyway"; on macOS, open DSIP once, then System Settings → Privacy & Security → "Open Anyway"
+          (before macOS 15, right-click → Open). An update the Windows app installs itself does not ask again. Check downloads against
+          \`SHA256SUMS\`.
           NOTES

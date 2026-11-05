@@ -74,5 +74,7 @@ Mac app its user cannot replace (the sandbox allows no write to Applications). T
 one offline copy the owner keeps: lost, installed copies take no updates until reinstalled by hand with a build that
 carries a new key.
 
-Nothing is code-signed yet (A4c, once there are certificates). The icon is drawn by `tool/icons.py` (no dependencies):
+Nothing is code-signed yet, as Anvil's builds: A4c (Windows Authenticode, macOS Developer ID and notarization) waits
+for the certificates. Until then the first run warns: SmartScreen's "More info" → "Run anyway" on Windows; on macOS,
+System Settings → Privacy & Security → "Open Anyway" after the first try (right-click → Open before macOS 15). The icon is drawn by `tool/icons.py` (no dependencies):
 `python3 tool/icons.py`.
