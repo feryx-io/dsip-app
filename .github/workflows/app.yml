@@ -1,7 +1,8 @@
 name: app
 
-# The desktop app (app/): analysed and its widget tests run; its bindings held to the Rust API; built for Linux,
-# Windows and macOS, and its integration test run on each with its Rust core loaded.
+# The desktop app (app/): analysed and its widget tests run; its golden screenshots compared on all three desktops; its
+# bindings held to the Rust API; built for Linux, Windows and macOS, and its integration test run on each with its Rust
+# core loaded.
 
 on:
   push:
@@ -30,7 +31,15 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
+      # the widget tests, and the goldens made on Linux matched exactly
       - run: flutter test
+      - name: What differed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures-linux
+          path: app/test/goldens/failures
+          if-no-files-found: ignore
       - name: Rust, as pinned in rust-toolchain.toml
         working-directory: .
         run: rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
@@ -83,6 +92,17 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev xvfb
       - run: flutter pub get
+      # one set of goldens, made on Linux, holds here too (test/goldens/tolerant_comparator.dart)
+      - name: The screens look the same as on Linux
+        if: matrix.target != 'linux'
+        run: flutter test test/goldens
+      - name: What differed
+        if: failure() && matrix.target != 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures-${{ matrix.target }}
+          path: app/test/goldens/failures
+          if-no-files-found: ignore
       - run: flutter build ${{ matrix.target }} --release
       - name: The app starts with its Rust core
         timeout-minutes: 30
