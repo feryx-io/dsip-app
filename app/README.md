@@ -67,8 +67,13 @@ are the same commands the app's buttons send. A call the system filters (Do Not 
 declined; one it cannot show still rings in the app. DSIP's calls have no hold and no keys, so the system offers
 neither. On Android a foreground service runs while there is a call, so it keeps the microphone when the user leaves
 the app, with a call-style notification (Answer and Decline, then Hang up), and the app comes over the lock screen only
-then; the system's Recents on iOS leave the app's calls out. The call's audio route and ringing a sleeping phone
-(A1's push) come next (A5c, A5d).
+then; the system's Recents on iOS leave the app's calls out. Where a call's audio goes is the system's (A5c, as Anvil's U4c): Telecom's call endpoints (Android 14 on; the call
+audio state before) and the audio session's route on iOS: the earpiece, the speaker, Bluetooth (by the device's name
+where the system gives it), a wired headset. A call shows a speaker switch when the earpiece and the speaker are all
+there is, and with Bluetooth or a headset too, the route in use, opening the list to choose from; on a phone Settings
+has no microphone and speaker lists. The screen goes off at the ear while a call is answered or being placed on the
+earpiece (not ringing, not on the speaker or a headset): a proximity wake lock on Android, released once the phone has
+left the ear, proximity monitoring on iOS. Ringing a sleeping phone (A1's push) comes next (A5d).
 
 ```bash
 flutter build apk --release                                   # debug-signed until there is an upload key (A7)
