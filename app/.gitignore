@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# golden comparisons that failed: the images and their difference
+/test/goldens/failures/

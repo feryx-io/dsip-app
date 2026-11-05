@@ -163,7 +163,9 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
             validator: check,
           ),
         );
-    return ConstrainedBox(
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 560),
       child: Form(
         key: _form,
@@ -201,6 +203,7 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

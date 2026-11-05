@@ -18,12 +18,25 @@ and group conversations, their threads kept up as messages arrive; add, remove, 
 automatic or picked; following others, and what is known of each: their state, whether it is their relay's word or a
 record of theirs, how many of their devices are sealed to you; stop following, stop sharing), who you are, and the
 settings: the microphone and speaker (chosen at once, kept for the next start) and the connection (relay, mailbox,
-hints node, STUN server; saved, then the app starts again with them). Golden screenshots come next; joining as another
-device of an identity on another machine after that.
+hints node, STUN server; saved, then the app starts again with them). Joining as another device of an identity on
+another machine comes later.
+
+`test/goldens` holds a screenshot of every screen, light and dark, drawn from the fixtures with the app's own font
+(Inter, `assets/fonts`, SIL Open Font License) and Material Icons. One set, made on Linux, is compared on Linux
+(exactly) and on Windows and macOS, where text's edges rasterise a few shades apart: there a screen matches while under
+0.3% of its pixels differ by more than 96 of 255 (`test/goldens/tolerant_comparator.dart`, Anvil's; each run prints the
+figures). A screen changed on purpose needs them made again, on Linux:
+
+```bash
+flutter test test/goldens --update-goldens
+```
+
+A failed comparison leaves the images and their difference in `test/goldens/failures` (CI keeps them as the run's
+artifact).
 
 ```bash
 flutter pub get
-flutter test                                              # the screens against a fake client
+flutter test                                              # the screens against a fake client, and the goldens
 flutter run -d linux                                      # or windows, macos
 flutter test integration_test/app_test.dart -d linux      # the app as built, its Rust core loaded
 ```

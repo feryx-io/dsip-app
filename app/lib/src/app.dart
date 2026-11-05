@@ -18,11 +18,12 @@ class DsipApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
     onGenerateTitle: (context) => Strings.of(context).appName,
     localizationsDelegates: const [...Strings.localizationsDelegates, GlobalMaterialLocalizations.delegate],
     supportedLocales: Strings.supportedLocales,
-    theme: ThemeData(colorSchemeSeed: Colors.teal),
-    darkTheme: ThemeData(colorSchemeSeed: Colors.teal, brightness: Brightness.dark),
+    theme: ThemeData(colorSchemeSeed: Colors.teal, fontFamily: 'Inter'),
+    darkTheme: ThemeData(colorSchemeSeed: Colors.teal, brightness: Brightness.dark, fontFamily: 'Inter'),
     home: ListenableBuilder(
       listenable: controller,
       builder: (context, _) => switch ((controller.configured, controller.state)) {
