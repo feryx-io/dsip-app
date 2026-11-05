@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=DSIP
+GenericName=Calls and messages
+Comment=Calls, messages and presence from an identity you hold
+Exec=dsip
+Icon=com.thevoiceguy.dsip
+Terminal=false
+Categories=Network;Telephony;InstantMessaging;
+Keywords=phone;call;chat;message;voip;dsip;
+StartupWMClass=com.thevoiceguy.dsip
