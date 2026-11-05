@@ -19,10 +19,13 @@ class SettingsScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(s.settingsSound, style: heading),
-        const SizedBox(height: 8),
-        SoundSettings(controller: controller, audio: state.audio),
-        const Divider(height: 32),
+        // A phone's microphone and speaker follow the call's route (the call's screen), not a list here.
+        if (controller.mobile == null) ...[
+          Text(s.settingsSound, style: heading),
+          const SizedBox(height: 8),
+          SoundSettings(controller: controller, audio: state.audio),
+          const Divider(height: 32),
+        ],
         Text(s.settingsConnection, style: heading),
         const SizedBox(height: 8),
         ConnectionSettings(controller: controller),

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import '../mobile/calls.dart';
+import '../mobile/platform.dart';
 
 /// Calls: place one to an identity, answer or decline one ringing here, hang up, mute; the ones that ended below.
 class CallsScreen extends StatefulWidget {
@@ -123,11 +125,88 @@ class _LiveCall extends StatelessWidget {
                           icon: Icon(call.muted ? Icons.mic : Icons.mic_off),
                           label: Text(call.muted ? s.callUnmute : s.callMute),
                         ),
+                      if (controller.system case final system?) AudioRouteButton(system: system),
                     ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Where the call's audio goes, on a phone (app plan A5c, as Anvil's U4c): a speaker switch when the earpiece and the
+/// speaker are all there is; with Bluetooth or a headset too, the route in use, opening the list to choose from. Nothing
+/// until the system says what there is.
+class AudioRouteButton extends StatelessWidget {
+  const AudioRouteButton({super.key, required this.system});
+  final SystemCalls system;
+
+  static IconData icon(AudioRoute route) => switch (route) {
+    AudioRoute.earpiece => Icons.phone_in_talk,
+    AudioRoute.speaker => Icons.volume_up,
+    AudioRoute.bluetooth => Icons.bluetooth_audio,
+    AudioRoute.wired => Icons.headset,
+  };
+
+  static String label(Strings s, AudioRoutes routes, AudioRoute route) => switch (route) {
+    AudioRoute.earpiece => s.routeEarpiece,
+    AudioRoute.speaker => s.routeSpeaker,
+    AudioRoute.bluetooth => routes.bluetoothName ?? s.routeBluetooth,
+    AudioRoute.wired => s.routeWired,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return ValueListenableBuilder<AudioRoutes?>(
+      valueListenable: system.routes,
+      builder: (context, routes, _) {
+        if (routes == null || routes.available.length < 2) return const SizedBox.shrink();
+        if (routes.justSpeaker) {
+          final on = routes.current == AudioRoute.speaker;
+          void onPressed() => system.setRoute(on ? AudioRoute.earpiece : AudioRoute.speaker);
+          return on
+              ? FilledButton.tonalIcon(
+                  key: const Key('speaker-route'),
+                  onPressed: onPressed,
+                  icon: const Icon(Icons.volume_up),
+                  label: Text(s.routeSpeaker),
+                )
+              : OutlinedButton.icon(
+                  key: const Key('speaker-route'),
+                  onPressed: onPressed,
+                  icon: const Icon(Icons.volume_up),
+                  label: Text(s.routeSpeaker),
+                );
+        }
+        return OutlinedButton.icon(
+          key: const Key('audio-route'),
+          icon: Icon(icon(routes.current)),
+          label: Text(label(s, routes, routes.current)),
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final route in routes.available)
+                    ListTile(
+                      key: Key('route-${route.name}'),
+                      leading: Icon(icon(route)),
+                      title: Text(label(s, routes, route)),
+                      trailing: route == routes.current ? const Icon(Icons.check) : null,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        system.setRoute(route);
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

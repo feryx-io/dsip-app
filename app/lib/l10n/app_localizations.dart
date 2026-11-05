@@ -950,6 +950,30 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'DSIP may not use the microphone, so the people you call will not hear you. Allow it in the system\'s settings for DSIP.'**
   String get microphoneRefused;
+
+  /// A call's audio at the phone's earpiece, held to the ear.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get routeEarpiece;
+
+  /// A call's audio on the phone's loudspeaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaker'**
+  String get routeSpeaker;
+
+  /// A call's audio on a Bluetooth headset or car, when the system gives no name.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get routeBluetooth;
+
+  /// A call's audio on a headset on a wire.
+  ///
+  /// In en, this message translates to:
+  /// **'Headset'**
+  String get routeWired;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {
