@@ -24,6 +24,61 @@ pub struct State {
     /// This device's presence, and the identities it follows.
     #[serde(default)]
     pub presence: PresenceState,
+    /// Waking this device while it sleeps (A5d), once the phone has given its push token; `None`: not woken.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub push: Option<Push>,
+}
+
+/// Waking this device while it sleeps (app plan A5d; the Wake Profile): enrolled at the publisher's push gateway with
+/// the phone's token, and registered with the relay (calls) and the mailbox (messages).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Push {
+    /// The gateway's DID.
+    pub gateway: String,
+    /// The token's provider: `apns` or `fcm`.
+    pub provider: String,
+    /// The gateway took the token (W§3).
+    pub enrolled: bool,
+    /// The relay: calls wake this device.
+    pub relay: Registration,
+    /// The mailbox: messages wake it; `None` without one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mailbox: Option<Registration>,
+    /// Why the last attempt stopped short (the gateway unreachable, …).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Where a registration with a waker stands.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Registration {
+    /// `registered`, `not-offered` (the waker wakes no one, W§4.4), `refused` (its `wake.*` reason), `failed` (no
+    /// answer; tried again), or `pending` (not tried yet).
+    pub status: String,
+    /// The refusal's reason, or the failure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// When a registration given ends (it is renewed before, W§4.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<i64>,
+}
+
+impl Registration {
+    pub(crate) fn status(status: &str) -> Registration {
+        Registration { status: status.into(), ..Registration::default() }
+    }
+
+    pub(crate) fn registered(expires_at: i64) -> Registration {
+        Registration { status: "registered".into(), reason: None, expires_at: Some(expires_at) }
+    }
+
+    pub(crate) fn refused(reason: &str) -> Registration {
+        Registration { status: "refused".into(), reason: Some(reason.into()), expires_at: None }
+    }
+
+    pub(crate) fn failed(why: &str) -> Registration {
+        Registration { status: "failed".into(), reason: Some(why.into()), expires_at: None }
+    }
 }
 
 /// Presence's part of the state (Presence Profile, draft).
@@ -300,6 +355,11 @@ pub enum Change {
         /// The audio as it is now.
         audio: Audio,
     },
+    /// Waking this device changed: enrolled, registered, refused; `None`: it is not woken (no token).
+    Push {
+        /// Where it stands.
+        push: Option<Push>,
+    },
     /// The app stopped: its phone unbound.
     Stopped,
 }
@@ -327,6 +387,7 @@ impl State {
             }
             Change::Unfollowed { identity } => self.presence.following.retain(|p| &p.identity != identity),
             Change::Audio { audio } => self.audio = audio.clone(),
+            Change::Push { push } => self.push = push.clone(),
             Change::Message { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }

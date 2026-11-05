@@ -63,6 +63,15 @@ microphone (headless machines); `--audio none` signals calls with no sound. `--c
 self-signed certificate. `--input` and `--output` pick the microphone and speaker at the start (the system's default
 otherwise; a device gone since leaves the default).
 
+Waking a sleeping phone (A5d, DSIP's Wake Profile): with `--push-gateway did:web:push.example` (the publisher's
+gateway), `dsip-app push --provider fcm --app <project> --token <token>` gives the phone's platform push token. The app
+enrols it at the gateway under a key of its own (the gateway never learns the device's DID), and registers with the
+relay for calls and the mailbox for messages, each when its `hello` says it wakes devices. The registration is given
+again when half its 30 days are gone, and at once for a new token; `push --off` ends it. `state` shows where each
+stands under `push`. A woken app reads its push's data with `dsip-app open-wake '<json>'`: what woke it, the waker to
+bind to, and for a call the caller as the relay's sealed hint names them, a claim until the invite verifies. The
+keys live in `wake.json` beside the identity, readable by its owner alone.
+
 ## How it is built
 
 - **One state, one stream of changes.** [`App`](crates/dsip-app/src/lib.rs) owns the identity and a

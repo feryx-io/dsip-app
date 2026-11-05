@@ -41,6 +41,10 @@ pub struct Settings {
     /// Fetch `did:web` documents to find those identities' mailboxes.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub fetch_did_web: bool,
+    /// The publisher's push gateway (a `did:web`, W§2), for waking this device while it sleeps (A5d): a phone's app
+    /// sets it; without it, never woken.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub push_gateway: Option<String>,
 }
 
 /// A mailbox: where it is and who it is.
@@ -73,6 +77,16 @@ impl Settings {
                 None => None,
             };
             cfg.hints = Some(dsip_transport::hints::HintsClient::new(self.hints_nodes.clone(), pem.as_deref())?);
+        }
+        if let Some(g) = &self.push_gateway {
+            let mut w = crate::WakeConfig::new(g);
+            // a gateway under the settings' own CA (a test's, a private deployment's) is trusted as the relay is
+            if let Some(p) = &self.ca {
+                let pem = std::fs::read(p).map_err(|e| bad(format!("{}: {e}", p.display())))?;
+                let docs = dsip_transport::resolver::DidWebResolver::new().with_ca(&pem)?;
+                w.client = Some(dsip_transport::wake::WakeClient::new(std::sync::Arc::new(docs)).with_ca(&pem).map_err(|e| bad(e.to_string()))?);
+            }
+            cfg.wake = Some(w);
         }
         if let Some(m) = &self.mailbox {
             cfg.messaging = Some(MessagingConfig {

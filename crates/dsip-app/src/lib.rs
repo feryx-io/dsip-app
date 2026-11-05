@@ -30,6 +30,7 @@ mod settings;
 mod state;
 #[cfg(windows)]
 mod user_only;
+pub mod wake;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -42,9 +43,10 @@ pub use audio::HostKind;
 pub use command::{Command, Response};
 pub use messaging::MessagingConfig;
 pub use settings::{init_identity, Mailbox, Settings};
+pub use wake::WakeConfig;
 pub use state::{
     Audio as AudioState, AudioDevice, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, Messaging, PresenceState,
-    PresenceView, RequestView, State,
+    PresenceView, Push, Registration, RequestView, State,
 };
 
 /// This build's version: the release's (a tag `vX.Y.Z` is this crate's version, `.github/workflows/release.yml`).
@@ -106,12 +108,14 @@ pub struct Config {
     /// The microphone and speaker to use (their [`AudioDevice::id`]s), `None` for the system's default of the kind.
     /// One no longer there is left for the default, with a warning.
     pub audio_devices: (Option<String>, Option<String>),
+    /// Waking this device while it sleeps (A5d): the publisher's push gateway; `None`: never woken.
+    pub wake: Option<WakeConfig>,
 }
 
 impl Config {
     /// `identity` bound to `relay`, with the platform's audio devices and no STUN.
     pub fn new(identity: dsip_phone::Identity, relay: &str) -> Config {
-        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None, seal_presence: true, audio_devices: (None, None) }
+        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None, seal_presence: true, audio_devices: (None, None), wake: None }
     }
 }
 
@@ -140,6 +144,10 @@ pub(crate) struct Inner {
     /// The identities followed, kept across restarts ([`FOLLOWING_FILE`] in the identity directory); held while
     /// writing it.
     following_file: std::sync::Mutex<std::path::PathBuf>,
+    /// The identity's folder.
+    identity_dir: std::path::PathBuf,
+    /// The waking task, when the app has a push gateway.
+    wake: std::sync::OnceLock<mpsc::UnboundedSender<wake::Kick>>,
 }
 
 /// The running client. Cheap to clone; clones are the same app.
@@ -200,6 +208,7 @@ impl App {
             me,
             messaging: Messaging::default(),
             presence: PresenceState::default(),
+            push: None,
             relay: cfg.relay,
             calls: Default::default(),
             audio: audio.as_ref().map(|a| a.view()).unwrap_or_else(|| AudioState { host: "none".into(), ..Default::default() }),
@@ -216,11 +225,16 @@ impl App {
                 messaging: std::sync::OnceLock::new(),
                 stopped: tokio::sync::watch::channel(false).0,
                 following_file: std::sync::Mutex::new(identity_dir.join(FOLLOWING_FILE)),
+                identity_dir: identity_dir.clone(),
+                wake: std::sync::OnceLock::new(),
             }),
         };
         if let Some(m) = cfg.messaging {
-            let tx = messaging::spawn(app.clone(), m, identity_dir, relay.clone()).map_err(Error::Messaging)?;
+            let tx = messaging::spawn(app.clone(), m, identity_dir.clone(), relay.clone()).map_err(Error::Messaging)?;
             let _ = app.inner.messaging.set(tx);
+        }
+        if let Some(w) = cfg.wake {
+            let _ = app.inner.wake.set(wake::spawn(app.clone(), w, &identity_dir));
         }
         if let Some((hints, device, delegation)) = relay_hint {
             let (identity, mut stopped) = (app.state().me.identity, app.inner.stopped.subscribe());
@@ -358,12 +372,37 @@ impl App {
                 self.publish(Change::Audio { audio: a.view() });
                 Response::Ok
             }
+            Command::Push { provider, app, token, environment } => {
+                let Some(w) = self.inner.wake.get() else { return Response::error("no push gateway: set one in the settings") };
+                let token = match (token, provider, app) {
+                    (None, ..) => None,
+                    (Some(token), Some(provider), Some(app)) => Some(wake::Token { provider, app, token, environment }),
+                    _ => return Response::error("a token needs its provider and app"),
+                };
+                let _ = w.send(wake::Kick::Token(token));
+                Response::Ok
+            }
+            Command::OpenWake { data } => match wake::open(&self.inner.identity_dir, &data) {
+                Ok(r) => r,
+                Err(e) => Response::error(e),
+            },
             Command::Subscribe => Response::error("subscribe is for the control socket"),
             Command::Quit => {
                 self.stop().await;
                 Response::Ok
             }
         }
+    }
+
+    /// Ask the messaging thread to register this device with its mailbox to be woken ([`wake::MailboxAsk`]), or with
+    /// `None` to end that registration: the registration's view, and what to keep of it.
+    pub(crate) async fn mailbox_wake(&self, ask: Option<wake::MailboxAsk>) -> (Registration, Option<wake::Registered>) {
+        let Some(m) = self.inner.messaging.get() else { return (Registration::status("not-offered"), None) };
+        let (reply, answer) = tokio::sync::oneshot::channel();
+        if m.send(messaging::Req::Wake { ask, reply }).is_err() {
+            return (Registration::failed("messaging has stopped"), None);
+        }
+        answer.await.unwrap_or_else(|_| (Registration::failed("messaging has stopped"), None))
     }
 
     /// Unbind and stop: calls still up end. Resolves [`App::stopped`].

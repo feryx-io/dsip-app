@@ -136,6 +136,29 @@ pub enum Command {
     /// Look at the audio devices again (one plugged in or out); answers with [`Response::Ok`] after a
     /// [`Change::Audio`](crate::Change).
     AudioDevices,
+    /// Be woken while asleep (A5d): `token` is the phone's platform push token (`provider` `apns` or `fcm`, `app` the
+    /// APNs topic or FCM project, `environment` APNs's `production` or `sandbox`), enrolled at the push gateway and
+    /// registered with the relay and the mailbox; without a token, stop being woken. Answers at once; the state's
+    /// `push` follows ([`Change::Push`](crate::Change)). Needs a push gateway in the settings.
+    Push {
+        /// `apns` or `fcm`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        provider: Option<String>,
+        /// The APNs topic or FCM project.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        app: Option<String>,
+        /// The token; none: stop being woken.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        token: Option<String>,
+        /// APNs only.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        environment: Option<String>,
+    },
+    /// Read a push that woke this app ([`Response::Wake`]): `data` is its `dsip-wake` data as the system delivered it.
+    OpenWake {
+        /// The push's data.
+        data: serde_json::Value,
+    },
     /// A conversation's messages, oldest first.
     Thread {
         /// Its group id.
@@ -177,6 +200,24 @@ pub enum Response {
     Thread {
         /// Oldest first.
         messages: Vec<crate::MessageView>,
+    },
+    /// What a push said, for [`Command::OpenWake`] (W§5.3, W§6): its `kind` (`call`, `call-ended`, `message`), the
+    /// `waker` to bind to, the call's `session`, and for a call the caller as the relay's sealed hint names them: a
+    /// claim, to show until the invite arrives and verifies.
+    Wake {
+        /// `call`, `call-ended`, `message`.
+        kind: String,
+        /// The relay or mailbox that woke it.
+        waker: String,
+        /// The call's session.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        session: Option<String>,
+        /// The caller's device, from the hint.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        from: Option<String>,
+        /// The identity the caller's device acts for, from the hint.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        on_behalf_of: Option<String>,
     },
     /// Not done, and why.
     Error {

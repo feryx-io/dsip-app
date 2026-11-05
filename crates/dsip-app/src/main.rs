@@ -75,6 +75,9 @@ enum Cmd {
         /// Fetch `did:web` documents to find those identities' mailboxes.
         #[arg(long)]
         fetch_did_web: bool,
+        /// The publisher's push gateway (a `did:web`), to be woken while asleep once `push` gives a token.
+        #[arg(long)]
+        push_gateway: Option<String>,
     },
     /// Ask an identity for permission to message it.
     Introduce {
@@ -196,6 +199,30 @@ enum Cmd {
         #[arg(long)]
         output: Option<String>,
     },
+    /// Be woken while asleep with this platform push token (enrolled at the push gateway, registered with the relay
+    /// and the mailbox); `--off` to stop.
+    Push {
+        /// `apns` or `fcm`.
+        #[arg(long, required_unless_present = "off")]
+        provider: Option<String>,
+        /// The APNs topic or FCM project.
+        #[arg(long, required_unless_present = "off")]
+        app: Option<String>,
+        /// The token.
+        #[arg(long, required_unless_present = "off")]
+        token: Option<String>,
+        /// APNs's `production` or `sandbox`.
+        #[arg(long)]
+        environment: Option<String>,
+        /// Stop being woken.
+        #[arg(long, conflicts_with_all = ["provider", "app", "token", "environment"])]
+        off: bool,
+    },
+    /// Read a push's `dsip-wake` data (JSON): what woke the app, and a call's caller from its sealed hint.
+    OpenWake {
+        /// The data.
+        data: String,
+    },
     /// Print the state (JSON).
     State,
     /// Print the state, then every change, one JSON line each, until the app stops.
@@ -215,7 +242,7 @@ async fn main() -> Result<ExitCode> {
             println!("{}", dsip_app::init_identity(&identity, &name).context("making the identity")?);
             return Ok(ExitCode::SUCCESS);
         }
-        Cmd::Run { identity, relay, ca, audio, input, output, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web } => {
+        Cmd::Run { identity, relay, ca, audio, input, output, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web, push_gateway } => {
             let settings = Settings {
                 identity,
                 relay,
@@ -228,6 +255,7 @@ async fn main() -> Result<ExitCode> {
                 hints_nodes,
                 messaging_state,
                 fetch_did_web,
+                push_gateway,
             };
             let cfg = settings.config()?;
             let app = App::start(cfg).await?;
@@ -272,6 +300,9 @@ async fn main() -> Result<ExitCode> {
         Cmd::Unmute { call } => Command::Unmute { call },
         Cmd::Audio { input: None, output: None } => Command::AudioDevices,
         Cmd::Audio { input, output } => Command::ChooseAudio { input, output },
+        Cmd::Push { off: true, .. } => Command::Push { provider: None, app: None, token: None, environment: None },
+        Cmd::Push { provider, app, token, environment, .. } => Command::Push { provider, app, token, environment },
+        Cmd::OpenWake { data } => Command::OpenWake { data: serde_json::from_str(&data).context("the data is not JSON")? },
         Cmd::State => Command::State,
         Cmd::Quit => Command::Quit,
     };

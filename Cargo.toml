@@ -9,18 +9,20 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/thevoiceguy/dsip-app"
 
 [workspace.dependencies]
-# dsip-rs, every crate at one ref (dsip-rs RELEASING.md, "Downstream"): the release tag
-dsip-core = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-endpoint = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-media = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-phone = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-transport = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-messenger = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-messaging-device = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06", features = ["sqlite"] }
-dsip-mls = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06", features = ["sqlite"] }
-dsip-mailbox = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-messaging = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
+# dsip-rs, every crate at one ref (dsip-rs RELEASING.md, "Downstream"): the release tag. TEMPORARILY dsip-rs
+# feat/device-wake's commit (the device side of waking, A5d) until it is merged and released.
+dsip-core = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-endpoint = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-media = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-phone = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-transport = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-messenger = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-messaging-device = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb", features = ["sqlite"] }
+dsip-mls = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb", features = ["sqlite"] }
+dsip-mailbox = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-messaging = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
+dsip-wake = { git = "https://github.com/thevoiceguy/dsip-rs", rev = "520a5bb" }
 # Anvil's audio and updater (app plan decision 4 (a)): cpal, echo cancellation; the signed manifest, installed the way
 # this copy was. Every Anvil crate at one ref.
 anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32", features = ["tone"] }
