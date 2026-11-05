@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../rust/api/app.dart' as bridge;
+import '../rust/api/update.dart' as update;
 import 'client.dart';
 import 'models.dart';
 
@@ -22,4 +23,19 @@ class RustClient implements Client {
 
   @override
   Future<void> stop() => bridge.stop();
+
+  @override
+  String appVersion() => update.appVersion();
+
+  @override
+  Future<UpdateInfo?> checkForUpdate() async {
+    final j = jsonDecode(await update.checkForUpdate());
+    return j == null ? null : UpdateInfo.fromJson(j as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> downloadUpdate() => update.downloadUpdate();
+
+  @override
+  Future<void> installUpdate() => update.installUpdate();
 }

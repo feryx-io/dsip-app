@@ -8,7 +8,7 @@ use dsip_app::{App, Command, Response, Settings};
 use crate::frb_generated::StreamSink;
 
 /// The runtime the app's tasks run on, for the life of the process.
-fn runtime() -> &'static tokio::runtime::Runtime {
+pub(crate) fn runtime() -> &'static tokio::runtime::Runtime {
     static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
     RT.get_or_init(|| tokio::runtime::Builder::new_multi_thread().enable_all().thread_name("dsip-app").build().expect("a runtime"))
 }

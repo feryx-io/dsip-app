@@ -458,4 +458,58 @@ class StringsEn extends Strings {
 
   @override
   String get settingsRestart => 'Restart';
+
+  @override
+  String get settingsAbout => 'About';
+
+  @override
+  String settingsVersion(String version) {
+    return 'DSIP $version';
+  }
+
+  @override
+  String get updateCheck => 'Check for updates';
+
+  @override
+  String get updateChecking => 'Checking…';
+
+  @override
+  String get updateLatest => 'This is the latest version.';
+
+  @override
+  String updateAvailable(String version) {
+    return 'DSIP $version is out.';
+  }
+
+  @override
+  String updateAfterCall(String version) {
+    return 'DSIP $version is out: update once your call is over.';
+  }
+
+  @override
+  String updateByHand(String version, String reason) {
+    return 'DSIP $version is out. This copy does not update itself ($reason).';
+  }
+
+  @override
+  String updateDownloading(String version) {
+    return 'Getting DSIP $version…';
+  }
+
+  @override
+  String updateFailed(String reason) {
+    return 'Could not update: $reason';
+  }
+
+  @override
+  String get updateInstall => 'Update and restart';
+
+  @override
+  String get updateDownload => 'Download';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateNotes => 'What\'s new';
 }

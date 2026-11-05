@@ -20,6 +20,18 @@ abstract class Client {
   Stream<Update> updates();
 
   Future<void> stop();
+
+  /// This copy's version.
+  String appVersion();
+
+  /// The latest release when it is newer than this copy; null when this is the latest.
+  Future<UpdateInfo?> checkForUpdate();
+
+  /// Fetch the release [checkForUpdate] found, checked against its signed manifest.
+  Future<void> downloadUpdate();
+
+  /// Install the release fetched once this process has gone, and start the app again: the caller quits right after.
+  Future<void> installUpdate();
 }
 
 /// A response that is an error: its message; null otherwise.

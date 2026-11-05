@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/app.dart';
+import 'api/update.dart';
 
 import 'dart:async';
 import 'dart:convert';

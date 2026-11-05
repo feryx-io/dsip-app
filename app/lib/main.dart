@@ -10,7 +10,7 @@ import 'src/settings.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
-  final controller = Controller(RustClient(), SettingsStore(await getApplicationSupportDirectory()));
+  final controller = Controller(RustClient(), SettingsStore(await getApplicationSupportDirectory()), checkUpdates: true);
   runApp(DsipApp(controller: controller));
   await controller.load();
 }

@@ -274,3 +274,29 @@ String shortDid(String did) {
   final method = i < 0 ? '' : did.substring(0, i + 1);
   return key.length <= 14 ? did : '$method${key.substring(0, 8)}…${key.substring(key.length - 4)}';
 }
+
+/// A newer release than this copy (`dsip_app_bridge`'s `check_for_update`).
+class UpdateInfo {
+  const UpdateInfo({required this.version, required this.notes, required this.canInstall, this.reason, this.download});
+  final String version;
+
+  /// The release's page.
+  final String notes;
+
+  /// This copy can install it itself.
+  final bool canInstall;
+
+  /// Why not, when it cannot.
+  final String? reason;
+
+  /// The file to install by hand, when it cannot.
+  final String? download;
+
+  factory UpdateInfo.fromJson(Map<String, dynamic> j) => UpdateInfo(
+    version: j['version'] as String,
+    notes: j['notes'] as String,
+    canInstall: j['can_install'] as bool,
+    reason: j['reason'] as String?,
+    download: j['download'] as String?,
+  );
+}

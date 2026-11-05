@@ -21,6 +21,9 @@ dsip-mls = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06"
 dsip-mailbox = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
 dsip-messaging = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
 dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.06" }
-# Anvil's audio (app plan decision 4 (a)): cpal, echo cancellation
-anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", features = ["tone"] }
-anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.31", default-features = false }
+# Anvil's audio and updater (app plan decision 4 (a)): cpal, echo cancellation; the signed manifest, installed the way
+# this copy was. Every Anvil crate at one ref.
+# TEMPORARY: anvil PR #66 (anvil-update for other apps) until its tag v0.2.32.
+anvil-audio = { git = "https://github.com/thevoiceguy/anvil", rev = "e13c3f7d7e41201ac95eb750f5e76f5546b57274", features = ["tone"] }
+anvil-core = { git = "https://github.com/thevoiceguy/anvil", rev = "e13c3f7d7e41201ac95eb750f5e76f5546b57274", default-features = false }
+anvil-update = { git = "https://github.com/thevoiceguy/anvil", rev = "e13c3f7d7e41201ac95eb750f5e76f5546b57274" }

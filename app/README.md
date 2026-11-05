@@ -63,5 +63,16 @@ each installed, started and removed again in CI before anything is published, an
 
 Uninstalling keeps the app's folder, which holds the identity's keys, unless the user says to delete it (Windows
 asks; a silent uninstall keeps it): a `did:key` identity cannot be rotated, so its keys gone is the identity gone.
+The app updates itself (`rust/src/api/update.rs`, Anvil's `anvil-update` with DSIP's description). Each release
+carries `latest.json` (`packaging/manifest.py`: the version, the release's page, each installer with its size and
+SHA-256) and `latest.json.sig`, an Ed25519 signature made in the release workflow with the `DSIP_UPDATE_KEY` secret and
+checked there against `packaging/update-key.pub.pem`, the public half the app carries (a test holds them together).
+The app looks half a minute after it starts and every hour, and Settings has a check by hand. A banner offers "Update
+and restart" (not during a call; it looks again first, then fetches the file, checks its size and SHA-256, stops the
+app and runs the installer, which starts it again) to the Windows setup and an AppImage, and "Download" to a .deb or a
+Mac app its user cannot replace (the sandbox allows no write to Applications). The key's private half is the secret and
+one offline copy the owner keeps: lost, installed copies take no updates until reinstalled by hand with a build that
+carries a new key.
+
 Nothing is code-signed yet (A4c, once there are certificates). The icon is drawn by `tool/icons.py` (no dependencies):
 `python3 tool/icons.py`.

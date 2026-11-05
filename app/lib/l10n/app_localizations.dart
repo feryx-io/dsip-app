@@ -860,6 +860,90 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Restart'**
   String get settingsRestart;
+
+  /// No description provided for @settingsAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAbout;
+
+  /// No description provided for @settingsVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP {version}'**
+  String settingsVersion(String version);
+
+  /// No description provided for @updateCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get updateCheck;
+
+  /// No description provided for @updateChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get updateChecking;
+
+  /// No description provided for @updateLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'This is the latest version.'**
+  String get updateLatest;
+
+  /// No description provided for @updateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP {version} is out.'**
+  String updateAvailable(String version);
+
+  /// No description provided for @updateAfterCall.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP {version} is out: update once your call is over.'**
+  String updateAfterCall(String version);
+
+  /// No description provided for @updateByHand.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP {version} is out. This copy does not update itself ({reason}).'**
+  String updateByHand(String version, String reason);
+
+  /// No description provided for @updateDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting DSIP {version}…'**
+  String updateDownloading(String version);
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update: {reason}'**
+  String updateFailed(String reason);
+
+  /// No description provided for @updateInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Update and restart'**
+  String get updateInstall;
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get updateDownload;
+
+  /// No description provided for @updateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateLater;
+
+  /// No description provided for @updateNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s new'**
+  String get updateNotes;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

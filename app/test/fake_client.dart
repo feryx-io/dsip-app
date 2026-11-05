@@ -50,4 +50,32 @@ class FakeClient implements Client {
 
   @override
   Future<void> stop() async => stops++;
+
+  /// What [checkForUpdate] finds (null: nothing newer), or throws.
+  UpdateInfo? release;
+  Object? checkFails;
+  Object? installFails;
+  int checks = 0;
+
+  /// The update calls made, in order: `download`, `install`.
+  final updating = <String>[];
+
+  @override
+  String appVersion() => '0.1.0';
+
+  @override
+  Future<UpdateInfo?> checkForUpdate() async {
+    checks++;
+    if (checkFails != null) throw checkFails!;
+    return release;
+  }
+
+  @override
+  Future<void> downloadUpdate() async => updating.add('download');
+
+  @override
+  Future<void> installUpdate() async {
+    if (installFails != null) throw installFails!;
+    updating.add('install');
+  }
 }
