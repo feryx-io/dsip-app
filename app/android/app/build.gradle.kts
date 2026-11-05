@@ -45,3 +45,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // NotificationCompat.CallStyle and ServiceCompat for the call's notification and service (CallService.kt).
+    implementation("androidx.core:core:1.13.1")
+}

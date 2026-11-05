@@ -58,8 +58,17 @@ Flutter app does not set up (`rust/src/android.rs`); `rust/build.rs` links the N
 starts it asks for the microphone (refused, it still starts and says why) and, on iOS, sets the audio session to play
 and record for voice chat (`lib/src/mobile/platform.dart`, the `dsip/mobile` channel). Below 600 points wide the tabs
 run along the bottom and a conversation opens over the list; the goldens hold each screen at a phone's size too
-(`phone-*.png`). A phone does not update itself: its store does (A7). The system's call screen (CallKit, Telecom),
-the call's audio route and ringing a sleeping phone (A1's push) come next (A5b–A5d).
+(`phone-*.png`). A phone does not update itself: its store does (A7).
+
+The app's calls are the system's calls (A5b, as Anvil's U4b): CallKit on iOS, a self-managed `ConnectionService` with
+Telecom on Android, kept in step by `lib/src/mobile/calls.dart`. A call ringing in rings there (the lock screen too), a
+call placed shows as dialling, answered and over follow `dsip-app`; answering, declining, hanging up and muting there
+are the same commands the app's buttons send. A call the system filters (Do Not Disturb, a blocked caller) is
+declined; one it cannot show still rings in the app. DSIP's calls have no hold and no keys, so the system offers
+neither. On Android a foreground service runs while there is a call, so it keeps the microphone when the user leaves
+the app, with a call-style notification (Answer and Decline, then Hang up), and the app comes over the lock screen only
+then; the system's Recents on iOS leave the app's calls out. The call's audio route and ringing a sleeping phone
+(A1's push) come next (A5c, A5d).
 
 ```bash
 flutter build apk --release                                   # debug-signed until there is an upload key (A7)

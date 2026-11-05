@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'client/client.dart';
 import 'client/models.dart';
+import 'mobile/calls.dart';
 import 'mobile/platform.dart';
 import 'settings.dart';
 
@@ -12,7 +13,13 @@ import 'settings.dart';
 /// time. Every action is a `dsip-app` command; nothing here decides what the protocol does.
 class Controller extends ChangeNotifier {
   Controller(this.client, this.store, {this.checkUpdates = false, this.mobile, void Function()? quit})
-    : quit = quit ?? (() => exit(0));
+    : quit = quit ?? (() => exit(0)) {
+    final mobile = this.mobile;
+    if (mobile != null) _system = SystemCalls(mobile, run: run, calls: () => state?.calls ?? const []);
+  }
+
+  /// The system's call screen, on a phone.
+  SystemCalls? _system;
 
   final Client client;
   final SettingsStore store;
@@ -100,6 +107,7 @@ class Controller extends ChangeNotifier {
     _updates = null;
     await client.stop();
     state = null;
+    _system?.sync(const []);
     threads.clear();
     notifyListeners();
     await store.save(settings);
@@ -138,6 +146,7 @@ class Controller extends ChangeNotifier {
     await client.start(settings);
     _updates = client.updates().listen((u) {
       state = u.state;
+      _system?.sync(u.state.calls);
       switch (u.kind) {
         case 'message':
           final m = MessageView.fromJson(u.change!['message'] as Map<String, dynamic>);
@@ -240,6 +249,7 @@ class Controller extends ChangeNotifier {
   void dispose() {
     _updateTimer?.cancel();
     _updates?.cancel();
+    _system?.dispose();
     super.dispose();
   }
 }
