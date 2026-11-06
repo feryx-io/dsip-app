@@ -37,6 +37,20 @@ pub fn init_identity(dir: String, display_name: String) -> anyhow::Result<String
     Ok(dsip_app::init_identity(std::path::Path::new(&dir), &display_name)?)
 }
 
+/// Back up the identity in `dir`: its key sealed under `passphrase`, as `{"identity", "code", "file"}` JSON (the DID,
+/// the recovery code, a backup file's text).
+pub fn export_identity(dir: String, passphrase: String) -> anyhow::Result<String> {
+    dsip_app::keys::use_system_store();
+    let b = dsip_app::backup::export_identity(std::path::Path::new(&dir), &passphrase)?;
+    Ok(serde_json::json!({"identity": b.identity, "code": b.code, "file": b.file}).to_string())
+}
+
+/// Make the identity in `code` (a recovery code, or a backup file's text) this install's, in `dir`; its DID.
+pub fn restore_identity(dir: String, code: String, passphrase: String, display_name: String) -> anyhow::Result<String> {
+    dsip_app::keys::use_system_store();
+    Ok(dsip_app::backup::restore_identity(std::path::Path::new(&dir), &code, &passphrase, &display_name)?)
+}
+
 /// The system's microphones and speakers, as `dsip-app` lists them (`{"host", "devices": [{"id", "name", "kind",
 /// "default"}]}`), without the app running: what the phone's own test checks Rust reaches (on Android, through the
 /// JVM `MainActivity` hands over).

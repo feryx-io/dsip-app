@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
 import 'update.dart';
 
-/// The settings: the sound devices calls use (chosen at once, kept for the next start), and where the app connects
-/// (its relay, mailbox, hints node and STUN server: saved, then the app starts again with them).
+/// The settings: the sound devices calls use (chosen at once, kept for the next start), where the app connects (its
+/// relay, mailbox, hints node and STUN server: saved, then the app starts again with them), and the identity's backup
+/// (A6b).
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.controller, required this.state});
   final Controller controller;
@@ -29,6 +31,10 @@ class SettingsScreen extends StatelessWidget {
         Text(s.settingsConnection, style: heading),
         const SizedBox(height: 8),
         ConnectionSettings(controller: controller),
+        const Divider(height: 32),
+        Text(s.settingsBackup, style: heading),
+        const SizedBox(height: 8),
+        BackupSettings(controller: controller),
         const Divider(height: 32),
         Text(s.settingsAbout, style: heading),
         const SizedBox(height: 8),
@@ -213,6 +219,136 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
         ),
       ),
       ),
+    );
+  }
+}
+
+/// The identity's backup (A6b): a recovery code made under a passphrase, shown to write down or copy.
+class BackupSettings extends StatelessWidget {
+  const BackupSettings({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(s.settingsBackupIntro),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const Key('backup'),
+          icon: const Icon(Icons.key),
+          label: Text(s.settingsBackupMake),
+          onPressed: () => showDialog<void>(context: context, builder: (_) => BackupDialog(controller: controller)),
+        ),
+      ],
+    );
+  }
+}
+
+/// The passphrase twice, then the code.
+class BackupDialog extends StatefulWidget {
+  const BackupDialog({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  State<BackupDialog> createState() => _BackupDialogState();
+}
+
+class _BackupDialogState extends State<BackupDialog> {
+  final _form = GlobalKey<FormState>();
+  final _passphrase = TextEditingController();
+  final _again = TextEditingController();
+  bool _busy = false;
+  String? _failed;
+  String? _code;
+
+  @override
+  void dispose() {
+    _passphrase.dispose();
+    _again.dispose();
+    super.dispose();
+  }
+
+  Future<void> _make() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _failed = null;
+    });
+    try {
+      final dir = widget.controller.settings?['identity'] as String? ?? '';
+      final backup = await widget.controller.client.exportIdentity(dir, _passphrase.text);
+      if (mounted) setState(() => _code = backup.code);
+    } catch (e) {
+      if (mounted) setState(() => _failed = Strings.of(context).backupFailed('$e'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final code = _code;
+    if (code != null) {
+      return AlertDialog(
+        title: Text(s.backupCodeTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.backupCodeBody),
+            const SizedBox(height: 12),
+            SelectableText(code, key: const Key('code'), style: const TextStyle(fontFamily: 'monospace')),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              if (context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(s.backupCopied)));
+            },
+            child: Text(s.backupCopy),
+          ),
+          FilledButton(onPressed: () => Navigator.pop(context), child: Text(s.backupDone)),
+        ],
+      );
+    }
+    return AlertDialog(
+      title: Text(s.backupTitle),
+      content: Form(
+        key: _form,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              key: const Key('passphrase'),
+              controller: _passphrase,
+              obscureText: true,
+              decoration: InputDecoration(labelText: s.backupPassphrase, helperText: s.backupPassphraseHint, helperMaxLines: 3),
+              validator: (v) => (v ?? '').characters.length < 10 ? s.backupPassphraseShort : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              key: const Key('again'),
+              controller: _again,
+              obscureText: true,
+              decoration: InputDecoration(labelText: s.backupPassphraseAgain),
+              validator: (v) => v != _passphrase.text ? s.backupPassphraseDiffers : null,
+            ),
+            if (_failed != null) ...[
+              const SizedBox(height: 12),
+              Text(_failed!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.backupCancel)),
+        FilledButton(onPressed: _busy ? null : _make, child: Text(s.backupMake)),
+      ],
     );
   }
 }

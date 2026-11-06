@@ -18,6 +18,29 @@ Future<String> initIdentity({
   displayName: displayName,
 );
 
+/// Back up the identity in `dir`: its key sealed under `passphrase`, as `{"identity", "code", "file"}` JSON (the DID,
+/// the recovery code, a backup file's text).
+Future<String> exportIdentity({
+  required String dir,
+  required String passphrase,
+}) => RustLib.instance.api.crateApiAppExportIdentity(
+  dir: dir,
+  passphrase: passphrase,
+);
+
+/// Make the identity in `code` (a recovery code, or a backup file's text) this install's, in `dir`; its DID.
+Future<String> restoreIdentity({
+  required String dir,
+  required String code,
+  required String passphrase,
+  required String displayName,
+}) => RustLib.instance.api.crateApiAppRestoreIdentity(
+  dir: dir,
+  code: code,
+  passphrase: passphrase,
+  displayName: displayName,
+);
+
 /// The system's microphones and speakers, as `dsip-app` lists them (`{"host", "devices": [{"id", "name", "kind",
 /// "default"}]}`), without the app running: what the phone's own test checks Rust reaches (on Android, through the
 /// JVM `MainActivity` hands over).

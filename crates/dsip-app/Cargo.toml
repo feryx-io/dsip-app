@@ -38,6 +38,12 @@ clap = { version = "4", features = ["derive"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 keyring-core = "1"
+# backup.rs: the recovery code (A6b)
+argon2 = "0.5"
+chacha20poly1305 = "0.10"
+data-encoding = "2"
+getrandom = "0.2"
+sha2 = "0.10"
 
 # the control pipe for this user alone (user_only.rs)
 [target.'cfg(windows)'.dependencies]

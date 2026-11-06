@@ -78,6 +78,29 @@ void main() {
     expect(client.started?['identity'], '/home/alice/.dsip/alice');
   });
 
+  testWidgets("an identity restored from its recovery code is this install's (A6b)", (tester) async {
+    await open(tester);
+    await tester.tap(find.text('Restore from a backup'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter the recovery code.'), findsOneWidget);
+    expect(find.text('Enter the passphrase.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('code')), ' DSIP1-AAAAA-BBBBB ');
+    await tester.enterText(find.byKey(const Key('passphrase')), 'a long passphrase');
+    await tester.enterText(find.byKey(const Key('name')), 'Ann');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    final identity = SettingsStore(dir).defaultIdentity;
+    expect(client.restored, [(identity, 'DSIP1-AAAAA-BBBBB', 'a long passphrase', 'Ann')]);
+    expect(client.identities, isEmpty, reason: 'restored, not made');
+    expect(client.started?['identity'], identity);
+  });
+
   testWidgets('with settings saved, the app starts at once and shows its calls', (tester) async {
     await tester.runAsync(() => SettingsStore(dir).save({'identity': '/x', 'relay': 'wss://r/dsip'}));
     await open(tester);

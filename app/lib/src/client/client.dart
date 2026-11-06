@@ -9,6 +9,12 @@ abstract class Client {
   /// Make an identity in [dir]; its DID.
   Future<String> initIdentity(String dir, String displayName);
 
+  /// Back up the identity in [dir]: its key sealed under [passphrase], as a recovery code (A6b).
+  Future<IdentityBackup> exportIdentity(String dir, String passphrase);
+
+  /// Make the identity in [code] (a recovery code, or a backup file's text) this install's, in [dir]; its DID.
+  Future<String> restoreIdentity(String dir, String code, String passphrase, String displayName);
+
   /// Start the app from [settings] (`dsip-app`'s `Settings` as JSON).
   Future<void> start(Map<String, dynamic> settings);
 
@@ -32,6 +38,16 @@ abstract class Client {
 
   /// Install the release fetched once this process has gone, and start the app again: the caller quits right after.
   Future<void> installUpdate();
+}
+
+/// A backup of an identity: its DID, the recovery code, and the text of a file holding it.
+class IdentityBackup {
+  const IdentityBackup({required this.identity, required this.code, required this.file});
+  factory IdentityBackup.fromJson(Map<String, dynamic> j) =>
+      IdentityBackup(identity: j['identity'] as String, code: j['code'] as String, file: j['file'] as String);
+  final String identity;
+  final String code;
+  final String file;
 }
 
 /// A response that is an error: its message; null otherwise.
