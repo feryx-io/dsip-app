@@ -60,7 +60,7 @@ impl Settings {
     /// The [`Config`] these settings describe, the identity loaded from its directory.
     pub fn config(&self) -> Result<Config, Error> {
         let bad = |what: String| Error::Settings(what);
-        let id = dsip_phone::Identity::load(&self.identity)?;
+        let id = crate::keys::load_identity(&self.identity)?;
         let mut cfg = Config::new(id, &self.relay);
         cfg.tls = dsip_transport::tls::client_config(self.ca.as_deref())?;
         cfg.audio = match self.audio.as_deref().unwrap_or("system") {
@@ -101,8 +101,11 @@ impl Settings {
     }
 }
 
-/// Make an identity in `dir`: a controller key, a device key and the delegation between them (a `did:key`). Returns
-/// its DID.
+/// Make an identity in `dir`: a controller key, a device key and the delegation between them (a `did:key`), the keys
+/// moved into the platform's store when this process uses one ([`crate::keys`]); a store that refuses them leaves them
+/// in files its owner alone reads. Returns its DID.
 pub fn init_identity(dir: &std::path::Path, display_name: &str) -> Result<String, Error> {
-    Ok(dsip_phone::Identity::init(dir, display_name, None, None)?.meta.identity)
+    let did = dsip_phone::Identity::init(dir, display_name, None, None)?.meta.identity;
+    crate::keys::secure_or_keep(dir);
+    Ok(did)
 }

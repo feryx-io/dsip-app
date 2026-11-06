@@ -170,7 +170,7 @@ fn refresh(app: &App, engine: &Engine<SqliteProvider>) {
 
 /// Start the messaging thread for the identity in `identity_dir`, whose relay is `relay`.
 pub(crate) fn spawn(app: App, cfg: MessagingConfig, identity_dir: PathBuf, relay: String) -> Result<mpsc::UnboundedSender<Req>, String> {
-    let id = dsip_phone::Identity::load(&identity_dir).map_err(|e| e.to_string())?;
+    let id = crate::keys::load_identity(&identity_dir).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&cfg.state_dir).map_err(|e| format!("{}: {e}", cfg.state_dir.display()))?;
     let (tx, rx) = mpsc::unbounded_channel();
     // the store is a SQLite connection, which stays on the thread that opened it: opened there, its failure sent back

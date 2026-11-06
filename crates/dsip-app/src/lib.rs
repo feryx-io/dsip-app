@@ -25,6 +25,7 @@
 pub mod audio;
 mod command;
 pub mod control;
+pub mod keys;
 pub mod messaging;
 mod settings;
 mod state;
@@ -79,6 +80,9 @@ pub enum Error {
     /// The messaging state, or its thread.
     #[error("messaging: {0}")]
     Messaging(String),
+    /// Where the identity's keys are kept ([`keys`]).
+    #[error("keys: {0}")]
+    Keys(String),
 }
 
 /// How the app runs.

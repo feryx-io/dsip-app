@@ -32,6 +32,8 @@ pub fn init_app() {
 
 /// Make an identity in `dir` (a controller key, a device key and the delegation between them); its DID.
 pub fn init_identity(dir: String, display_name: String) -> anyhow::Result<String> {
+    // its keys go to the system's store (the Keychain, the Keystore, …: A6a)
+    dsip_app::keys::use_system_store();
     Ok(dsip_app::init_identity(std::path::Path::new(&dir), &display_name)?)
 }
 

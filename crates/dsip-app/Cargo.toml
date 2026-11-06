@@ -37,9 +37,27 @@ anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+keyring-core = "1"
+
 # the control pipe for this user alone (user_only.rs)
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading", "Win32_System_Pipes"] }
+# keys.rs: each platform's store for the identity's keys (A6a)
+windows-native-keyring-store = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "1", features = ["keychain"] }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+apple-native-keyring-store = { version = "1", features = ["protected"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+android-native-keyring-store = "1"
+
+# the Secret Service over D-Bus, in Rust (no libdbus), on its own executor: the keyring calls block, and may be made
+# from within the app's Tokio runtime
+[target.'cfg(all(target_os = "linux", not(target_os = "android")))'.dependencies]
+zbus-secret-service-keyring-store = { version = "1", features = ["rt-async-io-crypto-rust"] }
 
 [dev-dependencies]
 dsip-testkit.workspace = true

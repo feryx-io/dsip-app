@@ -42,6 +42,12 @@ dsip-app hangup
 dsip-app quit
 ```
 
+The identity's keys go to the system's store (A6a): the Keychain on macOS, Credential Manager on Windows, the Secret
+Service on Linux, one item named by the device's DID. The folder keeps what is public (`identity.json`,
+`delegation.json`). Where there is no store (a Linux machine with no Secret Service), or with `--key-files`, they stay in
+`controller.key` and `device.key`, readable by their owner alone. An identity made before is moved in at its next
+`run`.
+
 With a mailbox, the same app messages:
 
 ```sh

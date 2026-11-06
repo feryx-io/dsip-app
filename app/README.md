@@ -93,6 +93,17 @@ the core as Telecom does (`rust/src/ios.rs`, a C ABI read by `CoreLink.swift`), 
 Apple's rule is that every VoIP push reports a call: a `call-ended` wake reports the call it names, or one ended at
 once, as does a wake for an app not set up. An unsigned build gets no tokens, so it is never woken until A4c signs it.
 
+The identity's keys are kept in the platform's store, not in the identity folder (A6a, `dsip_app::keys`):
+- **iOS:** the Keychain, readable after the phone's first unlock so a push wakes a locked phone, and kept on this
+  device only.
+- **Android:** the Android Keystore.
+- **macOS:** the login keychain.
+- **Windows:** Credential Manager.
+- **Linux:** the Secret Service, or the files, their owner's alone.
+
+An identity made before this is moved in at the next start. A store that refuses them (a build without the
+entitlements a keychain wants) leaves them in those files, and says why in the log.
+
 Messages wake an iPhone through a second token (A5d-4): APNs takes PushKit's token for the `.voip` topic only, so the
 app also registers for remote notifications and gives the core its alert token, on the bundle ID's topic, which the
 core enrols apart and gives to the mailbox (spec-gap 178; both kept in `push.json`). The user is asked once, at a
