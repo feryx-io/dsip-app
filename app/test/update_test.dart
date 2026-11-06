@@ -4,6 +4,7 @@ import 'package:dsip_app/src/app.dart';
 import 'package:dsip_app/src/client/models.dart';
 import 'package:dsip_app/src/controller.dart';
 import 'package:dsip_app/src/settings.dart';
+import 'package:dsip_app/src/screens/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -14,6 +15,9 @@ const release = UpdateInfo(
   notes: 'https://github.com/thevoiceguy/dsip-app/releases/tag/v0.2.0',
   canInstall: true,
 );
+
+/// The settings screen's list (the page has other scrollables).
+Finder settingsList() => find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first;
 
 void main() {
   late Directory dir;
@@ -56,6 +60,7 @@ void main() {
     await open(tester);
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('DSIP 0.1.0'), 300, scrollable: settingsList());
     expect(find.text('DSIP 0.1.0'), findsOneWidget);
     expect(find.byKey(const Key('update-banner')), findsNothing);
 
@@ -66,7 +71,10 @@ void main() {
     client.release = release;
     await tester.tap(find.byKey(const Key('check-updates')));
     await tester.pumpAndSettle();
-    expect(find.text('DSIP 0.2.0 is out.'), findsNWidgets(2), reason: 'in the banner and under About');
+    // under About here; the banner is at the list's top, out of view since the list scrolled down to About
+    expect(find.text('DSIP 0.2.0 is out.'), findsWidgets);
+    await tester.scrollUntilVisible(find.byKey(const Key('update-banner')), -300, scrollable: settingsList());
+    expect(find.descendant(of: find.byKey(const Key('update-banner')), matching: find.text('DSIP 0.2.0 is out.')), findsOneWidget);
   });
 
   testWidgets('update and restart looks again, fetches, stops the app, installs and quits', (tester) async {
@@ -133,6 +141,7 @@ void main() {
     await open(tester);
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const Key('check-updates')), 300, scrollable: settingsList());
     await tester.tap(find.byKey(const Key('check-updates')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Could not update: Exception: no network'), findsOneWidget);

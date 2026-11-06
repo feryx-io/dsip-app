@@ -118,7 +118,9 @@ class Controller extends ChangeNotifier {
 
   /// Stop the app, save [settings], start it again with them: what changing the relay, mailbox or hints nodes takes.
   /// Calls up end. If it does not start, the state stays empty and [error] says why.
-  Future<void> restart(Map<String, dynamic> settings) async {
+  /// [between] runs while the app is stopped (moving the identity, A6d); its failure is [error], and the app starts
+  /// again as it was.
+  Future<void> restart(Map<String, dynamic> settings, {Future<void> Function()? between}) async {
     await _updates?.cancel();
     _updates = null;
     await client.stop();
@@ -126,6 +128,13 @@ class Controller extends ChangeNotifier {
     _system?.sync(const []);
     threads.clear();
     notifyListeners();
+    if (between != null) {
+      try {
+        await between();
+      } catch (e) {
+        error = '$e';
+      }
+    }
     await store.save(settings);
     this.settings = settings;
     try {
@@ -134,6 +143,16 @@ class Controller extends ChangeNotifier {
       error = '$e';
       notifyListeners();
     }
+  }
+
+  /// Move the identity onto a domain of its own: the `did:web` of [plan] ([Client.webPrepare], checked by
+  /// [Client.webCheck]), with the app stopped while it moves, and started again as it (A6d).
+  Future<void> moveToWeb(Map<String, dynamic> plan) async {
+    final s = settings;
+    if (s == null) return;
+    await restart(s, between: () async {
+      await client.webMove(s['identity'] as String, plan);
+    });
   }
 
   /// Use the microphone [input] and the speaker [output] (device ids; null: the system's default), and keep the

@@ -41,6 +41,32 @@ Future<String> restoreIdentity({
   displayName: displayName,
 );
 
+/// The document the identity in `dir` would serve on a domain of its own, as `did` (a `did:web`), naming `relay` and
+/// the mailbox (`mailbox_did`, `mailbox_uri`) when given: `{"did", "url", "document"}` JSON. Nothing changes yet.
+Future<String> webPrepare({
+  required String dir,
+  required String did,
+  required String relay,
+  String? mailboxDid,
+  String? mailboxUri,
+}) => RustLib.instance.api.crateApiAppWebPrepare(
+  dir: dir,
+  did: did,
+  relay: relay,
+  mailboxDid: mailboxDid,
+  mailboxUri: mailboxUri,
+);
+
+/// What the domain of `plan` (from [`web_prepare`]) serves, compared with what it must: each difference, as a JSON list
+/// of sentences; empty when it serves the document.
+Future<String> webCheck({required String plan, String? ca}) =>
+    RustLib.instance.api.crateApiAppWebCheck(plan: plan, ca: ca);
+
+/// Make the identity in `dir` the `did:web` of `plan` (once [`web_check`] finds nothing differs); its new DID. The app
+/// is stopped first, and started again after.
+Future<String> webMove({required String dir, required String plan}) =>
+    RustLib.instance.api.crateApiAppWebMove(dir: dir, plan: plan);
+
 /// The system's microphones and speakers, as `dsip-app` lists them (`{"host", "devices": [{"id", "name", "kind",
 /// "default"}]}`), without the app running: what the phone's own test checks Rust reaches (on Android, through the
 /// JVM `MainActivity` hands over).

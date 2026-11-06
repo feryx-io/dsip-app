@@ -51,8 +51,32 @@ class FakeClient implements Client {
     return 'did:key:z6MkAnn';
   }
 
+  /// What [webCheck] answers.
+  List<String> webDiffers = const [];
+
+  /// The DIDs [webMove] moved to, and whether the app was stopped then.
+  final moves = <(String, bool)>[];
+  bool _running = false;
+
+  @override
+  Future<Map<String, dynamic>> webPrepare(String dir, String did, String relay, {String? mailboxDid, String? mailboxUri}) async => {
+    'did': did,
+    'url': 'https://${did.substring('did:web:'.length).split(':').first}/.well-known/did.json',
+    'document': {'id': did, 'service': [{'type': 'DSIPSignaling', 'serviceEndpoint': {'uri': relay}}]},
+  };
+
+  @override
+  Future<List<String>> webCheck(Map<String, dynamic> plan) async => webDiffers;
+
+  @override
+  Future<String> webMove(String dir, Map<String, dynamic> plan) async {
+    moves.add((plan['did'] as String, !_running));
+    return plan['did'] as String;
+  }
+
   @override
   Future<void> start(Map<String, dynamic> settings) async {
+    _running = true;
     if (startFails != null) throw startFails!;
     started = settings;
   }
@@ -67,7 +91,10 @@ class FakeClient implements Client {
   Stream<Update> updates() => _updates.stream;
 
   @override
-  Future<void> stop() async => stops++;
+  Future<void> stop() async {
+    _running = false;
+    stops++;
+  }
 
   /// What [checkForUpdate] finds (null: nothing newer), or throws.
   UpdateInfo? release;

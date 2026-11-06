@@ -215,6 +215,20 @@ fn store(id: &dsip_phone::Identity) -> Result<(), Error> {
     Ok(())
 }
 
+/// After dsip-rs changed the identity in `dir` (`id`: a key agreement key issued, a move to `did:web`), keep its keys
+/// where they are: where they are in the store, the store's item is written again and the key agreement file dsip-rs
+/// wrote goes; where they are in files, those stay, their owner's alone.
+pub(crate) fn keep(dir: &Path, id: &dsip_phone::Identity) -> Result<(), Error> {
+    if !in_files(dir) && keyring_core::get_default_store().is_some() {
+        store(id)?;
+        match std::fs::remove_file(dir.join(KEY_AGREEMENT_FILE)) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(Error::Keys(format!("{KEY_AGREEMENT_FILE}: {e}"))),
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 /// Give the identity in `dir` a key agreement key, when it has none (A6c; core §7.3, spec-gap 179): the first secret
 /// derived from its identity key, so every device holding that key holds the same one, and the identity's delegation
 /// naming it. What is sealed to the identity then opens with it, and its hint carries the delegation. Kept where the
@@ -226,11 +240,7 @@ pub fn ensure_key_agreement(dir: &Path) -> Result<bool, Error> {
     }
     let secret = id.derived_key_agreement_secret(0);
     id.issue_key_agreement(secret, dsip_transport::now_s())?;
-    if !in_files(dir) && keyring_core::get_default_store().is_some() {
-        // the keys are in the store: the key agreement key joins them, and its file goes
-        store(&id)?;
-        std::fs::remove_file(dir.join(KEY_AGREEMENT_FILE)).map_err(|e| Error::Keys(format!("{KEY_AGREEMENT_FILE}: {e}")))?;
-    }
+    keep(dir, &id)?;
     tracing::info!("keys: {} has a key agreement key", id.meta.identity);
     Ok(true)
 }

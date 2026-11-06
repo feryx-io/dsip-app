@@ -993,6 +993,102 @@ abstract class Strings {
   /// **'No backup: {reason}'**
   String backupFailed(String reason);
 
+  /// No description provided for @settingsWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Your own domain'**
+  String get settingsWeb;
+
+  /// No description provided for @settingsWebIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a DID on a domain you control (did:web) in place of this device\'s key. You can then change keys without losing the identity. People who know you now will see it as a new identity, and need to accept you again.'**
+  String get settingsWebIntro;
+
+  /// No description provided for @settingsWebStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up'**
+  String get settingsWebStart;
+
+  /// No description provided for @webTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your own domain'**
+  String get webTitle;
+
+  /// No description provided for @webDid.
+  ///
+  /// In en, this message translates to:
+  /// **'Your did:web'**
+  String get webDid;
+
+  /// No description provided for @webDidHint.
+  ///
+  /// In en, this message translates to:
+  /// **'did:web:example.com, or did:web:example.com:users:ann'**
+  String get webDidHint;
+
+  /// No description provided for @webDidNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a DID that starts with did:web:'**
+  String get webDidNeeded;
+
+  /// No description provided for @webPrepare.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the document'**
+  String get webPrepare;
+
+  /// No description provided for @webServe.
+  ///
+  /// In en, this message translates to:
+  /// **'Serve this at {url}, then check.'**
+  String webServe(String url);
+
+  /// No description provided for @webCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check'**
+  String get webCheck;
+
+  /// No description provided for @webServed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your domain serves the document.'**
+  String get webServed;
+
+  /// No description provided for @webDiffers.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet: {differences}'**
+  String webDiffers(String differences);
+
+  /// No description provided for @webMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to it'**
+  String get webMove;
+
+  /// No description provided for @webMoveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Move your identity?'**
+  String get webMoveConfirmTitle;
+
+  /// No description provided for @webMoveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'You become {did}. The app restarts, and calls in progress end. Contacts see a new identity and need to accept you again.'**
+  String webMoveConfirm(String did);
+
+  /// No description provided for @webFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That did not work: {reason}'**
+  String webFailed(String reason);
+
   /// No description provided for @settingsAbout.
   ///
   /// In en, this message translates to:
