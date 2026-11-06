@@ -177,6 +177,8 @@ mod tests {
 
     #[test]
     fn an_identity_is_restored_from_its_code_on_a_new_install() {
+        // the keys test sets a process-wide store: not while this one makes and loads identities
+        let _one = crate::keys::STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let (a, b) = (temp("a"), temp("b"));
         let did = crate::init_identity(&a, "Ann").unwrap();
         let backup = export_identity(&a, "correct horse battery").unwrap();
