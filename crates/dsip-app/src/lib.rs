@@ -184,7 +184,12 @@ impl App {
         let identity_dir = cfg.identity.dir.clone();
         // the relay-only hint, when no messaging thread publishes one with the mailbox
         let relay_hint = match (&cfg.hints, cfg.messaging.is_none()) {
-            (Some(h), true) => Some((h.clone(), cfg.identity.device.clone(), cfg.identity.delegation.clone())),
+            (Some(h), true) => Some((
+                h.clone(),
+                cfg.identity.device.clone(),
+                cfg.identity.delegation.clone(),
+                cfg.identity.key_agreement.as_ref().map(|k| k.delegation.clone()),
+            )),
             _ => None,
         };
         let mut b = dsip_phone::Phone::builder().identity(cfg.identity).relay(&cfg.relay).answer(dsip_phone::AnswerPolicy::Ring);
@@ -241,7 +246,7 @@ impl App {
         if let Some(w) = cfg.wake {
             let _ = app.inner.wake.set(wake::spawn(app.clone(), w, &identity_dir));
         }
-        if let Some((hints, device, delegation)) = relay_hint {
+        if let Some((hints, device, delegation, key_agreement)) = relay_hint {
             let (identity, mut stopped) = (app.state().me.identity, app.inner.stopped.subscribe());
             tokio::spawn(async move {
                 let mut last_seq = 0i64;
@@ -250,7 +255,9 @@ impl App {
                     let seq = now.max(last_seq + 1);
                     last_seq = seq;
                     let endpoints = dsip_transport::hints::endpoints(Some(&relay), None);
-                    let hint = dsip_transport::hints::reachability(&identity, &device, &delegation, &endpoints, seq, now, messaging::HINT_TTL_S);
+                    // with the identity's key agreement delegation: senders seal to its key (§7.3, spec-gap 179)
+                    let hint = dsip_transport::hints::reachability_with(&identity, &device, &delegation, &endpoints, seq, now, messaging::HINT_TTL_S,
+                                                                         key_agreement.as_ref());
                     for (node, r) in hints.publish(&hint).await {
                         tracing::info!("hint seq {seq} → {node}: {r:?}");
                     }

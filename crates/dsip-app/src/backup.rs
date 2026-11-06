@@ -157,7 +157,8 @@ pub fn restore_identity(dir: &Path, code: &str, passphrase: &str, display_name: 
     if did != controller.did() {
         return Err(bad("the restored identity is not the code's"));
     }
-    crate::keys::secure_or_keep(dir);
+    // the same key agreement key as the identity's other devices: derived from the identity key restored (A6c)
+    crate::keys::ready_identity(dir);
     Ok(did)
 }
 
@@ -192,6 +193,10 @@ mod tests {
         let (old, new) = (crate::keys::load_identity(&a).unwrap(), crate::keys::load_identity(&b).unwrap());
         assert_eq!(new.controller.did(), old.controller.did());
         assert_ne!(new.device.did(), old.device.did(), "its own device key");
+        // the same key agreement key: what is sealed to the identity opens on both devices (A6c; core §7.3)
+        let secret = |id: &dsip_phone::Identity| id.key_agreement.as_ref().map(|k| k.secret);
+        assert!(secret(&old).is_some());
+        assert_eq!(secret(&new), secret(&old));
         assert!(matches!(restore_identity(&b, &backup.code, "correct horse battery", "Ann"), Err(Error::Keys(m)) if m.contains("already")));
         for d in [a, b] {
             std::fs::remove_dir_all(d).unwrap();

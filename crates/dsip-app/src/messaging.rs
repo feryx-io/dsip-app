@@ -206,7 +206,9 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
     if let (Some(resume), true) = (dsip_messaging_device::Store::get(&store, "resume").map_err(|e| format!("{e:?}"))?, saved.is_object()) {
         saved["resume"] = resume; // spec-gap 44: the item transactions keep the delivery state under its own key
     }
-    let engine_identity = dsip_messenger::engine_identity(&identity, &id.device, &id.controller, &id.delegation, &id.meta.display_name);
+    // the identity's key agreement key opens sealed introductions first (§7.3, spec-gap 179)
+    let ka_secret = id.key_agreement.as_ref().map(|k| k.secret);
+    let engine_identity = dsip_messenger::engine_identity_with(&identity, &id.device, &id.controller, &id.delegation, &id.meta.display_name, ka_secret.as_ref());
     let engine = Engine::open(&engine_identity, &cfg.mailbox.0, &cfg.mailbox.1, store, &saved, now as f64).map_err(|e| err(&e.0))?;
     let mcfg = dsip_messenger::Config {
         identity: identity.clone(),
@@ -253,7 +255,8 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
             let seq = dsip_transport::now_s().max(last_seq + 1);
             last_seq = seq;
             let endpoints = dsip_transport::hints::endpoints(Some(&relay), Some((&cfg.mailbox.0, &cfg.mailbox.1)));
-            let hint = dsip_transport::hints::reachability(&identity, &id.device, &id.delegation, &endpoints, seq, dsip_transport::now_s(), HINT_TTL_S);
+            let ka = id.key_agreement.as_ref().map(|k| &k.delegation);
+            let hint = dsip_transport::hints::reachability_with(&identity, &id.device, &id.delegation, &endpoints, seq, dsip_transport::now_s(), HINT_TTL_S, ka);
             for (node, r) in hints.publish(&hint).await {
                 tracing::info!("hint seq {seq} → {node}: {r:?}");
             }
