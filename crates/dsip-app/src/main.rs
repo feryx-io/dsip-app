@@ -17,6 +17,10 @@ struct Args {
     /// `\\.\pipe\dsip-app-<user>`.
     #[arg(long, global = true)]
     control: Option<PathBuf>,
+    /// Keep the identity's keys in its folder's files, its owner's alone, not in the system's store (the Keychain,
+    /// Credential Manager, the Secret Service).
+    #[arg(long, global = true)]
+    key_files: bool,
     #[command(subcommand)]
     cmd: Cmd,
 }
@@ -243,12 +247,17 @@ async fn main() -> Result<ExitCode> {
         .with_writer(std::io::stderr).init();
     let args = Args::parse();
     let path = args.control.clone().unwrap_or_else(control::default_path);
+    if !args.key_files && matches!(args.cmd, Cmd::Init { .. } | Cmd::Run { .. }) {
+        dsip_app::keys::use_system_store();
+    }
     let cmd = match args.cmd {
         Cmd::Init { identity, name } => {
             println!("{}", dsip_app::init_identity(&identity, &name).context("making the identity")?);
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Run { identity, relay, ca, audio, input, output, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web, push_gateway } => {
+            // an identity made before its keys were kept in the store: moved in now
+            dsip_app::keys::secure_or_keep(&identity);
             let settings = Settings {
                 identity,
                 relay,
