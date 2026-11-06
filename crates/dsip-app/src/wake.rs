@@ -1,11 +1,13 @@
 //! Waking this device when it sleeps (app plan A5d; the Wake Profile, `wake/0.1`): the phone's platform push token
 //! ([`crate::Command::Push`]) enrolled at the publisher's push gateway, and the registration that results given to the
 //! relay (calls) and the mailbox (messages), each when it says it wakes devices; renewed once half its life is gone,
-//! and at once when the token changes. A woken app opens what the push carried ([`open`]).
+//! and at once when the token changes. An iPhone has two tokens, as APNs takes each for its own topic only (spec-gap
+//! 178): PushKit's for calls, given to the relay, and the alert token for messages, given to the mailbox, each
+//! enrolled apart. FCM's one token serves both. A woken app opens what the push carried ([`open`]).
 //!
-//! What it keeps is `wake.json` beside the identity: the token, the enrolment's key (made for it and nothing else, so
-//! the gateway never learns the device's DID), the gateway's handle, the seal secret the relay seals a call's caller
-//! to, and each registration's waker and expiry. The protocol is dsip-rs's (`dsip_transport::wake::enrol`,
+//! What it keeps is `wake.json` beside the identity: the tokens, each enrolment's key (made for it and nothing else,
+//! so the gateway never learns the device's DID), the gateway's handles, the seal secret the relay seals a call's
+//! caller to, and each registration's waker and expiry. The protocol is dsip-rs's (`dsip_transport::wake::enrol`,
 //! `Phone::wake_register`, `Messenger::wake_register`); this decides when.
 //!
 //! Spec: W§3 (enrolment), W§4.1–W§4.4 (registration, renewal, advertising), W§5.4 and W§6 (what a woken device reads).
@@ -58,7 +60,8 @@ impl WakeConfig {
 pub struct Token {
     /// `apns` or `fcm` (registry `dsip-wake-provider`).
     pub provider: String,
-    /// The APNs topic (the bundle ID with `.voip`) or the FCM project.
+    /// The APNs topic (the bundle ID with `.voip` for PushKit's token, the bundle ID for the alert token) or the FCM
+    /// project.
     pub app: String,
     /// The token.
     pub token: String,
@@ -87,10 +90,16 @@ pub(crate) struct Registered {
 /// What `wake.json` holds.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct Saved {
+    /// The token for calls, or for everything when there is no `message_token`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     token: Option<Token>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     enrolment: Option<Enrolment>,
+    /// APNs' alert token, for messages (spec-gap 178).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    message_token: Option<Token>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    message_enrolment: Option<Enrolment>,
     /// The seal secret (base64url), made once per device.
     #[serde(default)]
     seal: String,
@@ -140,8 +149,8 @@ fn restrict(path: &Path) -> std::io::Result<()> {
 
 /// What the waking task is told.
 pub(crate) enum Kick {
-    /// A new token, or none (stop being woken).
-    Token(Option<Token>),
+    /// New tokens: for calls (or everything), and APNs' alert token for messages; neither, stop being woken.
+    Tokens(Option<Token>, Option<Token>),
     /// Look again now (a binding came back).
     Check,
 }
@@ -157,9 +166,10 @@ pub(crate) fn spawn(app: App, cfg: WakeConfig, dir: &Path) -> mpsc::UnboundedSen
         loop {
             tokio::select! {
                 k = rx.recv() => match k {
-                    Some(Kick::Token(t)) => {
+                    Some(Kick::Tokens(calls, messages)) => {
                         let mut s = Saved::load(&w.path);
-                        s.token = t;
+                        s.token = calls;
+                        s.message_token = messages;
                         s.save(&w.path);
                     }
                     Some(Kick::Check) => {}
@@ -188,13 +198,39 @@ impl Waking {
         let mut push = Push { gateway: self.cfg.gateway.clone(), ..Push::default() };
         let done = self.steps(&mut s, &mut push).await;
         s.save(&self.path);
-        let push = s.token.is_some().then_some(push);
+        let push = (s.token.is_some() || s.message_token.is_some()).then_some(push);
         self.app.publish(Change::Push { push });
         done
     }
 
+    /// The enrolment for `token` at the gateway: the one in `current` if it is for this token and gateway, else a new
+    /// one under a new wake key (W§3: a new token, or another gateway, means a new enrolment and so new registrations).
+    /// `None` when the gateway did not take it, the reason in `push`.
+    async fn enrolled(&self, current: &mut Option<Enrolment>, token: Option<Token>, push: &mut Push) -> Option<Enrolment> {
+        let Some(token) = token else {
+            *current = None;
+            return None;
+        };
+        if let Some(e) = current.as_ref().filter(|e| e.gateway == self.cfg.gateway && e.token == token) {
+            return Some(e.clone());
+        }
+        *current = None;
+        let key = KeyPair::generate();
+        let env = token.environment.as_deref();
+        match dsip_transport::wake::enrol(&self.client, &self.cfg.gateway, &key, &token.provider, &token.app, &token.token, env).await {
+            Ok(handle) => {
+                *current = Some(Enrolment { gateway: self.cfg.gateway.clone(), token, key: b64::encode(&key.seed()), handle });
+                current.clone()
+            }
+            Err(e) => {
+                push.error = Some(format!("enrolling {} at {}: {e}", token.app, self.cfg.gateway));
+                None
+            }
+        }
+    }
+
     async fn steps(&mut self, s: &mut Saved, push: &mut Push) -> bool {
-        let Some(token) = s.token.clone() else {
+        let Some(provider) = s.token.as_ref().or(s.message_token.as_ref()).map(|t| t.provider.clone()) else {
             // W§4.2: no token, no waking: each registration is ended where it was given
             if s.relay.take().is_some() {
                 if let Err(e) = self.app.inner.phone.wake_remove().await {
@@ -205,29 +241,23 @@ impl Waking {
                 let _ = self.app.mailbox_wake(None).await;
             }
             s.enrolment = None;
+            s.message_enrolment = None;
             return true;
         };
-        push.provider = token.provider.clone();
-        // W§3: a new token, or another gateway, means a new enrolment and so new registrations
-        let enrolled = s.enrolment.as_ref().is_some_and(|e| e.gateway == self.cfg.gateway && e.token == token);
-        if !enrolled {
-            s.relay = None;
-            s.mailbox = None;
-            let key = KeyPair::generate();
-            let env = token.environment.as_deref();
-            match dsip_transport::wake::enrol(&self.client, &self.cfg.gateway, &key, &token.provider, &token.app, &token.token, env).await {
-                Ok(handle) => {
-                    s.enrolment = Some(Enrolment { gateway: self.cfg.gateway.clone(), token, key: b64::encode(&key.seed()), handle })
-                }
-                Err(e) => {
-                    push.error = Some(format!("enrolling at {}: {e}", self.cfg.gateway));
-                    return false;
-                }
-            }
+        push.provider = provider.clone();
+        let calls = self.enrolled(&mut s.enrolment, s.token.clone(), push).await;
+        let messages = self.enrolled(&mut s.message_enrolment, s.message_token.clone(), push).await;
+        if (s.token.is_some() && calls.is_none()) || (s.message_token.is_some() && messages.is_none()) {
+            return false;
         }
-        let e = s.enrolment.clone().expect("enrolled above");
         push.enrolled = true;
-        let key = KeyPair::from_seed(seed(&e.key).unwrap_or_default());
+        // Messages wake through the alert token's handle; FCM's one token serves both. APNs' VoIP token cannot carry
+        // an alert push (spec-gap 178): without an alert token, the mailbox wakes nothing.
+        let for_messages = match (messages, provider.as_str()) {
+            (Some(m), _) => Some(m),
+            (None, "apns") => None,
+            (None, _) => calls.clone(),
+        };
         let now = dsip_transport::now_s();
 
         // the relay: calls (W§4.4: only one that says it wakes devices)
@@ -236,33 +266,54 @@ impl Waking {
         push.relay = if phone.relay_wake().is_none() {
             s.relay = None;
             Registration::status("not-offered")
-        } else if let Some(r) = s.relay.as_ref().filter(|r| !due(r, phone.relay_did(), &e.handle, now)) {
-            Registration::registered(r.expires_at)
-        } else {
-            let reg = dsip_wake::registration(&key, phone.relay_did(), &e.gateway, &e.handle, now);
-            let seal = dsip_core::hpke::x25519_public(&s.seal_secret());
-            match phone.wake_register(reg, Some(seal), None).await {
-                Ok(Answer::Accepted { .. }) => {
-                    let r = Registered { waker: phone.relay_did().into(), handle: e.handle.clone(), expires_at: now + dsip_wake::W_REGISTRATION_S };
-                    let view = Registration::registered(r.expires_at);
-                    s.relay = Some(r);
-                    view
-                }
-                Ok(Answer::Refused { reason, .. }) => Registration::refused(&reason),
-                Err(err) => {
-                    done = false;
-                    Registration::failed(&err.to_string())
+        } else if let Some(e) = calls {
+            if let Some(r) = s.relay.as_ref().filter(|r| !due(r, phone.relay_did(), &e.handle, now)) {
+                Registration::registered(r.expires_at)
+            } else {
+                let key = KeyPair::from_seed(seed(&e.key).unwrap_or_default());
+                let reg = dsip_wake::registration(&key, phone.relay_did(), &e.gateway, &e.handle, now);
+                let seal = dsip_core::hpke::x25519_public(&s.seal_secret());
+                match phone.wake_register(reg, Some(seal), None).await {
+                    Ok(Answer::Accepted { .. }) => {
+                        let r = Registered { waker: phone.relay_did().into(), handle: e.handle.clone(), expires_at: now + dsip_wake::W_REGISTRATION_S };
+                        let view = Registration::registered(r.expires_at);
+                        s.relay = Some(r);
+                        view
+                    }
+                    Ok(Answer::Refused { reason, .. }) => Registration::refused(&reason),
+                    Err(err) => {
+                        done = false;
+                        Registration::failed(&err.to_string())
+                    }
                 }
             }
+        } else {
+            if s.relay.take().is_some() {
+                if let Err(e) = phone.wake_remove().await {
+                    tracing::info!("waking: ending the relay's registration: {e}");
+                }
+            }
+            Registration::status("no-token")
         };
 
         // the mailbox: messages, when there is one
         if self.app.inner.messaging.get().is_some() {
-            let current = s.mailbox.clone();
-            let ask = MailboxAsk { key: key.seed(), gateway: e.gateway.clone(), handle: e.handle.clone(), current, now };
-            let (view, kept) = self.app.mailbox_wake(Some(ask)).await;
+            let view = match for_messages {
+                Some(e) => {
+                    let key = seed(&e.key).unwrap_or_default();
+                    let ask = MailboxAsk { key, gateway: e.gateway.clone(), handle: e.handle.clone(), current: s.mailbox.clone(), now };
+                    let (view, kept) = self.app.mailbox_wake(Some(ask)).await;
+                    s.mailbox = kept;
+                    view
+                }
+                None => {
+                    if s.mailbox.take().is_some() {
+                        let _ = self.app.mailbox_wake(None).await;
+                    }
+                    Registration::status("no-token")
+                }
+            };
             done &= view.status != "failed";
-            s.mailbox = kept;
             push.mailbox = Some(view);
         }
         done

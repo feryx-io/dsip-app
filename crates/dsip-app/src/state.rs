@@ -52,8 +52,9 @@ pub struct Push {
 /// Where a registration with a waker stands.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Registration {
-    /// `registered`, `not-offered` (the waker wakes no one, W§4.4), `refused` (its `wake.*` reason), `failed` (no
-    /// answer; tried again), or `pending` (not tried yet).
+    /// `registered`, `not-offered` (the waker wakes no one, W§4.4), `no-token` (no token for its kinds: an iPhone
+    /// without PushKit's token for the relay, or without the alert token for the mailbox), `refused` (its `wake.*`
+    /// reason), `failed` (no answer; tried again), or `pending` (not tried yet).
     pub status: String,
     /// The refusal's reason, or the failure.
     #[serde(default, skip_serializing_if = "Option::is_none")]

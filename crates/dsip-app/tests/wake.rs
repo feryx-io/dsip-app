@@ -10,10 +10,11 @@ use std::time::Duration;
 use dsip_app::{App, Command, Config, MessagingConfig, Response, State, WakeConfig};
 use dsip_mailbox::{MailboxConfig, MailboxServer};
 use dsip_testkit::{push, Network, PushGateway};
+use dsip_transport::wake::WakeClient;
 use serde_json::Value;
 
 fn push_token(token: &str) -> Command {
-    Command::Push { provider: Some("fcm".into()), app: Some(push::APP.into()), token: Some(token.into()), environment: None }
+    Command::Push { provider: Some("fcm".into()), app: Some(push::APP.into()), token: Some(token.into()), environment: None, message_app: None, message_token: None }
 }
 
 fn config(net: &Network, id: dsip_phone::Identity, gw: Option<&PushGateway>) -> Config {
@@ -118,7 +119,7 @@ async fn with_the_token_gone_the_registration_ends_and_a_call_wakes_nothing() {
     let bob_did = bob.state().me.identity;
     bob.command(push_token("fcm-token-bob")).await;
     until(&bob, "registered", relay_registered).await;
-    let off = Command::Push { provider: None, app: None, token: None, environment: None };
+    let off = Command::Push { provider: None, app: None, token: None, environment: None, message_app: None, message_token: None };
     assert_eq!(bob.command(off).await, Response::Ok);
     until(&bob, "not woken", |s| s.push.is_none()).await;
     bob.stop().await;
@@ -185,4 +186,124 @@ async fn with_a_mailbox_that_wakes_both_are_registered_with() {
     .await;
     bob.stop().await;
     let _ = std::fs::remove_dir_all(dir);
+}
+
+/// The bundle ID of the iPhone app the APNs gateway below pushes for.
+const BUNDLE: &str = "org.dsip.test";
+
+/// A gateway pushing for an iPhone app's two APNs topics (spec-gap 178): PushKit's `<bundle>.voip` and the alert
+/// token's `<bundle>`, through a recorder; and the waker configuration that reaches it.
+async fn apns_gateway(dir: &Path) -> (String, WakeClient, dsip_push::providers::Recorder, dsip_transport::waker::WakeConfig) {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(dir, &["localhost".into(), "127.0.0.1".into()]).unwrap();
+    let tcp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = tcp.local_addr().unwrap().port();
+    let did = format!("did:web:localhost%3A{port}");
+    let endpoint = format!("https://localhost:{port}/wake");
+    let recorder = dsip_push::providers::Recorder::default();
+    let providers: HashMap<String, Arc<dyn dsip_push::Provider>> = [("apns".to_string(), Arc::new(recorder.clone()) as Arc<dyn dsip_push::Provider>)].into();
+    let gateway = Arc::new(dsip_push::Gateway::new(dsip_push::GatewayConfig {
+        key: dsip_core::keys::KeyPair::generate(),
+        did: did.clone(),
+        handle_key: dsip_core::keys::KeyPair::generate().seed(),
+        apps: vec![("apns".into(), format!("{BUNDLE}.voip")), ("apns".into(), BUNDLE.into())],
+        providers,
+        resolver: Default::default(),
+        web: None,
+        limits: dsip_push::Limits::default(),
+    }));
+    let mut docs = dsip_core::did::StaticResolver::default();
+    docs.insert(gateway.document(&endpoint));
+    let acceptor = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    tokio::spawn(async move { dsip_push::server::serve(gateway, &endpoint, tcp, acceptor).await });
+    let client = WakeClient::new(Arc::new(docs)).with_ca(&std::fs::read(&cert).unwrap()).unwrap();
+    let waker = dsip_transport::waker::WakeConfig { client: client.clone(), gateways: Some(vec![did.clone()]), store: None };
+    (did, client, recorder, waker)
+}
+
+fn iphone_tokens(voip: Option<&str>, alert: Option<&str>) -> Command {
+    Command::Push {
+        provider: Some("apns".into()),
+        app: voip.map(|_| format!("{BUNDLE}.voip")),
+        token: voip.map(String::from),
+        environment: Some("sandbox".into()),
+        message_app: alert.map(|_| BUNDLE.into()),
+        message_token: alert.map(String::from),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_iphone_enrols_its_two_tokens_apart_calls_at_the_relay_and_messages_at_the_mailbox() {
+    let dir = std::env::temp_dir().join(format!("dsip-app-wake-iphone-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (gateway, client, recorder, waker) = apns_gateway(&dir).await;
+    let net = Network::with(dsip_relay::RelayConfig { wake: Some(waker.clone()), ..dsip_relay::RelayConfig::default() });
+    let id = net.identity("Bob");
+    let id_dir = id.dir.clone();
+    let mut cfg = config(&net, id, None);
+    cfg.wake = Some(WakeConfig { gateway: gateway.clone(), client: Some(client) });
+    cfg.messaging = Some(MessagingConfig {
+        mailbox: mailbox_waking(&dir, waker).await,
+        hints_nodes: vec![],
+        ca: Some(dir.join("mailbox-cert.pem")),
+        state_dir: dir.join("bob-messaging"),
+        fetch_did_web: false,
+    });
+    let bob = App::start(cfg).await.unwrap();
+    let bob_did = bob.state().me.identity;
+    let mailbox_registered = |s: &State| s.push.as_ref().and_then(|p| p.mailbox.as_ref()).is_some_and(|m| m.status == "registered");
+
+    // PushKit's token alone: calls wake, messages cannot (APNs takes no alert push on a VoIP token)
+    assert_eq!(bob.command(iphone_tokens(Some("voip-token"), None)).await, Response::Ok);
+    until(&bob, "the relay alone", |s| {
+        relay_registered(s) && s.push.as_ref().and_then(|p| p.mailbox.as_ref()).is_some_and(|m| m.status == "no-token")
+    })
+    .await;
+
+    // the alert token too: enrolled apart, under its own key, and given to the mailbox
+    assert_eq!(bob.command(iphone_tokens(Some("voip-token"), Some("alert-token"))).await, Response::Ok);
+    until(&bob, "both", |s| relay_registered(s) && mailbox_registered(s)).await;
+    let saved: Value = serde_json::from_slice(&std::fs::read(id_dir.join(dsip_app::wake::FILE)).unwrap()).unwrap();
+    let (calls, messages) = (&saved["enrolment"], &saved["message_enrolment"]);
+    assert_eq!((calls["token"]["app"].as_str(), messages["token"]["app"].as_str()), (Some("org.dsip.test.voip"), Some(BUNDLE)));
+    assert_ne!(calls["key"], messages["key"], "each enrolment its own wake key (W§3)");
+    assert_eq!(saved["relay"]["handle"], calls["handle"], "the relay wakes through PushKit's token");
+    assert_eq!(saved["mailbox"]["handle"], messages["handle"], "the mailbox through the alert token");
+
+    // a call to the sleeping phone is a VoIP push on PushKit's token
+    bob.stop().await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let alice = App::start(config(&net, net.identity("Alice"), None)).await.unwrap();
+    alice.command(Command::Call { to: bob_did }).await;
+    let pushed = tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            if let Some(p) = recorder.pushes().into_iter().next() {
+                return p;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .expect("a push");
+    assert_eq!((pushed["app"].as_str(), pushed["token"].as_str(), pushed["class"].as_str()), (Some("org.dsip.test.voip"), Some("voip-token"), Some("call")));
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+/// [`mailbox`], waking through `waker`.
+async fn mailbox_waking(dir: &Path, waker: dsip_transport::waker::WakeConfig) -> (String, String) {
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(&dir.join("mailbox-tls"), &["127.0.0.1".into(), "localhost".into()]).unwrap();
+    std::fs::copy(&cert, dir.join("mailbox-cert.pem")).unwrap();
+    let tls = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    let tcp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = tcp.local_addr().unwrap().port();
+    let mut cfg = MailboxConfig::new(dir.join("mailbox"), format!("https://127.0.0.1:{port}/blobs"));
+    cfg.serve_any = Some(4);
+    cfg.wake = Some(waker);
+    let server = MailboxServer::open(cfg).unwrap();
+    server.spawn_tasks();
+    let did = server.did().to_string();
+    tokio::spawn(async move { server.serve_tls(tcp, tls).await });
+    (did, format!("wss://127.0.0.1:{port}/dsip"))
 }

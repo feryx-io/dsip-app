@@ -34,28 +34,46 @@ pub(crate) fn install(dir: PathBuf, gateway: Option<String>) {
     let _ = INSTALL.set(Install { dir, gateway });
 }
 
-/// Where the platform wakes this install (the `Command::Push` it is given at every start).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Where the platform wakes this install (the `Command::Push` it is given at every start): FCM's one token, or an
+/// iPhone's two (A5d-4; the Wake Profile, spec-gap 178), PushKit's for calls and APNs' alert token for messages, which
+/// the system hands over apart.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct PushToken {
     /// `fcm` or `apns`.
     pub provider: String,
-    /// The FCM project or the APNs topic.
+    /// The FCM project or PushKit's APNs topic; empty with no such token yet.
+    #[serde(default)]
     pub app: String,
-    /// The platform's token.
+    /// The platform's token (FCM's, or PushKit's); empty: none yet.
+    #[serde(default)]
     pub token: String,
     /// APNs only: `sandbox` for a build signed for development; none is `production` (W§3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<String>,
+    /// APNs: the alert token's topic (the bundle ID).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_app: Option<String>,
+    /// APNs: the alert token.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_token: Option<String>,
 }
 
 impl PushToken {
     fn command(&self) -> Command {
+        let calls = !self.token.is_empty();
         Command::Push {
             provider: Some(self.provider.clone()),
-            app: Some(self.app.clone()),
-            token: Some(self.token.clone()),
+            app: calls.then(|| self.app.clone()),
+            token: calls.then(|| self.token.clone()),
             environment: self.environment.clone(),
+            message_app: self.message_token.as_ref().and(self.message_app.clone()),
+            message_token: self.message_token.clone(),
         }
+    }
+
+    /// No token at all.
+    fn is_empty(&self) -> bool {
+        self.token.is_empty() && self.message_token.is_none()
     }
 }
 
@@ -151,16 +169,35 @@ pub(crate) async fn wake() -> anyhow::Result<()> {
     start(serde_json::from_str(&text)?).await
 }
 
-/// Native code's way to the app: the platform's push token (empty: none), and for APNs its `environment`, kept for
-/// every start and given to the app now if it runs.
-pub(crate) async fn set_push(provider: &str, app: &str, token: &str, environment: Option<&str>) -> anyhow::Result<()> {
+/// Which of an install's tokens native code gives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Tokens {
+    /// FCM's one token, or PushKit's.
+    Calls,
+    /// APNs' alert token (spec-gap 178).
+    Messages,
+}
+
+/// The tokens kept in `saved`, with `which` now `token` (empty: none) on `app`, and for APNs its `environment`. A
+/// token from another provider replaces everything kept.
+pub(crate) fn with_token(saved: Option<PushToken>, which: Tokens, provider: &str, app: &str, token: &str, environment: Option<&str>) -> Option<PushToken> {
+    let mut t = saved.filter(|t| t.provider == provider).unwrap_or_else(|| PushToken { provider: provider.into(), ..Default::default() });
+    t.environment = environment.filter(|e| !e.is_empty()).map(str::to_string);
+    match which {
+        Tokens::Calls => (t.app, t.token) = (app.into(), token.into()),
+        Tokens::Messages => {
+            let given = !token.is_empty();
+            (t.message_app, t.message_token) = (given.then(|| app.to_string()), given.then(|| token.to_string()))
+        }
+    }
+    (!t.is_empty()).then_some(t)
+}
+
+/// Native code's way to the app: one of the platform's push tokens (empty: none), and for APNs its `environment`,
+/// kept for every start and given to the app now if it runs.
+pub(crate) async fn set_push(which: Tokens, provider: &str, app: &str, token: &str, environment: Option<&str>) -> anyhow::Result<()> {
     let install = INSTALL.get().ok_or_else(|| anyhow::anyhow!("not installed"))?;
-    let token = (!token.is_empty()).then(|| PushToken {
-        provider: provider.to_string(),
-        app: app.to_string(),
-        token: token.to_string(),
-        environment: environment.filter(|e| !e.is_empty()).map(str::to_string),
-    });
+    let token = with_token(load_push(&install.dir), which, provider, app, token, environment);
     save_push(&install.dir, token.as_ref())?;
     if let Some(running) = current() {
         let command = token.as_ref().map(PushToken::command).unwrap_or(Command::Push {
@@ -168,6 +205,8 @@ pub(crate) async fn set_push(provider: &str, app: &str, token: &str, environment
             app: None,
             token: None,
             environment: None,
+            message_app: None,
+            message_token: None,
         });
         if let dsip_app::Response::Error { message } = runtime().spawn(async move { running.command(command).await }).await? {
             anyhow::bail!(message);
@@ -468,7 +507,7 @@ mod tests {
         // A folder not made yet: the platform may give a token before the app is set up.
         let dir = std::env::temp_dir().join(format!("dsip-app-push-{}", std::process::id())).join("support");
         assert_eq!(load_push(&dir), None);
-        let token = PushToken { provider: "fcm".into(), app: "dsip-test".into(), token: "token-1".into(), environment: None };
+        let token = PushToken { provider: "fcm".into(), app: "dsip-test".into(), token: "token-1".into(), ..Default::default() };
         save_push(&dir, Some(&token)).unwrap();
         assert_eq!(load_push(&dir), Some(token.clone()));
         assert!(matches!(token.command(), Command::Push { token: Some(t), .. } if t == "token-1"));
@@ -482,6 +521,33 @@ mod tests {
         std::fs::write(push_path(&dir), r#"{"provider":"apns","app":"com.thevoiceguy.dsip.voip","token":"ab12"}"#).unwrap();
         assert!(matches!(load_push(&dir).unwrap().command(), Command::Push { environment: None, .. }));
         std::fs::remove_dir_all(dir.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn an_iphones_two_tokens_are_kept_together_as_they_come() {
+        let voip = |saved, token| with_token(saved, Tokens::Calls, "apns", "com.thevoiceguy.dsip.voip", token, Some("sandbox"));
+        let alert = |saved, token| with_token(saved, Tokens::Messages, "apns", "com.thevoiceguy.dsip", token, Some("sandbox"));
+
+        // the alert token may come first: messages alone
+        let t = alert(None, "alert-1").unwrap();
+        let Command::Push { token, message_app, message_token, .. } = t.command() else { panic!() };
+        assert_eq!((token, message_app.as_deref(), message_token.as_deref()), (None, Some("com.thevoiceguy.dsip"), Some("alert-1")));
+
+        // then PushKit's: both, in one command
+        let t = voip(Some(t), "voip-1").unwrap();
+        let Command::Push { app, token, environment, message_token, .. } = t.command() else { panic!() };
+        assert_eq!((app.as_deref(), token.as_deref(), environment.as_deref(), message_token.as_deref()),
+                   (Some("com.thevoiceguy.dsip.voip"), Some("voip-1"), Some("sandbox"), Some("alert-1")));
+
+        // a token gone leaves the other; both gone, nothing
+        let t = alert(Some(t), "").unwrap();
+        assert!(matches!(t.command(), Command::Push { token: Some(_), message_token: None, message_app: None, .. }));
+        assert_eq!(voip(Some(t), ""), None);
+
+        // another provider's token replaces what was kept
+        let kept = alert(None, "alert-1");
+        let fcm = with_token(kept, Tokens::Calls, "fcm", "dsip-test", "fcm-1", None).unwrap();
+        assert_eq!(fcm.message_token, None);
     }
 
     #[test]

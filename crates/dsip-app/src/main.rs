@@ -214,8 +214,14 @@ enum Cmd {
         /// APNs's `production` or `sandbox`.
         #[arg(long)]
         environment: Option<String>,
+        /// APNs: the alert token's topic (the bundle ID), for message wakes, when `--token` is PushKit's.
+        #[arg(long, requires = "message_token")]
+        message_app: Option<String>,
+        /// APNs: the alert token.
+        #[arg(long, requires = "message_app")]
+        message_token: Option<String>,
         /// Stop being woken.
-        #[arg(long, conflicts_with_all = ["provider", "app", "token", "environment"])]
+        #[arg(long, conflicts_with_all = ["provider", "app", "token", "environment", "message_app", "message_token"])]
         off: bool,
     },
     /// Read a push's `dsip-wake` data (JSON): what woke the app, and a call's caller from its sealed hint.
@@ -300,8 +306,12 @@ async fn main() -> Result<ExitCode> {
         Cmd::Unmute { call } => Command::Unmute { call },
         Cmd::Audio { input: None, output: None } => Command::AudioDevices,
         Cmd::Audio { input, output } => Command::ChooseAudio { input, output },
-        Cmd::Push { off: true, .. } => Command::Push { provider: None, app: None, token: None, environment: None },
-        Cmd::Push { provider, app, token, environment, .. } => Command::Push { provider, app, token, environment },
+        Cmd::Push { off: true, .. } => {
+            Command::Push { provider: None, app: None, token: None, environment: None, message_app: None, message_token: None }
+        }
+        Cmd::Push { provider, app, token, environment, message_app, message_token, .. } => {
+            Command::Push { provider, app, token, environment, message_app, message_token }
+        }
         Cmd::OpenWake { data } => Command::OpenWake { data: serde_json::from_str(&data).context("the data is not JSON")? },
         Cmd::State => Command::State,
         Cmd::Quit => Command::Quit,

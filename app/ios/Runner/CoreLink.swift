@@ -65,10 +65,12 @@ enum CoreLink {
     }
   }
 
-  /// Where this install is woken from now on; an empty token is nowhere.
-  static func setPush(provider: String, app: String, token: String, environment: String?) {
+  /// Where this install is woken from now on, for calls (PushKit's token) or for messages (APNs' alert token, spec-gap
+  /// 178); an empty token is none.
+  static func setPush(messages: Bool = false, provider: String, app: String, token: String, environment: String?) {
     worker.async {
-      if let error = take(dsip_set_push(provider, app, token, environment ?? "")) {
+      let set = messages ? dsip_set_message_push : dsip_set_push
+      if let error = take(set(provider, app, token, environment ?? "")) {
         NSLog("DsipCore: the push token was not taken: %@", error)
       }
     }

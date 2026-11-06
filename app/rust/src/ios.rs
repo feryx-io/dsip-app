@@ -42,7 +42,14 @@ pub extern "C" fn dsip_wake() -> *mut c_char {
     outcome(crate::api::app::runtime().block_on(crate::system::wake()))
 }
 
-/// Where this install is woken; an empty token is nowhere. `environment` is APNs' (`sandbox`; empty is production).
+fn set_push(which: crate::system::Tokens, provider: *const c_char, app: *const c_char, token: *const c_char, environment: *const c_char) -> *mut c_char {
+    let (provider, app, token, environment) = (text(provider), text(app), text(token), text(environment));
+    let set = crate::system::set_push(which, &provider, &app, &token, Some(environment.as_str()));
+    outcome(crate::api::app::runtime().block_on(set))
+}
+
+/// Where this install is woken for calls: PushKit's token; an empty one is none. `environment` is APNs' (`sandbox`;
+/// empty is production).
 #[no_mangle]
 pub extern "C" fn dsip_set_push(
     provider: *const c_char,
@@ -50,9 +57,19 @@ pub extern "C" fn dsip_set_push(
     token: *const c_char,
     environment: *const c_char,
 ) -> *mut c_char {
-    let (provider, app, token, environment) = (text(provider), text(app), text(token), text(environment));
-    let set = crate::system::set_push(&provider, &app, &token, Some(environment.as_str()));
-    outcome(crate::api::app::runtime().block_on(set))
+    set_push(crate::system::Tokens::Calls, provider, app, token, environment)
+}
+
+/// Where this install is woken for messages: APNs' alert token, on the bundle ID's topic (spec-gap 178); an empty one
+/// is none.
+#[no_mangle]
+pub extern "C" fn dsip_set_message_push(
+    provider: *const c_char,
+    app: *const c_char,
+    token: *const c_char,
+    environment: *const c_char,
+) -> *mut c_char {
+    set_push(crate::system::Tokens::Messages, provider, app, token, environment)
 }
 
 /// The next event for the system's call screen as JSON, or null when none came within `timeout_ms`.
@@ -116,8 +133,16 @@ mod tests {
         );
         assert_eq!(set("8f2c00a91b", ""), None);
         assert_eq!(crate::system::load_push(&dir).unwrap().environment, None, "empty is production");
-        assert_eq!(set("", ""), None, "an empty token is nowhere");
-        assert_eq!(crate::system::load_push(&dir), None);
+
+        // the alert token, apart, kept beside PushKit's
+        let bundle = c("com.thevoiceguy.dsip");
+        assert_eq!(answer(dsip_set_message_push(apns.as_ptr(), bundle.as_ptr(), c("c0de").as_ptr(), c("").as_ptr())), None);
+        let saved = crate::system::load_push(&dir).unwrap();
+        assert_eq!((saved.token.as_str(), saved.message_app.as_deref(), saved.message_token.as_deref()), ("8f2c00a91b", Some("com.thevoiceguy.dsip"), Some("c0de")));
+        assert_eq!(set("", ""), None, "PushKit's token gone: messages still wake");
+        assert!(crate::system::load_push(&dir).unwrap().message_token.is_some());
+        assert_eq!(answer(dsip_set_message_push(apns.as_ptr(), bundle.as_ptr(), c("").as_ptr(), c("").as_ptr())), None);
+        assert_eq!(crate::system::load_push(&dir), None, "no token is nowhere");
 
         // no settings in the folder: nothing to start; no app: nothing to act on, and no events
         assert!(answer(dsip_wake()).unwrap().contains("no settings"));

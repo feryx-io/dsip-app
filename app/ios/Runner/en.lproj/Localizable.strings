@@ -1,0 +1,3 @@
+/* A message wake's alert (the Wake Profile, W§5.3: the gateway names this key; app plan A5d-4). The system shows it
+   with no app code run; tapped, the app opens and its mailbox delivers what came. */
+"DSIP_NEW_MESSAGE" = "New message";

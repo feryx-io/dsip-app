@@ -25,7 +25,7 @@ sit on:
   on Windows (`\\.\pipe\dsip-app-<user>`), each open to its user alone.
 
 The desktop app (`app/`, A3) is built on Flutter over this crate; its installers are made on a release tag (A4,
-`app/README.md`). The app updates itself from signed releases. Builds are not code-signed yet (A4c waits for the certificates, as Anvil's); the mobile apps are under way (A5: Android and iOS builds, the system's call screen, the call's audio route, and waking by push: FCM on Android, PushKit for calls on iOS).
+`app/README.md`). The app updates itself from signed releases. Builds are not code-signed yet (A4c waits for the certificates, as Anvil's); the mobile apps are under way (A5: Android and iOS builds, the system's call screen, the call's audio route, and waking by push: FCM on Android, PushKit for calls and alerts for messages on iOS).
 
 ```
 crates/dsip-app     the running client: State, Change, Command, the control socket, audio, and the CLI
@@ -67,8 +67,11 @@ Waking a sleeping phone (A5d, DSIP's Wake Profile): with `--push-gateway did:web
 gateway), `dsip-app push --provider fcm --app <project> --token <token>` gives the phone's platform push token. The app
 enrols it at the gateway under a key of its own (the gateway never learns the device's DID), and registers with the
 relay for calls and the mailbox for messages, each when its `hello` says it wakes devices. The registration is given
-again when half its 30 days are gone, and at once for a new token; `push --off` ends it. `state` shows where each
-stands under `push`. A woken app reads its push's data with `dsip-app open-wake '<json>'`: what woke it, the waker to
+again when half its 30 days are gone, and at once for a new token; `push --off` ends it. An iPhone has two tokens, as
+APNs takes each for its own topic only (spec-gap 178): `--provider apns --app <bundle>.voip --token <PushKit's>
+--message-app <bundle> --message-token <the alert token>` enrols them apart, PushKit's given to the relay and the
+alert token to the mailbox. `state` shows where each stands under `push` (`no-token`: no token for that waker's
+kinds). A woken app reads its push's data with `dsip-app open-wake '<json>'`: what woke it, the waker to
 bind to, and for a call the caller as the relay's sealed hint names them, a claim until the invite verifies. The
 keys live in `wake.json` beside the identity, readable by its owner alone.
 
