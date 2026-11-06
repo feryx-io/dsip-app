@@ -10,7 +10,7 @@ import 'platform.dart';
 /// answered and over as `dsip-app` has it; what the user does there (answer, decline or hang up, mute) becomes the
 /// same command a button in the app sends. Also where a call's audio goes, for the call's screen to show and change,
 /// and the proximity sensor while a call is at the ear (A5c, as Anvil's U4c). Where the system's call screen follows
-/// the Rust core itself ([MobilePlatform.systemFollowsCore]: Android, A5d-2), only the routes and the sensor.
+/// the Rust core itself ([MobilePlatform.systemFollowsCore]: Android and iOS, A5d), only the routes and the sensor.
 class SystemCalls {
   SystemCalls(this.mobile, {required this.run, required this.calls, this.failed}) {
     _events = mobile.callEvents.listen(_act);

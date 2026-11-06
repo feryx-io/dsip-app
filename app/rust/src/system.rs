@@ -1,14 +1,14 @@
-//! The app's calls for the system's call screen, and the phone's push token, without Dart (app plan A5d-2, as Anvil's
-//! A2; the Wake Profile's W§5.4).
+//! The app's calls for the system's call screen, and the phone's push token, without Dart (app plan A5d-2 and A5d-3,
+//! as Anvil's A2 and A3; the Wake Profile's W§5.4).
 //!
-//! A push starts the app in a process where Flutter may never run: the calls Android's Telecom shows then come from
-//! here, as events native code reads one at a time ([`next_event`]), and what the user does there comes back as a
-//! command ([`act`]). The push token is a file in the app's folder (`push.json`), written by native code when the
-//! platform hands it a token and given to the app whenever it starts, whoever starts it.
+//! A push starts the app in a process where Flutter may never run: the calls Android's Telecom and iOS's CallKit show
+//! then come from here, as events native code reads one at a time ([`next_event`]), and what the user does there comes
+//! back as a command ([`act`]). The push token is a file in the app's folder (`push.json`), written by native code
+//! when the platform hands it a token and given to the app whenever it starts, whoever starts it.
 //!
-//! Only Android's native code reads the events today; iOS (A5d-3) is to follow. Kept to plain Rust so the host's tests
-//! run it.
-#![cfg_attr(not(target_os = "android"), allow(dead_code))]
+//! Android's native code reaches it through JNI (`android.rs`), iOS's through a C ABI (`ios.rs`). Kept to plain Rust
+//! so the host's tests run it.
+#![cfg_attr(not(any(target_os = "android", target_os = "ios")), allow(dead_code))]
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -43,6 +43,9 @@ pub(crate) struct PushToken {
     pub app: String,
     /// The platform's token.
     pub token: String,
+    /// APNs only: `sandbox` for a build signed for development; none is `production` (W§3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<String>,
 }
 
 impl PushToken {
@@ -51,7 +54,7 @@ impl PushToken {
             provider: Some(self.provider.clone()),
             app: Some(self.app.clone()),
             token: Some(self.token.clone()),
-            environment: None,
+            environment: self.environment.clone(),
         }
     }
 }
@@ -77,7 +80,13 @@ pub(crate) fn load_push(dir: &Path) -> Option<PushToken> {
 pub(crate) fn save_push(dir: &Path, token: Option<&PushToken>) -> anyhow::Result<()> {
     let path = push_path(dir);
     match token {
-        Some(token) => std::fs::write(path, serde_json::to_vec(token)?)?,
+        Some(token) => {
+            // The platform may hand over a token before the app has been set up, when its folder is not there yet.
+            if let Some(dir) = path.parent() {
+                std::fs::create_dir_all(dir)?;
+            }
+            std::fs::write(path, serde_json::to_vec(token)?)?
+        }
         None => match std::fs::remove_file(path) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.into()),
             _ => {}
@@ -86,11 +95,11 @@ pub(crate) fn save_push(dir: &Path, token: Option<&PushToken>) -> anyhow::Result
     Ok(())
 }
 
-/// The system's call screen following the running app (Android).
+/// The system's call screen following the running app (Android, iOS).
 static FOLLOWER: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
 
 /// Start the app from `settings`, or leave the one running (a push may have started it before the screen did, or the
-/// other way round): the build's push gateway when the settings name none, the push token saved, and on Android the
+/// other way round): the build's push gateway when the settings name none, the push token saved, and on a phone the
 /// system's call screen following its calls.
 pub(crate) async fn start(mut settings: Settings) -> anyhow::Result<()> {
     // One start at a time: a push and the screen may both ask.
@@ -106,7 +115,7 @@ pub(crate) async fn start(mut settings: Settings) -> anyhow::Result<()> {
     let push = install.and_then(|i| load_push(&i.dir));
     let cfg = settings.config()?;
     let app = runtime().spawn(App::start(cfg)).await??;
-    if cfg!(target_os = "android") {
+    if cfg!(any(target_os = "android", target_os = "ios")) {
         let _guard = runtime().enter();
         *FOLLOWER.lock().unwrap_or_else(|e| e.into_inner()) = Some(follow(app.clone()));
     }
@@ -142,12 +151,16 @@ pub(crate) async fn wake() -> anyhow::Result<()> {
     start(serde_json::from_str(&text)?).await
 }
 
-/// Native code's way to the app: the platform's push token (empty: none), kept for every start and given to the app
-/// now if it runs.
-pub(crate) async fn set_push(provider: &str, app: &str, token: &str) -> anyhow::Result<()> {
+/// Native code's way to the app: the platform's push token (empty: none), and for APNs its `environment`, kept for
+/// every start and given to the app now if it runs.
+pub(crate) async fn set_push(provider: &str, app: &str, token: &str, environment: Option<&str>) -> anyhow::Result<()> {
     let install = INSTALL.get().ok_or_else(|| anyhow::anyhow!("not installed"))?;
-    let token = (!token.is_empty())
-        .then(|| PushToken { provider: provider.to_string(), app: app.to_string(), token: token.to_string() });
+    let token = (!token.is_empty()).then(|| PushToken {
+        provider: provider.to_string(),
+        app: app.to_string(),
+        token: token.to_string(),
+        environment: environment.filter(|e| !e.is_empty()).map(str::to_string),
+    });
     save_push(&install.dir, token.as_ref())?;
     if let Some(running) = current() {
         let command = token.as_ref().map(PushToken::command).unwrap_or(Command::Push {
@@ -452,17 +465,23 @@ mod tests {
 
     #[test]
     fn the_push_token_is_kept_in_the_apps_folder() {
-        let dir = std::env::temp_dir().join(format!("dsip-app-push-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        // A folder not made yet: the platform may give a token before the app is set up.
+        let dir = std::env::temp_dir().join(format!("dsip-app-push-{}", std::process::id())).join("support");
         assert_eq!(load_push(&dir), None);
-        let token = PushToken { provider: "fcm".into(), app: "dsip-test".into(), token: "token-1".into() };
+        let token = PushToken { provider: "fcm".into(), app: "dsip-test".into(), token: "token-1".into(), environment: None };
         save_push(&dir, Some(&token)).unwrap();
         assert_eq!(load_push(&dir), Some(token.clone()));
         assert!(matches!(token.command(), Command::Push { token: Some(t), .. } if t == "token-1"));
         save_push(&dir, None).unwrap();
         save_push(&dir, None).unwrap();
         assert_eq!(load_push(&dir), None);
-        std::fs::remove_dir_all(dir).unwrap();
+        std::fs::remove_dir_all(dir.parent().unwrap()).unwrap();
+
+        // kept before APNs' environment was: read as production
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(push_path(&dir), r#"{"provider":"apns","app":"com.thevoiceguy.dsip.voip","token":"ab12"}"#).unwrap();
+        assert!(matches!(load_push(&dir).unwrap().command(), Command::Push { environment: None, .. }));
+        std::fs::remove_dir_all(dir.parent().unwrap()).unwrap();
     }
 
     #[test]

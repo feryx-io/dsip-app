@@ -84,7 +84,16 @@ core itself on Android, Dart or not (`rust/src/system.rs`, read by `CoreLink.kt`
 Flutter running. A `call` wake rings at once, as from an unknown caller (the wake's hint is the relay's claim), while
 the core starts and binds; the call's invite, flushed then, takes its place by session and says who calls; answered
 before it came, it is answered then; declined, it is declined. A `call-ended` wake, the core not starting, or a minute
-with no invite ends it. A `message` wake starts the core so the mailbox delivers. iOS (PushKit) is next (A5d-3).
+with no invite ends it. A `message` wake starts the core so the mailbox delivers.
+
+On iOS (A5d-3, as Anvil's A3) the gateway is given the same way (`DSIP_PUSH_GATEWAY` in the environment of
+`flutter build ios`, read through Info.plist); PushKit's VoIP token goes to the core with the topic, the bundle ID with
+`.voip`, and APNs' environment (`sandbox` when the build's provisioning profile is a development one). CallKit follows
+the core as Telecom does (`rust/src/ios.rs`, a C ABI read by `CoreLink.swift`), and calls ring and end as on Android.
+Apple's rule is that every VoIP push reports a call: a `call-ended` wake reports the call it names, or one ended at
+once, as does a wake for an app not set up. An unsigned build gets no VoIP token, so it is never woken until A4c signs
+it. Message wakes are not on iOS yet: the profile sends them as alert pushes to the VoIP token, which APNs refuses
+(a gap in the profile's draft, W§5.3), and they need a notification service extension.
 
 ```bash
 flutter build apk --release                                   # debug-signed until there is an upload key (A7)
@@ -92,6 +101,7 @@ flutter build ios --release --no-codesign                     # unsigned until t
 flutter test integration_test/mobile_test.dart -d <device>    # an emulator or a simulator: the core, the audio, wakes
 DSIP_PUSH_GATEWAY=did:web:push.example DSIP_FCM_APP_ID=… DSIP_FCM_SENDER_ID=… DSIP_FCM_API_KEY=… DSIP_FCM_PROJECT_ID=… \
   flutter build apk --release                                 # woken through the publisher's gateway and Firebase project
+DSIP_PUSH_GATEWAY=did:web:push.example flutter build ios --release   # woken through the gateway by PushKit (signed builds)
 ```
 
 The launcher icons are drawn by `tool/icons.py` with the desktop's.

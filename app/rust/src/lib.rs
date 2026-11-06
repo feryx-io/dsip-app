@@ -9,4 +9,6 @@ pub mod api;
 mod android;
 #[allow(missing_docs)] // generated
 mod frb_generated;
+#[cfg(any(target_os = "ios", test))]
+mod ios;
 mod system;
