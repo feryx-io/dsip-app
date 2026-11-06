@@ -1,11 +1,18 @@
 import Foundation
 import PushKit
+import UIKit
+import UserNotifications
 
 /// The app woken while it sleeps through PushKit (app plan A5d-3, as Anvil's A3; the Wake Profile, W§5): the core
 /// enrols the VoIP token at the publisher's push gateway and registers with its relay; a relay holding a call for the
 /// app wakes it. Apple's rule: every VoIP push reports a call to CallKit, or iOS stops delivering them. A call wake rings
 /// at once while the app starts and binds, and the call's invite, flushed to it then, takes the ringing call's place
 /// (`CallSystem`); a `call-ended` wake ends the call it names, or reports one ended at once (W§5.4).
+///
+/// Messages wake through a second token (A5d-4; spec-gap 178): APNs takes a PushKit token for the `.voip` topic only,
+/// so the app's alert token, on the bundle ID's topic, is enrolled apart and given to the mailbox. A message wake is an
+/// alert the system shows itself (`DSIP_NEW_MESSAGE`, Localizable.strings), with no app code run: tapped, the app opens
+/// and its mailbox delivers.
 ///
 /// The topic is the bundle ID with `.voip`; the gateway is the publisher's, given at build time (`DSIP_PUSH_GATEWAY`,
 /// through Info.plist's `DsipPushGateway`). A build without a gateway, or unsigned (PushKit gives it no token), is never
@@ -24,6 +31,24 @@ final class Push: NSObject, PKPushRegistryDelegate {
 
   /// The APNs topic of the app's VoIP pushes (W§3's `app`).
   static var topic: String? { Bundle.main.bundleIdentifier.map { "\($0).voip" } }
+
+  /// Ask APNs for the alert token, and, once the app is set up, the user for leave to show a message wake: at launch.
+  func registerForMessages() {
+    guard !CoreLink.gateway.isEmpty else { return }
+    UIApplication.shared.registerForRemoteNotifications()
+    guard CoreLink.configured else { return }
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+      if let error = error { NSLog("DsipPush: notifications not allowed: %@", error.localizedDescription) }
+      if !granted { NSLog("DsipPush: message wakes will not show: notifications are off") }
+    }
+  }
+
+  /// APNs' alert token: messages wake through it (the app's delegate hands it over).
+  func alertToken(_ token: Data) {
+    guard !CoreLink.gateway.isEmpty, let bundle = Bundle.main.bundleIdentifier else { return }
+    let hex = token.map { String(format: "%02x", $0) }.joined()
+    CoreLink.setPush(messages: true, provider: "apns", app: bundle, token: hex, environment: Push.environment)
+  }
 
   /// APNs' environment for this build's token: `sandbox` when its provisioning profile grants the development one
   /// (a build run from Xcode, or ad hoc for development); none, production, for a build from the App Store, which

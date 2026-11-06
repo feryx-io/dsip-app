@@ -7,6 +7,7 @@
 void dsip_init(const char *dir, const char *gateway);
 char *dsip_wake(void);
 char *dsip_set_push(const char *provider, const char *app, const char *token, const char *environment);
+char *dsip_set_message_push(const char *provider, const char *app, const char *token, const char *environment);
 /// The next event for CallKit as JSON; NULL when none came in time.
 char *dsip_next_call_event(int64_t timeout_ms);
 char *dsip_act(const char *json);

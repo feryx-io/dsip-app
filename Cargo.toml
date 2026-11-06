@@ -19,6 +19,8 @@ dsip-messenger = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.
 dsip-messaging-device = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07", features = ["sqlite"] }
 dsip-mls = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07", features = ["sqlite"] }
 dsip-mailbox = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07" }
+dsip-push = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07" }
+dsip-relay = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07" }
 dsip-messaging = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07" }
 dsip-testkit = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07" }
 dsip-wake = { git = "https://github.com/thevoiceguy/dsip-rs", tag = "v2026.11.07" }

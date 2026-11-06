@@ -91,9 +91,15 @@ On iOS (A5d-3, as Anvil's A3) the gateway is given the same way (`DSIP_PUSH_GATE
 `.voip`, and APNs' environment (`sandbox` when the build's provisioning profile is a development one). CallKit follows
 the core as Telecom does (`rust/src/ios.rs`, a C ABI read by `CoreLink.swift`), and calls ring and end as on Android.
 Apple's rule is that every VoIP push reports a call: a `call-ended` wake reports the call it names, or one ended at
-once, as does a wake for an app not set up. An unsigned build gets no VoIP token, so it is never woken until A4c signs
-it. Message wakes are not on iOS yet: the profile sends them as alert pushes to the VoIP token, which APNs refuses
-(a gap in the profile's draft, W§5.3), and they need a notification service extension.
+once, as does a wake for an app not set up. An unsigned build gets no tokens, so it is never woken until A4c signs it.
+
+Messages wake an iPhone through a second token (A5d-4): APNs takes PushKit's token for the `.voip` topic only, so the
+app also registers for remote notifications and gives the core its alert token, on the bundle ID's topic, which the
+core enrols apart and gives to the mailbox (spec-gap 178; both kept in `push.json`). The user is asked once, at a
+launch after setup, to allow notifications. A message wake is an alert the system shows by itself, "New message"
+(`DSIP_NEW_MESSAGE` in `ios/Runner/en.lproj/Localizable.strings`), with none of the app's code run; tapped, the app
+opens and its mailbox delivers. Showing who wrote, and what, before then needs a notification service extension
+that syncs the mailbox (the profile's "may sync"): a later step.
 
 ```bash
 flutter build apk --release                                   # debug-signed until there is an upload key (A7)

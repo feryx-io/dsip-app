@@ -16,7 +16,24 @@ import UIKit
     // Before anything else: a VoIP push may have launched the app in the background, with no Flutter to come (A5d-3).
     CoreLink.start(calls)
     push = Push(calls: calls)
+    push?.registerForMessages()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// APNs' alert token, for message wakes (A5d-4).
+  override func application(
+    _ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    push?.alertToken(deviceToken)
+    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+  }
+
+  override func application(
+    _ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    // An unsigned build, or no network yet: asked again at the next launch.
+    NSLog("DsipPush: no alert token: %@", error.localizedDescription)
+    super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {

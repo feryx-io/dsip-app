@@ -372,14 +372,20 @@ impl App {
                 self.publish(Change::Audio { audio: a.view() });
                 Response::Ok
             }
-            Command::Push { provider, app, token, environment } => {
+            Command::Push { provider, app, token, environment, message_app, message_token } => {
                 let Some(w) = self.inner.wake.get() else { return Response::error("no push gateway: set one in the settings") };
-                let token = match (token, provider, app) {
-                    (None, ..) => None,
-                    (Some(token), Some(provider), Some(app)) => Some(wake::Token { provider, app, token, environment }),
-                    _ => return Response::error("a token needs its provider and app"),
+                let given = |app: Option<String>, token: Option<String>| match (token, &provider, app) {
+                    (None, ..) => Ok(None),
+                    (Some(token), Some(provider), Some(app)) => {
+                        Ok(Some(wake::Token { provider: provider.clone(), app, token, environment: environment.clone() }))
+                    }
+                    _ => Err(Response::error("a token needs its provider and app")),
                 };
-                let _ = w.send(wake::Kick::Token(token));
+                let (calls, messages) = match (given(app, token), given(message_app, message_token)) {
+                    (Ok(calls), Ok(messages)) => (calls, messages),
+                    (Err(e), _) | (_, Err(e)) => return e,
+                };
+                let _ = w.send(wake::Kick::Tokens(calls, messages));
                 Response::Ok
             }
             Command::OpenWake { data } => match wake::open(&self.inner.identity_dir, &data) {

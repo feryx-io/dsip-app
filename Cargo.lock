@@ -1447,6 +1447,8 @@ dependencies = [
  "dsip-messenger",
  "dsip-mls",
  "dsip-phone",
+ "dsip-push",
+ "dsip-relay",
  "dsip-testkit",
  "dsip-transport",
  "dsip-wake",

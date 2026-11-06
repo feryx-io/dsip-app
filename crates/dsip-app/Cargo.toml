@@ -47,4 +47,7 @@ dsip-testkit.workspace = true
 # tests/messages.rs runs mailboxes, which link OpenSSL: on Linux, where CI has it
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 dsip-mailbox.workspace = true
+# tests/wake.rs: a gateway pushing for an iPhone's two APNs topics, and a relay waking through it
+dsip-push.workspace = true
+dsip-relay.workspace = true
 tokio-rustls = "0.26"

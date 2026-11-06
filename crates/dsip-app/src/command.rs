@@ -153,6 +153,13 @@ pub enum Command {
         /// APNs only.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         environment: Option<String>,
+        /// APNs' alert token's topic (the bundle ID), when `token` is PushKit's: messages wake through it, as APNs takes
+        /// each token for its own topic only (the Wake Profile, spec-gap 178). FCM's one token serves both.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        message_app: Option<String>,
+        /// The alert token.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        message_token: Option<String>,
     },
     /// Read a push that woke this app ([`Response::Wake`]): `data` is its `dsip-wake` data as the system delivered it.
     OpenWake {
