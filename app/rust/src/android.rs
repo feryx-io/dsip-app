@@ -67,7 +67,7 @@ pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_setPush(
     token: JString,
 ) -> jstring {
     let (provider, app, token) = (text(&mut env, &provider), text(&mut env, &app), text(&mut env, &token));
-    let result = crate::api::app::runtime().block_on(crate::system::set_push(&provider, &app, &token));
+    let result = crate::api::app::runtime().block_on(crate::system::set_push(&provider, &app, &token, None));
     outcome(&mut env, result)
 }
 

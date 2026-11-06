@@ -8,6 +8,8 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The person you call hears you through the microphone.</string>
+	<key>DsipPushGateway</key>
+	<string>$(DSIP_PUSH_GATEWAY)</string>
 	<key>CFBundleDisplayName</key>
 	<string>DSIP</string>
 	<key>CFBundleExecutable</key>
@@ -51,6 +53,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>voip</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

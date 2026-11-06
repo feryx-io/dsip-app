@@ -18,7 +18,8 @@ import 'package:path_provider/path_provider.dart';
 /// The app as built for a phone (app plan A5), its Rust core loaded: it starts at the first run, makes an identity,
 /// and, the audio set up for calls, reaches the phone's microphone and speaker from Rust (on Android through the JVM
 /// `MainActivity` hands over); the system's call screen takes a call ringing in and a call placed (A5b); and a call's
-/// audio goes to the speaker and back (A5c); on Android, a wake rings at once, before the app has started (A5d-2). Run on an emulator or a simulator (CI's Android and iOS jobs):
+/// audio goes to the speaker and back (A5c); a wake rings at once, before the app has started (A5d-2 on Android,
+/// A5d-3 on iOS). Run on an emulator or a simulator (CI's Android and iOS jobs):
 /// `flutter test integration_test/mobile_test.dart -d <device>`.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -122,8 +123,10 @@ void main() {
     if (Platform.isAndroid) await mobile.reportEnded(903);
   });
 
-  // Android woken by FCM (A5d-2): pushes handed in as FCM delivers them (the debug build's `deliverPush`), to the app's
-  // own folder, where Dart keeps its settings.
+  // Woken by FCM on Android (A5d-2) and PushKit on iOS (A5d-3): pushes handed in as FCM or PushKit delivers them (the
+  // debug build's `deliverPush`: the emulator has no Firebase project, and PushKit does not reach a simulator), to the
+  // app's own folder, where Dart keeps its settings. Every VoIP push reports a call to CallKit: one for an app not set
+  // up is reported and ended at once, and is not among the calls shown.
   const channel = MethodChannel('dsip/mobile');
   Future<List<int>> systemCalls() async => [
     for (final id in await channel.invokeListMethod<num>('systemCalls') ?? const <num>[]) id.toInt(),
@@ -145,7 +148,7 @@ void main() {
     await channel.invokeMethod<void>('deliverPush', wake('call', '01K8S0E8M3000000000INVITE01'));
     await Future<void>.delayed(const Duration(seconds: 2));
     expect(pushed(await systemCalls()), isFalse);
-  }, skip: !Platform.isAndroid);
+  });
 
   testWidgets('a call wake rings at once, and stops when the app cannot start', (tester) async {
     final folder = await getApplicationSupportDirectory();
@@ -157,7 +160,9 @@ void main() {
     });
     final shown = NativeMobile().callEvents.firstWhere((e) => e.call < 0).timeout(const Duration(seconds: 10));
     await channel.invokeMethod<void>('deliverPush', wake('call', '01K8S0E8M3000000000INVITE02'));
-    expect((await shown).action, SystemCallAction.shown, reason: 'Telecom took the call the wake told of');
+    final first = await shown;
+    debugPrint('pushed call: ${first.action.name} ${first.reason ?? ''}');
+    taken(first);
     expect(await until((calls) => !pushed(calls)), isTrue, reason: 'it ends when the app cannot start');
-  }, skip: !Platform.isAndroid);
+  });
 }
