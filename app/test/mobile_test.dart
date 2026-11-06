@@ -14,7 +14,8 @@ import 'fake_mobile.dart';
 
 /// The app on a phone (app plan A5): the microphone asked for and the audio set up before the app starts, a refusal
 /// told; no self-update (a store updates the app); the screens laid out for a phone's width; and the system's call
-/// screen kept in step with the app's calls, what the user does there reaching the app (A5b).
+/// screen kept in step with the app's calls, what the user does there reaching the app (A5b); where a call's audio goes
+/// and the screen off at the ear (A5c).
 void main() {
   late Directory dir;
   late FakeClient client;
@@ -33,6 +34,9 @@ void main() {
     await tester.pumpWidget(DsipApp(controller: controller));
     await tester.runAsync(controller.load);
     client.push(fixture()['state'] as Map<String, dynamic>);
+    await tester.pumpAndSettle();
+    // The routes are asked for once the calls are known, on the real event loop (the app started in runAsync).
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
     await tester.pumpAndSettle();
     return controller;
   }
@@ -171,4 +175,101 @@ void main() {
     await tester.pumpAndSettle();
     expect(client.commands, isEmpty);
   });
+
+  const phoneOnly = AudioRoutes(current: AudioRoute.earpiece, available: [AudioRoute.earpiece, AudioRoute.speaker]);
+  const withCar = AudioRoutes(
+    current: AudioRoute.bluetooth,
+    available: [AudioRoute.earpiece, AudioRoute.speaker, AudioRoute.bluetooth],
+    bluetoothName: 'Car kit',
+  );
+
+  testWidgets('with only the earpiece and the speaker, the call has a speaker switch', (tester) async {
+    final mobile = FakeMobile()..routes = phoneOnly;
+    await open(tester, mobile);
+    final speaker = find.byKey(const Key('speaker-route'));
+    // on the call answered (2), not the one ringing in (3)
+    expect(speaker, findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('call-2')), matching: speaker), findsOneWidget);
+    await tester.tap(speaker);
+    await tester.pumpAndSettle();
+    expect(mobile.routeSets, [AudioRoute.speaker]);
+    mobile.route(const AudioRoutes(current: AudioRoute.speaker, available: [AudioRoute.earpiece, AudioRoute.speaker]));
+    await tester.pumpAndSettle();
+    await tester.tap(speaker);
+    await tester.pumpAndSettle();
+    expect(mobile.routeSets, [AudioRoute.speaker, AudioRoute.earpiece]);
+  });
+
+  testWidgets('with Bluetooth there, the call shows where the audio goes and lists the rest', (tester) async {
+    final mobile = FakeMobile()..routes = withCar;
+    await open(tester, mobile);
+    expect(find.byKey(const Key('speaker-route')), findsNothing);
+    final route = find.byKey(const Key('audio-route'));
+    expect(find.descendant(of: route, matching: find.text('Car kit')), findsOneWidget);
+    await tester.tap(route);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('route-earpiece')), findsOneWidget);
+    expect(find.byKey(const Key('route-speaker')), findsOneWidget);
+    expect(find.byKey(const Key('route-bluetooth')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('route-earpiece')));
+    await tester.pumpAndSettle();
+    expect(mobile.routeSets, [AudioRoute.earpiece]);
+    expect(find.byKey(const Key('route-earpiece')), findsNothing, reason: 'the list closed');
+  });
+
+  testWidgets('no route control until the system says what there is', (tester) async {
+    await open(tester, FakeMobile());
+    expect(find.byKey(const Key('speaker-route')), findsNothing);
+    expect(find.byKey(const Key('audio-route')), findsNothing);
+  });
+
+  testWidgets('the screen goes off at the ear while a call is up on the earpiece, and not on the speaker', (tester) async {
+    final mobile = FakeMobile()..routes = phoneOnly;
+    await open(tester, mobile);
+    expect(mobile.proximity, [true]);
+    mobile.route(const AudioRoutes(current: AudioRoute.speaker, available: [AudioRoute.earpiece, AudioRoute.speaker]));
+    await tester.pumpAndSettle();
+    expect(mobile.proximity, [true, false]);
+    mobile.route(phoneOnly);
+    await tester.pumpAndSettle();
+    expect(mobile.proximity, [true, false, true]);
+    // every call over
+    client.push(calls((c) => {...c, 'state': {'state': 'ended', 'reason': 'user.hangup'}}));
+    await tester.pumpAndSettle();
+    expect(mobile.proximity, [true, false, true, false]);
+  });
+
+  testWidgets('a call only ringing in does not turn the screen off', (tester) async {
+    final mobile = FakeMobile()..routes = phoneOnly;
+    await open(tester, mobile);
+    client.push(calls((c) => c['id'] == 3 ? c : null));
+    await tester.pumpAndSettle();
+    expect(mobile.proximity.last, isFalse);
+  });
+
+  testWidgets('a route the system refuses says why', (tester) async {
+    final mobile = FakeMobile()
+      ..routes = phoneOnly
+      ..routeFails = PlatformExceptionLike('no speaker here');
+    await open(tester, mobile);
+    await tester.tap(find.byKey(const Key('speaker-route')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('no speaker here'), findsOneWidget);
+  });
+
+  testWidgets('on a phone, Settings has no microphone and speaker lists: the call has its route', (tester) async {
+    await open(tester, FakeMobile());
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('audio-input')), findsNothing);
+    expect(find.byKey(const Key('audio-output')), findsNothing);
+  });
+}
+
+/// An error as a platform channel would throw one: its text is what the user is told.
+class PlatformExceptionLike implements Exception {
+  PlatformExceptionLike(this.message);
+  final String message;
+  @override
+  String toString() => message;
 }

@@ -57,8 +57,17 @@ class MainActivity : FlutterActivity() {
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "requestMicrophone" -> requestMicrophone(result)
-                // AAudio needs nothing set up front; the call's audio route comes with A5c.
+                // AAudio needs nothing set up front: Telecom sets the call's audio mode and routes it.
                 "startAudio" -> result.success(null)
+                "audioRoutes" -> result.success(CallSystem.audioRoutes())
+                "setAudioRoute" -> {
+                    CallSystem.setAudioRoute(call.text("route"))
+                    result.success(null)
+                }
+                "setProximity" -> {
+                    CallSystem.setProximity(this, call.argument<Boolean>("on") == true)
+                    result.success(null)
+                }
                 "reportIncoming" -> {
                     CallSystem.reportIncoming(this, call.id(), call.text("name"), call.text("address"))
                     result.success(null)

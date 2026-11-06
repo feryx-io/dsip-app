@@ -15,11 +15,22 @@ class Controller extends ChangeNotifier {
   Controller(this.client, this.store, {this.checkUpdates = false, this.mobile, void Function()? quit})
     : quit = quit ?? (() => exit(0)) {
     final mobile = this.mobile;
-    if (mobile != null) _system = SystemCalls(mobile, run: run, calls: () => state?.calls ?? const []);
+    if (mobile != null) {
+      _system = SystemCalls(
+        mobile,
+        run: run,
+        calls: () => state?.calls ?? const [],
+        failed: (why) {
+          error = why;
+          notifyListeners();
+        },
+      );
+    }
   }
 
-  /// The system's call screen, on a phone.
+  /// The system's call screen and where a call's audio goes, on a phone.
   SystemCalls? _system;
+  SystemCalls? get system => _system;
 
   final Client client;
   final SettingsStore store;
