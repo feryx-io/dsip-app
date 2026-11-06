@@ -106,6 +106,6 @@ impl Settings {
 /// in files its owner alone reads. Returns its DID.
 pub fn init_identity(dir: &std::path::Path, display_name: &str) -> Result<String, Error> {
     let did = dsip_phone::Identity::init(dir, display_name, None, None)?.meta.identity;
-    crate::keys::secure_or_keep(dir);
+    crate::keys::ready_identity(dir);
     Ok(did)
 }

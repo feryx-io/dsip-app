@@ -302,7 +302,7 @@ async fn main() -> Result<ExitCode> {
         }
         Cmd::Run { identity, relay, ca, audio, input, output, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web, push_gateway } => {
             // an identity made before its keys were kept in the store: moved in now
-            dsip_app::keys::secure_or_keep(&identity);
+            dsip_app::keys::ready_identity(&identity);
             let settings = Settings {
                 identity,
                 relay,

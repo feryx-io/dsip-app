@@ -129,7 +129,7 @@ pub(crate) async fn start(mut settings: Settings) -> anyhow::Result<()> {
     // The keys in the system's store (A6a): an identity made before they were is moved in now.
     dsip_app::keys::use_system_store();
     let identity = settings.identity.clone();
-    runtime().spawn_blocking(move || dsip_app::keys::secure_or_keep(&identity)).await?;
+    runtime().spawn_blocking(move || dsip_app::keys::ready_identity(&identity)).await?;
     let install = INSTALL.get();
     if settings.push_gateway.is_none() {
         settings.push_gateway = install.and_then(|i| i.gateway.clone());

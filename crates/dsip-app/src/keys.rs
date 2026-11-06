@@ -29,11 +29,30 @@ pub const SERVICE: &str = "com.thevoiceguy.dsip";
 /// The files that hold the keys of an identity not (yet) in a store.
 const KEY_FILES: [&str; 2] = ["controller.key", "device.key"];
 
-/// What an item holds: both seeds, hex.
-#[derive(Serialize, Deserialize)]
+/// The file dsip-rs keeps an identity's key agreement key in (its secret and the delegation naming it).
+const KEY_AGREEMENT_FILE: &str = "key-agreement.json";
+
+/// What an item holds: both seeds, hex; and the identity's key agreement key (§7.3, spec-gap 179), its secret hex and
+/// the delegation naming it, when it has one.
+#[derive(Serialize, Deserialize, PartialEq)]
 struct Seeds {
     controller: String,
     device: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    key_agreement: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    key_agreement_delegation: Option<String>,
+}
+
+impl Seeds {
+    fn of(id: &dsip_phone::Identity) -> Seeds {
+        Seeds {
+            controller: hex(&id.controller.seed()),
+            device: hex(&id.device.seed()),
+            key_agreement: id.key_agreement.as_ref().map(|k| hex(&k.secret)),
+            key_agreement_delegation: id.key_agreement.as_ref().map(|k| k.delegation.frame()),
+        }
+    }
 }
 
 /// Use the platform's store from now on, in this process; `false` where there is none (a Linux desktop without a
@@ -135,7 +154,14 @@ pub fn load_identity(dir: &Path) -> Result<dsip_phone::Identity, Error> {
     if device.did() != meta.device {
         return Err(Error::Keys(format!("the stored device key is not {}'s", meta.device)));
     }
-    Ok(dsip_phone::Identity { dir: dir.to_path_buf(), controller, device, delegation, meta })
+    let key_agreement = match (&seeds.key_agreement, &seeds.key_agreement_delegation) {
+        (Some(secret), Some(frame)) => Some(dsip_transport::identity::KeyAgreement {
+            secret: unhex(secret).ok_or_else(|| Error::Keys("the stored key agreement key is not a key".into()))?,
+            delegation: Envelope::from_frame(frame).map_err(|e| Error::Keys(format!("the stored key agreement delegation: {e:?}")))?,
+        }),
+        _ => None,
+    };
+    Ok(dsip_phone::Identity { dir: dir.to_path_buf(), controller, device, delegation, meta, key_agreement })
 }
 
 /// The key files readable by their owner alone (Unix; dsip-rs writes them under the umask).
@@ -166,20 +192,46 @@ pub fn secure_identity(dir: &Path) -> Result<bool, Error> {
         return Ok(true);
     }
     let id = dsip_phone::Identity::load(dir)?;
-    let seeds = Seeds { controller: hex(&id.controller.seed()), device: hex(&id.device.seed()) };
-    let item = entry(&id.meta.device).map_err(store_error)?;
-    item.set_secret(&serde_json::to_vec(&seeds).expect("JSON")).map_err(store_error)?;
-    let back: Seeds = item.get_secret().ok().and_then(|s| serde_json::from_slice(&s).ok()).ok_or_else(|| Error::Keys("the store did not give the keys back".into()))?;
-    if (back.controller.as_str(), back.device.as_str()) != (seeds.controller.as_str(), seeds.device.as_str()) {
-        return Err(Error::Keys("the store gave other keys back".into()));
-    }
-    for f in KEY_FILES {
+    store(&id)?;
+    for f in KEY_FILES.iter().chain([&KEY_AGREEMENT_FILE]) {
         match std::fs::remove_file(dir.join(f)) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(Error::Keys(format!("{f}: {e}"))),
             _ => {}
         }
     }
     tracing::info!("keys: {} moved into the system store", id.meta.device);
+    Ok(true)
+}
+
+/// Write `id`'s keys to its item, and read them back.
+fn store(id: &dsip_phone::Identity) -> Result<(), Error> {
+    let seeds = Seeds::of(id);
+    let item = entry(&id.meta.device).map_err(store_error)?;
+    item.set_secret(&serde_json::to_vec(&seeds).expect("JSON")).map_err(store_error)?;
+    let back: Seeds = item.get_secret().ok().and_then(|s| serde_json::from_slice(&s).ok()).ok_or_else(|| Error::Keys("the store did not give the keys back".into()))?;
+    if back != seeds {
+        return Err(Error::Keys("the store gave other keys back".into()));
+    }
+    Ok(())
+}
+
+/// Give the identity in `dir` a key agreement key, when it has none (A6c; core §7.3, spec-gap 179): the first secret
+/// derived from its identity key, so every device holding that key holds the same one, and the identity's delegation
+/// naming it. What is sealed to the identity then opens with it, and its hint carries the delegation. Kept where the
+/// identity's keys are: the store, or `key-agreement.json`, its owner's alone. Whether one was issued.
+pub fn ensure_key_agreement(dir: &Path) -> Result<bool, Error> {
+    let mut id = load_identity(dir)?;
+    if id.key_agreement.is_some() {
+        return Ok(false);
+    }
+    let secret = id.derived_key_agreement_secret(0);
+    id.issue_key_agreement(secret, dsip_transport::now_s())?;
+    if !in_files(dir) && keyring_core::get_default_store().is_some() {
+        // the keys are in the store: the key agreement key joins them, and its file goes
+        store(&id)?;
+        std::fs::remove_file(dir.join(KEY_AGREEMENT_FILE)).map_err(|e| Error::Keys(format!("{KEY_AGREEMENT_FILE}: {e}")))?;
+    }
+    tracing::info!("keys: {} has a key agreement key", id.meta.identity);
     Ok(true)
 }
 
@@ -191,6 +243,16 @@ pub fn secure_or_keep(dir: &Path) {
         if let Err(e) = restrict_files(dir) {
             tracing::warn!("keys: {e}");
         }
+    }
+}
+
+/// What every start, and every identity made or restored here, goes through: the keys moved into the store
+/// ([`secure_or_keep`]), and a key agreement key issued when there is none ([`ensure_key_agreement`]; its failure is
+/// logged, and what is sealed to the identity keeps opening with the derived key).
+pub fn ready_identity(dir: &Path) {
+    secure_or_keep(dir);
+    if let Err(e) = ensure_key_agreement(dir) {
+        tracing::warn!("keys: no key agreement key for {}: {e}", dir.display());
     }
 }
 
@@ -219,8 +281,12 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("dsip-app-keys-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let made = dsip_phone::Identity::init(&dir, "Ann", None, None).unwrap();
-        // no store chosen: files, as before, their owner's alone
+        // no store chosen: files, as before, their owner's alone; a key agreement key issued beside them
         assert!(!secure_identity(&dir).unwrap());
+        assert!(ensure_key_agreement(&dir).unwrap());
+        assert!(!ensure_key_agreement(&dir).unwrap(), "once");
+        let ka = load_identity(&dir).unwrap().key_agreement.expect("issued");
+        assert_eq!(ka.secret, made_with(&dir).derived_key_agreement_secret(0));
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -234,12 +300,19 @@ mod tests {
         let loaded = load_identity(&dir).unwrap();
         assert_eq!((loaded.controller.did(), loaded.device.did()), (made.controller.did(), made.device.did()));
         assert_eq!(loaded.delegation.frame(), made.delegation.frame());
+        assert!(!dir.join(KEY_AGREEMENT_FILE).exists(), "the key agreement key moved too");
+        assert_eq!(loaded.key_agreement.map(|k| (k.secret, k.delegation.frame())), Some((ka.secret, ka.delegation.frame())));
         assert!(secure_identity(&dir).unwrap(), "moved already");
 
         forget_keys(&made.device.did()).unwrap();
         assert!(matches!(load_identity(&dir), Err(Error::Keys(m)) if m.contains("not in this device's store")));
         keyring_core::unset_default_store();
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// The identity in `dir` as its files hold it (for the secret it derives).
+    fn made_with(dir: &Path) -> dsip_phone::Identity {
+        dsip_phone::Identity::load(dir).unwrap()
     }
 
     #[test]
