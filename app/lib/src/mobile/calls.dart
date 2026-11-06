@@ -9,7 +9,8 @@ import 'platform.dart';
 /// Anvil's U4b): a call ringing in rings there too (the lock screen as well), a call placed shows as dialling, then
 /// answered and over as `dsip-app` has it; what the user does there (answer, decline or hang up, mute) becomes the
 /// same command a button in the app sends. Also where a call's audio goes, for the call's screen to show and change,
-/// and the proximity sensor while a call is at the ear (A5c, as Anvil's U4c).
+/// and the proximity sensor while a call is at the ear (A5c, as Anvil's U4c). Where the system's call screen follows
+/// the Rust core itself ([MobilePlatform.systemFollowsCore]: Android, A5d-2), only the routes and the sensor.
 class SystemCalls {
   SystemCalls(this.mobile, {required this.run, required this.calls, this.failed}) {
     _events = mobile.callEvents.listen(_act);
@@ -81,6 +82,8 @@ class SystemCalls {
       if (answered == null) {
         final system = SystemCall(id: call.id, name: call.peerName ?? shortDid(call.peer), address: call.peer);
         _told[call.id] = call.state.answered;
+        // where the system follows the core, the core told it already
+        if (mobile.systemFollowsCore) continue;
         if (call.ringingHere) {
           unawaited(mobile.reportIncoming(system));
         } else {
@@ -89,12 +92,12 @@ class SystemCalls {
         }
       } else if (call.state.answered && !answered) {
         _told[call.id] = true;
-        unawaited(mobile.reportConnected(call.id));
+        if (!mobile.systemFollowsCore) unawaited(mobile.reportConnected(call.id));
       }
     }
     for (final id in _told.keys.where((id) => !live.containsKey(id)).toList()) {
       _told.remove(id);
-      unawaited(mobile.reportEnded(id));
+      if (!mobile.systemFollowsCore) unawaited(mobile.reportEnded(id));
     }
     if (_told.isEmpty) {
       routes.value = null;
@@ -105,6 +108,8 @@ class SystemCalls {
   }
 
   Future<void> _act(SystemCallEvent event) async {
+    // The core heard it already.
+    if (mobile.systemFollowsCore) return;
     final call = calls().where((c) => c.id == event.call && !c.state.ended).firstOrNull;
     if (call == null) return;
     switch (event.action) {

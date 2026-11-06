@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.OutcomeReceiver
 import android.os.PowerManager
+import android.os.SystemClock
 import android.telecom.CallAudioState
 import android.telecom.CallEndpoint
 import android.telecom.CallEndpointException
@@ -19,11 +20,16 @@ import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.util.Log
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONObject
 
 /**
  * The app's calls as Android's Telecom knows them (a self-managed ConnectionService; app plan A5b, as Anvil's U4b):
- * the app reports each call, Telecom keeps the phone's audio and other calling apps in step, and what the user does at
- * the call's notification or a headset comes back as `callEvent`s on `dsip/mobile` (lib/src/mobile/platform.dart).
+ * the Rust core tells of each call ([fromCore], through [CoreLink]; A5d-2), Telecom keeps the phone's audio and other
+ * calling apps in step, and what the user does at the call's notification or a headset goes back to the core — and to
+ * Dart, when it runs, as `callEvent`s on `dsip/mobile` (lib/src/mobile/platform.dart).
+ *
+ * A call a push told of (the Wake Profile, W§5.4) rings at once, before the app has started and bound; the app's call,
+ * when the relay flushes its invite, takes its place: the one with the session the wake named.
  */
 object CallSystem {
     private const val TAG = "DsipCalls"
@@ -36,10 +42,28 @@ object CallSystem {
     var channel: MethodChannel? = null
 
     /** A call: who it is with, and where it is. */
-    class Call(val id: Long, val name: String, val address: String, val incoming: Boolean) {
+    class Call(var id: Long, var name: String, var address: String, val incoming: Boolean) {
         var connected = false
         var connection: DsipConnection? = null
+
+        /** The DSIP session, as a wake or the app named it. */
+        var session: String? = null
+
+        /** Answered at the screen before the app's call came. */
+        var answerWhenReady = false
+
+        /** Shown from a push: the app's call not here yet. */
+        val pushed get() = id < 0
     }
+
+    /** A pushed call rings this long without the app's call, then stops (T-Establish's maximum, W§5.4). */
+    private const val PUSHED_RING_MS = 60_000L
+
+    /** Ids for pushed calls: below zero, apart from the app's. */
+    private var nextPushed = -1L
+
+    /** Sessions declined from a push before their invite came: when. */
+    private val declined = HashMap<String, Long>()
 
     val calls = LinkedHashMap<Long, Call>()
 
@@ -64,12 +88,113 @@ object CallSystem {
         registered = true
     }
 
-    fun emit(action: String, id: Long, extra: Map<String, Any?> = emptyMap()) {
+    /** Dart hears what happened at the system, when it runs (its tests do). */
+    private fun tell(action: String, id: Long, extra: Map<String, Any?>) {
         val event = HashMap<String, Any?>(extra)
         event["action"] = action
         event["id"] = id
         main.post { channel?.invokeMethod("callEvent", event) }
     }
+
+    /** What the user or the system did with a call: for the core, and Dart. */
+    fun emit(action: String, id: Long, extra: Map<String, Any?> = emptyMap()) {
+        tell(action, id, extra)
+        if (action == "shown") return
+        if (id >= 0) {
+            CoreLink.act(action, id, extra)
+            return
+        }
+        // A pushed call: the app's is not here yet.
+        main.post {
+            val call = calls[id] ?: return@post
+            when (action) {
+                "answer" -> call.answerWhenReady = true
+                "end" -> {
+                    call.session?.let { decline(it) }
+                    CallService.appContext?.let { reportEnded(it, id) }
+                }
+                // Do Not Disturb or a blocked caller: declined when it comes. Anything else rings on in the
+                // notification alone.
+                "failed" -> if (extra["reason"] == "filtered") {
+                    call.session?.let { decline(it) }
+                    CallService.appContext?.let { reportEnded(it, id) }
+                }
+            }
+        }
+    }
+
+    private fun decline(session: String) {
+        val now = SystemClock.elapsedRealtime()
+        declined.entries.removeAll { now - it.value > PUSHED_RING_MS }
+        declined[session] = now
+    }
+
+    /** What the core says of its calls (`app/rust/src/system.rs`). */
+    fun fromCore(context: Context, event: JSONObject) {
+        val id = event.optLong("id", -1)
+        val name = event.optString("name")
+        val address = event.optString("address")
+        when (event.optString("kind")) {
+            "incoming" -> coreRinging(context, id, name, address, event.optString("session"))
+            "outgoing" -> if (!calls.containsKey(id)) reportOutgoing(context, id, name, address)
+            "connected" -> reportConnected(context, id)
+            "ended" -> reportEnded(context, id)
+            // The app stopped: its calls are over; a pushed call waits on.
+            "reset" -> calls.values.filter { !it.pushed }.map { it.id }.forEach { reportEnded(context, it) }
+        }
+    }
+
+    /** The app's call ringing in: the pushed call it is, or a new one. */
+    private fun coreRinging(context: Context, id: Long, name: String, address: String, session: String) {
+        if (calls.containsKey(id)) return
+        if (session.isNotEmpty() && declined.remove(session) != null) {
+            CoreLink.act("end", id)
+            return
+        }
+        val pushed = calls.values.firstOrNull { it.pushed && it.session == session }
+        if (pushed == null) {
+            reportIncoming(context, id, name, address)
+            calls[id]?.session = session
+            return
+        }
+        // Who calls, as the verified invite says, in place of the unknown caller (W§6).
+        calls.remove(pushed.id)
+        pushed.id = id
+        pushed.name = name
+        pushed.address = address
+        calls[id] = pushed
+        pushed.connection?.let {
+            it.callId = id
+            it.setAddress(Uri.fromParts(SCHEME, address, null), TelecomManager.PRESENTATION_ALLOWED)
+            it.setCallerDisplayName(name, TelecomManager.PRESENTATION_ALLOWED)
+        }
+        CallService.update(context)
+        if (pushed.answerWhenReady) CoreLink.act("answer", id)
+    }
+
+    /** A wake says a call is coming ([session]): it rings now, while the app starts and binds. */
+    fun reportPushed(context: Context, session: String, name: String) {
+        if (calls.values.any { it.session == session } || declined.containsKey(session)) return
+        val id = nextPushed--
+        val call = Call(id, name, "", incoming = true)
+        call.session = session
+        ring(context, call)
+        main.postDelayed({
+            if (calls[id]?.pushed == true) {
+                Log.i(TAG, "the call $session never came")
+                reportEnded(context, id)
+            }
+        }, PUSHED_RING_MS)
+    }
+
+    /** A `call-ended` wake: the call a push told of is over before the app bound (W§5.1). */
+    fun cancelPushed(context: Context, session: String) {
+        val call = calls.values.firstOrNull { it.pushed && it.session == session } ?: return
+        reportEnded(context, call.id)
+    }
+
+    /** The app could not start: the pushed call cannot reach it. */
+    fun wakeFailed(context: Context, session: String) = cancelPushed(context, session)
 
     // Where a call's audio goes (A5c, as Anvil's U4c): Telecom routes a self-managed call's audio and tells each
     // connection the routes there are (as call endpoints from Android 14, as a CallAudioState before). Kept for Dart as
@@ -190,7 +315,11 @@ object CallSystem {
     }
 
     fun reportIncoming(context: Context, id: Long, name: String, address: String) {
-        val call = Call(id, name, address, incoming = true)
+        ring(context, Call(id, name, address, incoming = true))
+    }
+
+    private fun ring(context: Context, call: Call) {
+        val id = call.id
         calls[id] = call
         try {
             register(context)

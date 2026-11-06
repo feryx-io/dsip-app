@@ -24,7 +24,8 @@ Future<String> initIdentity({
 Future<String> systemAudio() => RustLib.instance.api.crateApiAppSystemAudio();
 
 /// Start the app from `settings` ([`dsip_app::Settings`] as JSON): the identity bound to its relay, its mailbox when
-/// it has one. Refused while one runs.
+/// it has one. One running already is left running: on a phone, a push may have started it before the screen did
+/// (`system.rs`).
 Future<void> start({required String settings}) =>
     RustLib.instance.api.crateApiAppStart(settings: settings);
 

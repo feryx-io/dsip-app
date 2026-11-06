@@ -73,12 +73,25 @@ where the system gives it), a wired headset. A call shows a speaker switch when 
 there is, and with Bluetooth or a headset too, the route in use, opening the list to choose from; on a phone Settings
 has no microphone and speaker lists. The screen goes off at the ear while a call is answered or being placed on the
 earpiece (not ringing, not on the speaker or a headset): a proximity wake lock on Android, released once the phone has
-left the ear, proximity monitoring on iOS. Ringing a sleeping phone (A1's push) comes next (A5d).
+left the ear, proximity monitoring on iOS.
+
+A sleeping phone rings (A5d, DSIP's Wake Profile). On Android (A5d-2, as Anvil's A2) the publisher's push gateway and
+Firebase project are given at build time, so none is kept here: `DSIP_PUSH_GATEWAY` (its DID) and `DSIP_FCM_APP_ID`,
+`DSIP_FCM_SENDER_ID`, `DSIP_FCM_API_KEY`, `DSIP_FCM_PROJECT_ID`, from the environment or `-P`; without them the app
+builds and is never woken. The FCM token goes to the core (`push.json` in the app's folder, given to `dsip-app`'s
+`push` at every start), which enrols it at the gateway and registers with the relay and the mailbox. Telecom follows the
+core itself on Android, Dart or not (`rust/src/system.rs`, read by `CoreLink.kt`): a push starts the app with no
+Flutter running. A `call` wake rings at once, as from an unknown caller (the wake's hint is the relay's claim), while
+the core starts and binds; the call's invite, flushed then, takes its place by session and says who calls; answered
+before it came, it is answered then; declined, it is declined. A `call-ended` wake, the core not starting, or a minute
+with no invite ends it. A `message` wake starts the core so the mailbox delivers. iOS (PushKit) is next (A5d-3).
 
 ```bash
 flutter build apk --release                                   # debug-signed until there is an upload key (A7)
 flutter build ios --release --no-codesign                     # unsigned until there is an Apple account
-flutter test integration_test/mobile_test.dart -d <device>    # an emulator or a simulator: the core, the audio
+flutter test integration_test/mobile_test.dart -d <device>    # an emulator or a simulator: the core, the audio, wakes
+DSIP_PUSH_GATEWAY=did:web:push.example DSIP_FCM_APP_ID=… DSIP_FCM_SENDER_ID=… DSIP_FCM_API_KEY=… DSIP_FCM_PROJECT_ID=… \
+  flutter build apk --release                                 # woken through the publisher's gateway and Firebase project
 ```
 
 The launcher icons are drawn by `tool/icons.py` with the desktop's.

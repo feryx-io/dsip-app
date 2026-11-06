@@ -12,7 +12,7 @@ import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 
 /** One of the app's calls as Telecom holds it. DSIP's calls have no hold and no keys: muting is all it offers. */
-class DsipConnection(val callId: Long, name: String, address: String) : Connection() {
+class DsipConnection(var callId: Long, name: String, address: String) : Connection() {
     init {
         connectionProperties = PROPERTY_SELF_MANAGED
         connectionCapabilities = CAPABILITY_MUTE

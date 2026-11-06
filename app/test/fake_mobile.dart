@@ -6,8 +6,11 @@ import 'fake_client.dart';
 
 /// The phone around the app, as a log of what it was told and a way for a test to act at the system's call screen.
 class FakeMobile implements MobilePlatform {
-  FakeMobile({this.allow = true, this.client});
+  FakeMobile({this.allow = true, this.client, this.systemFollowsCore = false});
   final bool allow;
+
+  @override
+  final bool systemFollowsCore;
 
   /// When given, the log says whether the app had started yet.
   final FakeClient? client;

@@ -13,12 +13,12 @@ pub(crate) fn runtime() -> &'static tokio::runtime::Runtime {
     RT.get_or_init(|| tokio::runtime::Builder::new_multi_thread().enable_all().thread_name("dsip-app").build().expect("a runtime"))
 }
 
-fn running() -> &'static Mutex<Option<App>> {
+pub(crate) fn running() -> &'static Mutex<Option<App>> {
     static APP: Mutex<Option<App>> = Mutex::new(None);
     &APP
 }
 
-fn current() -> Option<App> {
+pub(crate) fn current() -> Option<App> {
     running().lock().unwrap_or_else(|e| e.into_inner()).clone()
 }
 
@@ -44,16 +44,11 @@ pub fn system_audio() -> anyhow::Result<String> {
 }
 
 /// Start the app from `settings` ([`dsip_app::Settings`] as JSON): the identity bound to its relay, its mailbox when
-/// it has one. Refused while one runs.
+/// it has one. One running already is left running: on a phone, a push may have started it before the screen did
+/// (`system.rs`).
 pub async fn start(settings: String) -> anyhow::Result<()> {
-    if current().is_some() {
-        anyhow::bail!("the app is running already");
-    }
     let settings: Settings = serde_json::from_str(&settings)?;
-    let cfg = settings.config()?;
-    let app = runtime().spawn(App::start(cfg)).await??;
-    *running().lock().unwrap_or_else(|e| e.into_inner()) = Some(app);
-    Ok(())
+    crate::system::start(settings).await
 }
 
 /// Do `command` ([`dsip_app::Command`] as JSON); the [`dsip_app::Response`] as JSON.
@@ -106,6 +101,7 @@ pub fn updates(sink: StreamSink<String>) -> anyhow::Result<()> {
 
 /// Stop the app: calls still up end, its relay and mailbox are left.
 pub async fn stop() {
+    crate::system::stopped();
     let app = running().lock().unwrap_or_else(|e| e.into_inner()).take();
     if let Some(app) = app {
         let _ = runtime().spawn(async move { app.stop().await }).await;

@@ -8,7 +8,8 @@ import android.content.Intent
 class CallActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != CallService.END) return
-        val call = intent.getLongExtra(CallService.EXTRA_CALL, -1)
-        if (call >= 0) CallSystem.emit("end", call)
+        // A pushed call's id is below zero (CallSystem.reportPushed).
+        val call = intent.getLongExtra(CallService.EXTRA_CALL, Long.MIN_VALUE)
+        if (call != Long.MIN_VALUE) CallSystem.emit("end", call)
     }
 }

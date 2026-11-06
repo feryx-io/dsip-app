@@ -15,7 +15,7 @@ import 'fake_mobile.dart';
 /// The app on a phone (app plan A5): the microphone asked for and the audio set up before the app starts, a refusal
 /// told; no self-update (a store updates the app); the screens laid out for a phone's width; and the system's call
 /// screen kept in step with the app's calls, what the user does there reaching the app (A5b); where a call's audio goes
-/// and the screen off at the ear (A5c).
+/// and the screen off at the ear (A5c); on Android the system following the core instead (A5d-2).
 void main() {
   late Directory dir;
   late FakeClient client;
@@ -114,6 +114,24 @@ void main() {
     client.push(calls((c) => c['id'] == 2 ? {...c, 'state': {'state': 'ended', 'reason': 'user.hangup'}} : c));
     await tester.pumpAndSettle();
     expect(mobile.log, ['ended 2']);
+  });
+
+  testWidgets('where the system follows the core (Android), Dart tells it nothing and acts on nothing; the sensor stays',
+      (tester) async {
+    final mobile = FakeMobile(systemFollowsCore: true)
+      ..routes = const AudioRoutes(current: AudioRoute.earpiece, available: [AudioRoute.earpiece, AudioRoute.speaker]);
+    await open(tester, mobile);
+    client.commands.clear();
+    expect(mobile.log, ['requestMicrophone', 'startAudio']);
+    expect(mobile.proximity, [true]);
+    mobile.act(const SystemCallEvent(SystemCallAction.answer, 3));
+    mobile.act(const SystemCallEvent(SystemCallAction.end, 2));
+    await tester.pumpAndSettle();
+    client.push(calls((c) => {...c, 'state': {'state': 'ended', 'reason': 'user.hangup'}}));
+    await tester.pumpAndSettle();
+    expect(mobile.log, ['requestMicrophone', 'startAudio']);
+    expect(client.commands, isEmpty);
+    expect(mobile.proximity, [true, false]);
   });
 
   Future<FakeMobile> ringing(WidgetTester tester) async {
