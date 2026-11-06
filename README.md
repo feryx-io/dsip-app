@@ -54,6 +54,13 @@ and writes a file holding it. `dsip-app restore --identity ~/.dsip/alice --name 
 again on standard input) makes that identity this install's, with a new device key. The app does the same: Settings,
 Identity backup; and "Restore from a backup" at the first run.
 
+An identity on a domain of your own (A6d): `dsip-app web --identity ~/.dsip/alice --did did:web:alice.example.com
+--relay wss://relay.example.com:8443/dsip [--mailbox … --mailbox-did …]` prints the DID document the domain must serve
+and where (`https://alice.example.com/.well-known/did.json`). The document names the identity key, the key agreement
+key, the relay and the mailbox, since a `did:web` is reached by its document alone. `--check` fetches it and says what
+differs. `--move` checks, then makes the identity that `did:web` once nothing differs: its delegations are signed again,
+and its keys stay where they are. Contacts see it as a new identity. The app does the same: Settings, Your own domain.
+
 With a mailbox, the same app messages:
 
 ```sh

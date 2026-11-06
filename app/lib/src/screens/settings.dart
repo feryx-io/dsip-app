@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -35,6 +37,10 @@ class SettingsScreen extends StatelessWidget {
         Text(s.settingsBackup, style: heading),
         const SizedBox(height: 8),
         BackupSettings(controller: controller),
+        const Divider(height: 32),
+        Text(s.settingsWeb, style: heading),
+        const SizedBox(height: 8),
+        WebSettings(controller: controller),
         const Divider(height: 32),
         Text(s.settingsAbout, style: heading),
         const SizedBox(height: 8),
@@ -348,6 +354,175 @@ class _BackupDialogState extends State<BackupDialog> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(s.backupCancel)),
         FilledButton(onPressed: _busy ? null : _make, child: Text(s.backupMake)),
+      ],
+    );
+  }
+}
+
+/// The identity on a domain of the person's own (A6d): the document to serve, a check of what the domain serves, and
+/// the move once it does.
+class WebSettings extends StatelessWidget {
+  const WebSettings({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(s.settingsWebIntro),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const Key('web'),
+          icon: const Icon(Icons.language),
+          label: Text(s.settingsWebStart),
+          onPressed: () => showDialog<void>(context: context, builder: (_) => WebDialog(controller: controller)),
+        ),
+      ],
+    );
+  }
+}
+
+/// The DID, then the document and its URL, then the check, then the move.
+class WebDialog extends StatefulWidget {
+  const WebDialog({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  State<WebDialog> createState() => _WebDialogState();
+}
+
+class _WebDialogState extends State<WebDialog> {
+  final _form = GlobalKey<FormState>();
+  final _did = TextEditingController();
+  Map<String, dynamic>? _plan;
+  List<String>? _differs;
+  bool _busy = false;
+  String? _failed;
+
+  @override
+  void dispose() {
+    _did.dispose();
+    super.dispose();
+  }
+
+  Future<void> _step(Future<void> Function() work) async {
+    setState(() {
+      _busy = true;
+      _failed = null;
+    });
+    try {
+      await work();
+    } catch (e) {
+      if (mounted) setState(() => _failed = Strings.of(context).webFailed('$e'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _prepare() async {
+    if (!_form.currentState!.validate()) return;
+    final settings = widget.controller.settings ?? const {};
+    final mailbox = settings['mailbox'] as Map<String, dynamic>?;
+    await _step(() async {
+      final plan = await widget.controller.client.webPrepare(
+        settings['identity'] as String? ?? '',
+        _did.text.trim(),
+        settings['relay'] as String? ?? '',
+        mailboxDid: mailbox?['did'] as String?,
+        mailboxUri: mailbox?['uri'] as String?,
+      );
+      if (mounted) {
+        setState(() {
+          _plan = plan;
+          _differs = null;
+        });
+      }
+    });
+  }
+
+  Future<void> _check() => _step(() async {
+    final differs = await widget.controller.client.webCheck(_plan!);
+    if (mounted) setState(() => _differs = differs);
+  });
+
+  Future<void> _move() async {
+    final s = Strings.of(context);
+    final did = _plan!['did'] as String;
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.webMoveConfirmTitle),
+        content: Text(s.webMoveConfirm(did)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.backupCancel)),
+          FilledButton(key: const Key('web-move-sure'), onPressed: () => Navigator.pop(context, true), child: Text(s.webMove)),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    final plan = _plan!;
+    Navigator.pop(context);
+    await widget.controller.moveToWeb(plan);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final plan = _plan;
+    final differs = _differs;
+    return AlertDialog(
+      title: Text(s.webTitle),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _form,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                key: const Key('web-did'),
+                controller: _did,
+                decoration: InputDecoration(labelText: s.webDid, helperText: s.webDidHint),
+                validator: (v) => (v ?? '').trim().startsWith('did:web:') ? null : s.webDidNeeded,
+                onChanged: (_) => setState(() {
+                  _plan = null;
+                  _differs = null;
+                }),
+              ),
+              if (plan != null) ...[
+                const SizedBox(height: 12),
+                Text(s.webServe(plan['url'] as String)),
+                const SizedBox(height: 8),
+                SelectableText(
+                  const JsonEncoder.withIndent('  ').convert(plan['document']),
+                  key: const Key('web-document'),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ],
+              if (differs != null) ...[
+                const SizedBox(height: 12),
+                Text(differs.isEmpty ? s.webServed : s.webDiffers(differs.join('; ')), key: const Key('web-check')),
+              ],
+              if (_failed != null) ...[
+                const SizedBox(height: 12),
+                Text(_failed!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.backupCancel)),
+        if (plan != null)
+          TextButton(
+            onPressed: () => Clipboard.setData(ClipboardData(text: const JsonEncoder.withIndent('  ').convert(plan['document']))),
+            child: Text(s.backupCopy),
+          ),
+        if (plan == null) FilledButton(onPressed: _busy ? null : _prepare, child: Text(s.webPrepare)),
+        if (plan != null && differs?.isEmpty != true) FilledButton(onPressed: _busy ? null : _check, child: Text(s.webCheck)),
+        if (plan != null && differs?.isEmpty == true) FilledButton(onPressed: _busy ? null : _move, child: Text(s.webMove)),
       ],
     );
   }

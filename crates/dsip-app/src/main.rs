@@ -38,6 +38,35 @@ enum Cmd {
         #[arg(long)]
         name: String,
     },
+    /// Move the identity in `dir` onto a domain of its own (a `did:web`): print the document the domain must serve and
+    /// where; `--check` says how what it serves differs; `--move` checks, and moves the identity once nothing differs.
+    /// Contacts know the new DID as a new identity.
+    Web {
+        /// The identity folder.
+        #[arg(long)]
+        identity: PathBuf,
+        /// The `did:web` DID (`did:web:example.com`, or `did:web:example.com:users:ann`).
+        #[arg(long)]
+        did: String,
+        /// The relay the document names (`wss://…/dsip`).
+        #[arg(long)]
+        relay: String,
+        /// The mailbox the document names.
+        #[arg(long, requires = "mailbox_did")]
+        mailbox: Option<String>,
+        /// The mailbox's DID.
+        #[arg(long)]
+        mailbox_did: Option<String>,
+        /// A PEM certificate to trust for the domain, besides the web's.
+        #[arg(long)]
+        ca: Option<PathBuf>,
+        /// Fetch what the domain serves and compare.
+        #[arg(long)]
+        check: bool,
+        /// Check, then move the identity when nothing differs.
+        #[arg(long = "move", conflicts_with = "check")]
+        move_: bool,
+    },
     /// Back up the identity in `dir`: its key sealed under a passphrase read from standard input, as a recovery code
     /// (printed) and, with `--out`, a file holding it.
     Export {
@@ -277,12 +306,32 @@ async fn main() -> Result<ExitCode> {
         .with_writer(std::io::stderr).init();
     let args = Args::parse();
     let path = args.control.clone().unwrap_or_else(control::default_path);
-    if !args.key_files && matches!(args.cmd, Cmd::Init { .. } | Cmd::Run { .. } | Cmd::Export { .. } | Cmd::Restore { .. }) {
+    if !args.key_files && matches!(args.cmd, Cmd::Init { .. } | Cmd::Run { .. } | Cmd::Export { .. } | Cmd::Restore { .. } | Cmd::Web { .. }) {
         dsip_app::keys::use_system_store();
     }
     let cmd = match args.cmd {
         Cmd::Init { identity, name } => {
             println!("{}", dsip_app::init_identity(&identity, &name).context("making the identity")?);
+            return Ok(ExitCode::SUCCESS);
+        }
+        Cmd::Web { identity, did, relay, mailbox, mailbox_did, ca, check, move_ } => {
+            let mb = mailbox_did.as_deref().zip(mailbox.as_deref());
+            let plan = dsip_app::web::prepare(&identity, &did, &relay, mb).context("preparing the document")?;
+            if !check && !move_ {
+                println!("serve at {}:\n{}", plan.url, serde_json::to_string_pretty(&plan.document)?);
+                return Ok(ExitCode::SUCCESS);
+            }
+            let differs = dsip_app::web::check(&plan, ca.as_deref()).await.context("checking the domain")?;
+            for d in &differs {
+                println!("{}: {d}", plan.url);
+            }
+            if !differs.is_empty() {
+                return Ok(ExitCode::FAILURE);
+            }
+            println!("{} serves the document", plan.url);
+            if move_ {
+                println!("{}", dsip_app::web::move_to(&identity, &plan).context("moving the identity")?);
+            }
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Export { identity, out } => {

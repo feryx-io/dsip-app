@@ -175,4 +175,58 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Your recovery code'), findsNothing);
   });
+
+  testWidgets('the identity moves to its own domain once the domain serves its document (A6d)', (tester) async {
+    await open(tester);
+    await tester.ensureVisible(find.byKey(const Key('web')));
+    await tester.tap(find.byKey(const Key('web')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('web-did')), 'ann.example.com');
+    await tester.tap(find.text('Make the document'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a DID that starts with did:web:'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('web-did')), 'did:web:ann.example.com');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Make the document'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Serve this at https://ann.example.com/.well-known/did.json, then check.'), findsOneWidget);
+    expect(find.text('Move to it'), findsNothing, reason: 'not before the check');
+
+    // the domain does not serve it yet
+    client.webDiffers = ['its #key-1 is not this identity\'s key'];
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Check'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Not yet: its #key-1'), findsOneWidget);
+    expect(find.text('Move to it'), findsNothing);
+
+    // it does: moved with the app stopped, then started again
+    client.webDiffers = const [];
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Check'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Your domain serves the document.'), findsOneWidget);
+    await tester.tap(find.text('Move to it'));
+    await tester.pumpAndSettle();
+    expect(find.text('Move your identity?'), findsOneWidget);
+    final stops = client.stops;
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('web-move-sure')));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    // the confirmation's answer goes on in the test's zone: let it, then the move's real work run
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pump(); // a spinner turns until the restarted app's first update: no settling
+    expect(client.moves, [('did:web:ann.example.com', true)], reason: 'moved while the app was stopped');
+    expect(client.stops, stops + 1);
+    expect(client.started, saved, reason: 'started again');
+  });
 }

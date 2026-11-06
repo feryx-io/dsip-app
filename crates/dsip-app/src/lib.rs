@@ -33,6 +33,7 @@ mod state;
 #[cfg(windows)]
 mod user_only;
 pub mod wake;
+pub mod web;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};

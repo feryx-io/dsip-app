@@ -51,6 +51,30 @@ pub fn restore_identity(dir: String, code: String, passphrase: String, display_n
     Ok(dsip_app::backup::restore_identity(std::path::Path::new(&dir), &code, &passphrase, &display_name)?)
 }
 
+/// The document the identity in `dir` would serve on a domain of its own, as `did` (a `did:web`), naming `relay` and
+/// the mailbox (`mailbox_did`, `mailbox_uri`) when given: `{"did", "url", "document"}` JSON. Nothing changes yet.
+pub fn web_prepare(dir: String, did: String, relay: String, mailbox_did: Option<String>, mailbox_uri: Option<String>) -> anyhow::Result<String> {
+    dsip_app::keys::use_system_store();
+    let mb = mailbox_did.as_deref().zip(mailbox_uri.as_deref());
+    Ok(serde_json::to_string(&dsip_app::web::prepare(std::path::Path::new(&dir), &did, &relay, mb)?)?)
+}
+
+/// What the domain of `plan` (from [`web_prepare`]) serves, compared with what it must: each difference, as a JSON list
+/// of sentences; empty when it serves the document.
+pub async fn web_check(plan: String, ca: Option<String>) -> anyhow::Result<String> {
+    let plan: dsip_app::web::Plan = serde_json::from_str(&plan)?;
+    let differs = runtime().spawn(async move { dsip_app::web::check(&plan, ca.as_deref().map(std::path::Path::new)).await }).await??;
+    Ok(serde_json::to_string(&differs)?)
+}
+
+/// Make the identity in `dir` the `did:web` of `plan` (once [`web_check`] finds nothing differs); its new DID. The app
+/// is stopped first, and started again after.
+pub fn web_move(dir: String, plan: String) -> anyhow::Result<String> {
+    dsip_app::keys::use_system_store();
+    let plan: dsip_app::web::Plan = serde_json::from_str(&plan)?;
+    Ok(dsip_app::web::move_to(std::path::Path::new(&dir), &plan)?)
+}
+
 /// The system's microphones and speakers, as `dsip-app` lists them (`{"host", "devices": [{"id", "name", "kind",
 /// "default"}]}`), without the app running: what the phone's own test checks Rust reaches (on Android, through the
 /// JVM `MainActivity` hands over).

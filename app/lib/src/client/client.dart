@@ -15,6 +15,16 @@ abstract class Client {
   /// Make the identity in [code] (a recovery code, or a backup file's text) this install's, in [dir]; its DID.
   Future<String> restoreIdentity(String dir, String code, String passphrase, String displayName);
 
+  /// The document the identity in [dir] would serve as [did] (a `did:web`), naming [relay] and the mailbox: `{did, url,
+  /// document}` (A6d). Nothing changes yet.
+  Future<Map<String, dynamic>> webPrepare(String dir, String did, String relay, {String? mailboxDid, String? mailboxUri});
+
+  /// How what the domain of [plan] serves differs from what it must, each in a sentence; empty when it serves it.
+  Future<List<String>> webCheck(Map<String, dynamic> plan);
+
+  /// Make the identity in [dir] the `did:web` of [plan]; its new DID. Only while the app is stopped.
+  Future<String> webMove(String dir, Map<String, dynamic> plan);
+
   /// Start the app from [settings] (`dsip-app`'s `Settings` as JSON).
   Future<void> start(Map<String, dynamic> settings);
 

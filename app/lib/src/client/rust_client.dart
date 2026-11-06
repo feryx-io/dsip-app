@@ -21,6 +21,18 @@ class RustClient implements Client {
       bridge.restoreIdentity(dir: dir, code: code, passphrase: passphrase, displayName: displayName);
 
   @override
+  Future<Map<String, dynamic>> webPrepare(String dir, String did, String relay, {String? mailboxDid, String? mailboxUri}) async =>
+      jsonDecode(await bridge.webPrepare(dir: dir, did: did, relay: relay, mailboxDid: mailboxDid, mailboxUri: mailboxUri))
+          as Map<String, dynamic>;
+
+  @override
+  Future<List<String>> webCheck(Map<String, dynamic> plan) async =>
+      (jsonDecode(await bridge.webCheck(plan: jsonEncode(plan))) as List).cast<String>();
+
+  @override
+  Future<String> webMove(String dir, Map<String, dynamic> plan) => bridge.webMove(dir: dir, plan: jsonEncode(plan));
+
+  @override
   Future<void> start(Map<String, dynamic> settings) => bridge.start(settings: jsonEncode(settings));
 
   @override

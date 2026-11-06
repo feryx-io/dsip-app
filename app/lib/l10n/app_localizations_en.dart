@@ -532,6 +532,64 @@ class StringsEn extends Strings {
   }
 
   @override
+  String get settingsWeb => 'Your own domain';
+
+  @override
+  String get settingsWebIntro =>
+      'Use a DID on a domain you control (did:web) in place of this device\'s key. You can then change keys without losing the identity. People who know you now will see it as a new identity, and need to accept you again.';
+
+  @override
+  String get settingsWebStart => 'Set up';
+
+  @override
+  String get webTitle => 'Your own domain';
+
+  @override
+  String get webDid => 'Your did:web';
+
+  @override
+  String get webDidHint =>
+      'did:web:example.com, or did:web:example.com:users:ann';
+
+  @override
+  String get webDidNeeded => 'Enter a DID that starts with did:web:';
+
+  @override
+  String get webPrepare => 'Make the document';
+
+  @override
+  String webServe(String url) {
+    return 'Serve this at $url, then check.';
+  }
+
+  @override
+  String get webCheck => 'Check';
+
+  @override
+  String get webServed => 'Your domain serves the document.';
+
+  @override
+  String webDiffers(String differences) {
+    return 'Not yet: $differences';
+  }
+
+  @override
+  String get webMove => 'Move to it';
+
+  @override
+  String get webMoveConfirmTitle => 'Move your identity?';
+
+  @override
+  String webMoveConfirm(String did) {
+    return 'You become $did. The app restarts, and calls in progress end. Contacts see a new identity and need to accept you again.';
+  }
+
+  @override
+  String webFailed(String reason) {
+    return 'That did not work: $reason';
+  }
+
+  @override
   String get settingsAbout => 'About';
 
   @override
