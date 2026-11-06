@@ -21,6 +21,7 @@ dsip-messenger.workspace = true
 dsip-mls.workspace = true
 dsip-phone.workspace = true
 dsip-transport.workspace = true
+dsip-wake.workspace = true
 anvil-audio.workspace = true
 anvil-core.workspace = true
 audiopus = "0.3.0-rc.0"   # as dsip-media: the Opus frames its legs carry

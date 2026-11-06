@@ -76,6 +76,8 @@ pub(crate) enum Req {
     Leave { conversation: String, reply: oneshot::Sender<Response> },
     /// Deposit a grant the phone issued at its grantee's mailbox.
     Deliver { to: String, grant: String },
+    /// Register with the mailbox to be woken (A5d), or end the registration (`None`).
+    Wake { ask: Option<crate::wake::MailboxAsk>, reply: oneshot::Sender<(crate::Registration, Option<crate::wake::Registered>)> },
     Stop,
 }
 
@@ -241,6 +243,10 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
         if host.bound {
             host.bound = false;
             on_bind(&mut mx, &mut host).await;
+            // a mailbox that was not bound when waking was looked at gets its registration now (W§4.3)
+            if let Some(w) = host.app.inner.wake.get() {
+                let _ = w.send(crate::wake::Kick::Check);
+            }
             hint_due = tokio::time::Instant::now();
         }
         if tokio::time::Instant::now() >= hint_due && mx.connection().is_some() && !cfg.hints_nodes.is_empty() {
@@ -360,6 +366,18 @@ async fn request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, req: Re
             if let Err(e) = deliver(mx, &to, &grant).await {
                 tracing::warn!("the grant to {to} not deposited at its mailbox: {e}");
             }
+        }
+        Req::Wake { ask, reply } => {
+            let r = match ask {
+                Some(a) => crate::wake::at_mailbox(mx, host, a).await,
+                None => {
+                    if let Err(e) = mx.wake_remove(host).await {
+                        tracing::info!("waking: ending the mailbox's registration: {e}");
+                    }
+                    (crate::Registration::status("removed"), None)
+                }
+            };
+            let _ = reply.send(r);
         }
         Req::Stop => {}
     }
