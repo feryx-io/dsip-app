@@ -4,4 +4,6 @@
     <!-- The call notification's channels, as Settings lists them. -->
     <string name="calls_ringing_channel">Incoming calls</string>
     <string name="calls_ongoing_channel">Calls in progress</string>
+    <!-- A call a push told of, before its invite arrives: who calls is not known yet (W§6). -->
+    <string name="wake_caller">Unknown caller</string>
 </resources>

@@ -104,6 +104,10 @@ abstract class MobilePlatform {
   /// Set the system's audio up for calls (iOS: play and record, voice chat), before the app starts.
   Future<void> startAudio();
 
+  /// Whether the system's call screen follows the Rust core itself, Dart or not (Android, A5d-2: a push starts the app
+  /// with no Flutter running): Dart then reports no calls and acts on nothing done there.
+  bool get systemFollowsCore;
+
   /// A call ringing in, for the system to ring and show.
   Future<void> reportIncoming(SystemCall call);
 
@@ -152,6 +156,9 @@ class NativeMobile implements MobilePlatform {
 
   @override
   Future<void> startAudio() => _channel.invokeMethod<void>('startAudio');
+
+  @override
+  bool get systemFollowsCore => Platform.isAndroid;
 
   @override
   Future<void> reportIncoming(SystemCall call) => _channel.invokeMethod<void>('reportIncoming', call.toMap());

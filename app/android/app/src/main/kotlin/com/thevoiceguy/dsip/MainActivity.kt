@@ -2,6 +2,7 @@ package com.thevoiceguy.dsip
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -16,8 +17,11 @@ class MainActivity : FlutterActivity() {
     private var microphoneAnswer: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Before Dart opens the library: its audio (cpal's oboe) needs the JVM.
-        DsipNative.init(applicationContext)
+        // Before Dart opens the library: its audio (cpal's oboe) needs the JVM. The app's calls reach Telecom from here
+        // on, Dart or not (A5d-2).
+        CoreLink.start(this)
+        // Where the app is woken: the token, when built with a push gateway and Firebase.
+        Push.register(this)
         super.onCreate(savedInstanceState)
         // Over the lock screen only while there is a call to answer or end.
         CallSystem.onCalls = { any -> overLockScreen(any) }
@@ -45,8 +49,9 @@ class MainActivity : FlutterActivity() {
     /** Answer pressed on the call's notification opens the app here. */
     private fun answerFrom(intent: Intent?) {
         if (intent?.action != CallService.ANSWER) return
-        val call = intent.getLongExtra(CallService.EXTRA_CALL, -1)
-        if (call >= 0) CallSystem.emit("answer", call)
+        // A pushed call's id is below zero (CallSystem.reportPushed).
+        val call = intent.getLongExtra(CallService.EXTRA_CALL, Long.MIN_VALUE)
+        if (call != Long.MIN_VALUE) CallSystem.emit("answer", call)
         intent.action = null
     }
 
@@ -83,6 +88,18 @@ class MainActivity : FlutterActivity() {
                 "reportEnded" -> {
                     CallSystem.reportEnded(this, call.id())
                     result.success(null)
+                }
+                // The calls Telecom has now, by id (a pushed call's below zero): what the app's tests look at.
+                "systemCalls" -> result.success(CallSystem.calls.keys.toList())
+                // A push as FCM delivers one (its `dsip-wake` data), for the app's tests on a device with no Firebase
+                // project; debug builds only.
+                "deliverPush" -> {
+                    if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) {
+                        result.notImplemented()
+                    } else {
+                        Push.handle(this, call.arguments<Map<String, String>>() ?: emptyMap())
+                        result.success(null)
+                    }
                 }
                 else -> result.notImplemented()
             }

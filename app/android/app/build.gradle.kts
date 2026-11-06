@@ -4,6 +4,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+/** A build value from `-P` or the environment. */
+fun buildValue(name: String): String? =
+    (project.findProperty(name) as String?)?.takeIf { it.isNotEmpty() }
+        ?: System.getenv(name)?.takeIf { it.isNotEmpty() }
+
+fun requiredValue(name: String): String =
+    buildValue(name) ?: throw GradleException("$name is needed with DSIP_FCM_APP_ID")
+
 android {
     namespace = "com.thevoiceguy.dsip"
     compileSdk = flutter.compileSdkVersion
@@ -26,6 +34,22 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Waking the app while it sleeps (A5d-2; the Wake Profile): the publisher's push gateway (its DID) and the
+        // Firebase project it pushes through, as the values google-services.json would give. From the environment or
+        // `-P` at build time, so no project is kept in the repository; without them the app builds with push off.
+        resValue("string", "dsip_push_gateway", buildValue("DSIP_PUSH_GATEWAY") ?: "")
+        val fcmAppId = buildValue("DSIP_FCM_APP_ID")
+        if (fcmAppId != null) {
+            resValue("string", "google_app_id", fcmAppId)
+            resValue("string", "gcm_defaultSenderId", requiredValue("DSIP_FCM_SENDER_ID"))
+            resValue("string", "google_api_key", requiredValue("DSIP_FCM_API_KEY"))
+            resValue("string", "project_id", requiredValue("DSIP_FCM_PROJECT_ID"))
+        }
+    }
+
+    buildFeatures {
+        resValues = true
     }
 
     buildTypes {
@@ -49,4 +73,7 @@ flutter {
 dependencies {
     // NotificationCompat.CallStyle and ServiceCompat for the call's notification and service (CallService.kt).
     implementation("androidx.core:core:1.13.1")
+    // The pushes that wake the app (Push.kt).
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-messaging")
 }
