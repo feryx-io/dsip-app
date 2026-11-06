@@ -101,10 +101,15 @@ class Controller extends ChangeNotifier {
     if (settings != null) await _start(settings);
   }
 
-  /// First run: make the identity when [displayName] is given (else the settings name one that exists), save the
-  /// settings, start.
-  Future<void> setUp({required Map<String, dynamic> settings, String? displayName}) async {
-    if (displayName != null) await client.initIdentity(settings['identity'] as String, displayName);
+  /// First run: make the identity when [displayName] is given, or restore it from [restore] (a recovery code and its
+  /// passphrase) under that name (else the settings name one that exists), save the settings, start.
+  Future<void> setUp({required Map<String, dynamic> settings, String? displayName, (String, String)? restore}) async {
+    final dir = settings['identity'] as String;
+    if (restore != null) {
+      await client.restoreIdentity(dir, restore.$1, restore.$2, displayName ?? '');
+    } else if (displayName != null) {
+      await client.initIdentity(dir, displayName);
+    }
     await store.save(settings);
     this.settings = settings;
     configured = true;

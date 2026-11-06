@@ -23,6 +23,7 @@
 #![deny(missing_docs)]
 
 pub mod audio;
+pub mod backup;
 mod command;
 pub mod control;
 pub mod keys;

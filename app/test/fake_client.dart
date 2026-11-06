@@ -33,6 +33,24 @@ class FakeClient implements Client {
     return 'did:key:z6MkNew';
   }
 
+  /// What [restoreIdentity] was given: dir, code, passphrase, name.
+  final restored = <(String, String, String, String)>[];
+
+  /// What [exportIdentity] was given: dir, passphrase.
+  final exported = <(String, String)>[];
+
+  @override
+  Future<IdentityBackup> exportIdentity(String dir, String passphrase) async {
+    exported.add((dir, passphrase));
+    return const IdentityBackup(identity: 'did:key:z6MkAnn', code: 'DSIP1-AAAAA-BBBBB', file: 'DSIP identity backup\n\nDSIP1-AAAAA-BBBBB\n');
+  }
+
+  @override
+  Future<String> restoreIdentity(String dir, String code, String passphrase, String displayName) async {
+    restored.add((dir, code, passphrase, displayName));
+    return 'did:key:z6MkAnn';
+  }
+
   @override
   Future<void> start(Map<String, dynamic> settings) async {
     if (startFails != null) throw startFails!;

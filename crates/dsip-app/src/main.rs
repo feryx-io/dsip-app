@@ -38,6 +38,28 @@ enum Cmd {
         #[arg(long)]
         name: String,
     },
+    /// Back up the identity in `dir`: its key sealed under a passphrase read from standard input, as a recovery code
+    /// (printed) and, with `--out`, a file holding it.
+    Export {
+        /// The identity folder.
+        #[arg(long)]
+        identity: PathBuf,
+        /// Write the backup file here too.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Restore an identity from its recovery code (or a backup file) into `dir`, as this install's: the passphrase is
+    /// read from standard input.
+    Restore {
+        /// Where the restored identity goes (a folder without one).
+        #[arg(long)]
+        identity: PathBuf,
+        /// The recovery code, or the backup file's path.
+        code: String,
+        /// The display name others are shown.
+        #[arg(long)]
+        name: String,
+    },
     /// Run the client: bind the identity to the relay, ring for incoming calls, serve the control socket.
     Run {
         /// The identity directory (`dsip-app init`, or `dsip identity init`).
@@ -241,18 +263,41 @@ enum Cmd {
     Quit,
 }
 
+/// The passphrase, the first line of standard input (never an argument, which others on the machine can see).
+fn passphrase() -> Result<String> {
+    eprintln!("passphrase:");
+    let mut line = String::new();
+    std::io::stdin().read_line(&mut line).context("reading the passphrase")?;
+    Ok(line.trim_end_matches(['\r', '\n']).to_string())
+}
+
 #[tokio::main]
 async fn main() -> Result<ExitCode> {
     tracing_subscriber::fmt().with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .with_writer(std::io::stderr).init();
     let args = Args::parse();
     let path = args.control.clone().unwrap_or_else(control::default_path);
-    if !args.key_files && matches!(args.cmd, Cmd::Init { .. } | Cmd::Run { .. }) {
+    if !args.key_files && matches!(args.cmd, Cmd::Init { .. } | Cmd::Run { .. } | Cmd::Export { .. } | Cmd::Restore { .. }) {
         dsip_app::keys::use_system_store();
     }
     let cmd = match args.cmd {
         Cmd::Init { identity, name } => {
             println!("{}", dsip_app::init_identity(&identity, &name).context("making the identity")?);
+            return Ok(ExitCode::SUCCESS);
+        }
+        Cmd::Export { identity, out } => {
+            let backup = dsip_app::backup::export_identity(&identity, &passphrase()?).context("backing up the identity")?;
+            if let Some(out) = out {
+                std::fs::write(&out, &backup.file).with_context(|| out.display().to_string())?;
+            }
+            println!("{}", backup.code);
+            return Ok(ExitCode::SUCCESS);
+        }
+        Cmd::Restore { identity, code, name } => {
+            // a path to a backup file, or the code itself
+            let text = std::fs::read_to_string(&code).unwrap_or(code);
+            let did = dsip_app::backup::restore_identity(&identity, &text, &passphrase()?, &name).context("restoring the identity")?;
+            println!("{did}");
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Run { identity, relay, ca, audio, input, output, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web, push_gateway } => {

@@ -159,6 +159,42 @@ abstract class Strings {
   /// **'Enter the identity folder.'**
   String get firstRunFolderNeeded;
 
+  /// No description provided for @firstRunRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from a backup'**
+  String get firstRunRestore;
+
+  /// No description provided for @firstRunCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery code'**
+  String get firstRunCode;
+
+  /// No description provided for @firstRunCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP1-… as you wrote it down or saved it, or the backup file\'s text'**
+  String get firstRunCodeHint;
+
+  /// No description provided for @firstRunCodeNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the recovery code.'**
+  String get firstRunCodeNeeded;
+
+  /// No description provided for @backupPassphrase.
+  ///
+  /// In en, this message translates to:
+  /// **'Passphrase'**
+  String get backupPassphrase;
+
+  /// No description provided for @backupPassphraseNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the passphrase.'**
+  String get backupPassphraseNeeded;
+
   /// No description provided for @firstRunRelay.
   ///
   /// In en, this message translates to:
@@ -860,6 +896,102 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Restart'**
   String get settingsRestart;
+
+  /// No description provided for @settingsBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity backup'**
+  String get settingsBackup;
+
+  /// No description provided for @settingsBackupIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Your identity is a key on this device. If this device is lost, a backup is the only way to keep your identity: a recovery code, sealed under a passphrase you choose.'**
+  String get settingsBackupIntro;
+
+  /// No description provided for @settingsBackupMake.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up'**
+  String get settingsBackupMake;
+
+  /// No description provided for @backupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up your identity'**
+  String get backupTitle;
+
+  /// No description provided for @backupPassphraseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 10 characters. Without it, the code opens nothing: keep them apart.'**
+  String get backupPassphraseHint;
+
+  /// No description provided for @backupPassphraseShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 10 characters.'**
+  String get backupPassphraseShort;
+
+  /// No description provided for @backupPassphraseAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'The passphrase again'**
+  String get backupPassphraseAgain;
+
+  /// No description provided for @backupPassphraseDiffers.
+  ///
+  /// In en, this message translates to:
+  /// **'The two passphrases differ.'**
+  String get backupPassphraseDiffers;
+
+  /// No description provided for @backupMake.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the code'**
+  String get backupMake;
+
+  /// No description provided for @backupCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your recovery code'**
+  String get backupCodeTitle;
+
+  /// No description provided for @backupCodeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Write it down or keep it somewhere safe, with the passphrase apart. Anyone with both is you.'**
+  String get backupCodeBody;
+
+  /// No description provided for @backupCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get backupCopy;
+
+  /// No description provided for @backupCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied.'**
+  String get backupCopied;
+
+  /// No description provided for @backupDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get backupDone;
+
+  /// No description provided for @backupCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get backupCancel;
+
+  /// No description provided for @backupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'No backup: {reason}'**
+  String backupFailed(String reason);
 
   /// No description provided for @settingsAbout.
   ///

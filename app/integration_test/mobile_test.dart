@@ -36,6 +36,14 @@ void main() {
     expect(find.byType(FirstRun), findsOneWidget);
     final did = await RustClient().initIdentity('${dir.path}/identity', 'Alice');
     expect(did, startsWith('did:key:z6Mk'));
+    // The keys in the system's store (A6a): the Keystore takes them on Android; an unsigned simulator build may lack the
+    // Keychain's entitlement, and then they stay in files (said, not failed).
+    final inFiles = File('${dir.path}/identity/controller.key').existsSync();
+    debugPrint('identity keys: ${inFiles ? 'in files' : "in the system's store"}');
+    if (Platform.isAndroid) expect(inFiles, isFalse, reason: 'the Android Keystore holds them');
+    // and a backup of it opens again (A6b)
+    final backup = await RustClient().exportIdentity('${dir.path}/identity', 'a long passphrase');
+    expect(backup.identity, did);
     dir.deleteSync(recursive: true);
   });
 

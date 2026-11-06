@@ -205,12 +205,17 @@ pub fn forget_keys(device: &str) -> Result<(), Error> {
     }
 }
 
+/// Tests that touch keyring's process-wide default store, or make identities while another may: one at a time.
+#[cfg(test)]
+pub(crate) static STORE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn keys_move_into_the_store_and_load_from_it() {
+        let _one = STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let dir = std::env::temp_dir().join(format!("dsip-app-keys-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let made = dsip_phone::Identity::init(&dir, "Ann", None, None).unwrap();

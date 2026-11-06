@@ -144,4 +144,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(client.stops, 0);
   });
+
+  testWidgets('a backup asks for the passphrase twice, then shows the recovery code (A6b)', (tester) async {
+    await open(tester);
+    await tester.ensureVisible(find.byKey(const Key('backup')));
+    await tester.tap(find.byKey(const Key('backup')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('passphrase')), 'short');
+    await tester.tap(find.text('Make the code'));
+    await tester.pumpAndSettle();
+    expect(find.text('Use at least 10 characters.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('passphrase')), 'a long passphrase');
+    await tester.enterText(find.byKey(const Key('again')), 'a long passphrase!');
+    await tester.tap(find.text('Make the code'));
+    await tester.pumpAndSettle();
+    expect(find.text('The two passphrases differ.'), findsOneWidget);
+    expect(client.exported, isEmpty);
+
+    await tester.enterText(find.byKey(const Key('again')), 'a long passphrase');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Make the code'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(client.exported, [(saved['identity'] as String, 'a long passphrase')]);
+    expect(find.text('Your recovery code'), findsOneWidget);
+    expect(find.text('DSIP1-AAAAA-BBBBB'), findsOneWidget);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your recovery code'), findsNothing);
+  });
 }

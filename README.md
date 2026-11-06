@@ -48,6 +48,12 @@ Service on Linux, one item named by the device's DID. The folder keeps what is p
 `controller.key` and `device.key`, readable by their owner alone. An identity made before is moved in at its next
 `run`.
 
+A backup a person can keep (A6b): `echo "$PASSPHRASE" | dsip-app export --identity ~/.dsip/alice --out alice-backup.txt`
+prints a recovery code (`DSIP1-…`, the identity key sealed under the passphrase with Argon2id and XChaCha20-Poly1305),
+and writes a file holding it. `dsip-app restore --identity ~/.dsip/alice --name Alice alice-backup.txt` (the passphrase
+again on standard input) makes that identity this install's, with a new device key. The app does the same: Settings,
+Identity backup; and "Restore from a backup" at the first run.
+
 With a mailbox, the same app messages:
 
 ```sh

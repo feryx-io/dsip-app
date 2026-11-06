@@ -46,6 +46,25 @@ class StringsEn extends Strings {
   String get firstRunFolderNeeded => 'Enter the identity folder.';
 
   @override
+  String get firstRunRestore => 'Restore from a backup';
+
+  @override
+  String get firstRunCode => 'Recovery code';
+
+  @override
+  String get firstRunCodeHint =>
+      'DSIP1-… as you wrote it down or saved it, or the backup file\'s text';
+
+  @override
+  String get firstRunCodeNeeded => 'Enter the recovery code.';
+
+  @override
+  String get backupPassphrase => 'Passphrase';
+
+  @override
+  String get backupPassphraseNeeded => 'Enter the passphrase.';
+
+  @override
   String get firstRunRelay => 'Relay';
 
   @override
@@ -458,6 +477,59 @@ class StringsEn extends Strings {
 
   @override
   String get settingsRestart => 'Restart';
+
+  @override
+  String get settingsBackup => 'Identity backup';
+
+  @override
+  String get settingsBackupIntro =>
+      'Your identity is a key on this device. If this device is lost, a backup is the only way to keep your identity: a recovery code, sealed under a passphrase you choose.';
+
+  @override
+  String get settingsBackupMake => 'Back up';
+
+  @override
+  String get backupTitle => 'Back up your identity';
+
+  @override
+  String get backupPassphraseHint =>
+      'At least 10 characters. Without it, the code opens nothing: keep them apart.';
+
+  @override
+  String get backupPassphraseShort => 'Use at least 10 characters.';
+
+  @override
+  String get backupPassphraseAgain => 'The passphrase again';
+
+  @override
+  String get backupPassphraseDiffers => 'The two passphrases differ.';
+
+  @override
+  String get backupMake => 'Make the code';
+
+  @override
+  String get backupCodeTitle => 'Your recovery code';
+
+  @override
+  String get backupCodeBody =>
+      'Write it down or keep it somewhere safe, with the passphrase apart. Anyone with both is you.';
+
+  @override
+  String get backupCopy => 'Copy';
+
+  @override
+  String get backupCopied => 'Copied.';
+
+  @override
+  String get backupDone => 'Done';
+
+  @override
+  String get backupCancel => 'Cancel';
+
+  @override
+  String backupFailed(String reason) {
+    return 'No backup: $reason';
+  }
 
   @override
   String get settingsAbout => 'About';
