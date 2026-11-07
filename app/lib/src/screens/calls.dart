@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
@@ -91,6 +92,10 @@ class _LiveCall extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     void act(String command) => controller.run({'command': command, 'call': call.id});
+    // the keyboard's way to each (app.dart's CallKeys), said in the button's tooltip on a desktop
+    final mod = defaultTargetPlatform == TargetPlatform.macOS ? '⌘' : 'Ctrl+';
+    final desktop = controller.mobile == null;
+    Widget keyed(String keys, Widget button) => desktop ? Tooltip(message: '$mod$keys', child: button) : button;
     return Card(
       key: Key('call-${call.id}'),
       child: Padding(
@@ -111,11 +116,11 @@ class _LiveCall extends StatelessWidget {
               spacing: 8,
               children: call.ringingHere
                   ? [
-                      FilledButton.icon(onPressed: () => act('answer'), icon: const Icon(Icons.call), label: Text(s.callAnswer)),
-                      OutlinedButton.icon(onPressed: () => act('decline'), icon: const Icon(Icons.call_end), label: Text(s.callDecline)),
+                      keyed('Enter', FilledButton.icon(onPressed: () => act('answer'), icon: const Icon(Icons.call), label: Text(s.callAnswer))),
+                      keyed('Backspace', OutlinedButton.icon(onPressed: () => act('decline'), icon: const Icon(Icons.call_end), label: Text(s.callDecline))),
                     ]
                   : [
-                      FilledButton.icon(
+                      keyed('Backspace', FilledButton.icon(
                         onPressed: () => act('hangup'),
                         icon: const Icon(Icons.call_end),
                         label: Text(s.callHangUp),
@@ -123,13 +128,13 @@ class _LiveCall extends StatelessWidget {
                           backgroundColor: Theme.of(context).colorScheme.error,
                           foregroundColor: Theme.of(context).colorScheme.onError,
                         ),
-                      ),
+                      )),
                       if (call.state.answered)
-                        OutlinedButton.icon(
+                        keyed('M', OutlinedButton.icon(
                           onPressed: () => act(call.muted ? 'unmute' : 'mute'),
                           icon: Icon(call.muted ? Icons.mic : Icons.mic_off),
                           label: Text(call.muted ? s.callUnmute : s.callMute),
-                        ),
+                        )),
                       if (controller.system case final system?) AudioRouteButton(system: system),
                     ],
             ),

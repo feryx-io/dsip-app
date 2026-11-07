@@ -150,4 +150,34 @@ void main() {
     }
     expect(reached, containsAll(['name', 'relay', 'mailbox', 'mailbox-did', 'hints', 'start']));
   });
+
+  testWidgets('the calls from the keyboard, from any tab: answer, mute, hang up, decline', (tester) async {
+    final client = FakeClient();
+    final controller = Controller(client, SettingsStore(dir));
+    await tester.runAsync(() => SettingsStore(dir).save(_fixture('settings')['settings'] as Map<String, dynamic>));
+    tester.view.physicalSize = const Size(1100, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(DsipApp(controller: controller));
+    await tester.runAsync(controller.load);
+    client.push(seeded());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Presence').last); // another tab: the keys work wherever the app is
+    await tester.pumpAndSettle();
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(key);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+    }
+
+    // the fixture: call 3 rings here, and another is up
+    await press(LogicalKeyboardKey.enter);
+    expect(client.commands.last, {'command': 'answer', 'call': 3});
+    await press(LogicalKeyboardKey.backspace);
+    expect(client.commands.last, {'command': 'decline', 'call': 3}, reason: 'the call ringing in, first');
+    final up = (seeded()['calls'] as List).cast<Map<String, dynamic>>().firstWhere((c) => (c['state'] as Map)['state'] == 'answered');
+    await press(LogicalKeyboardKey.keyM);
+    expect(client.commands.last, {'command': up['muted'] == true ? 'unmute' : 'mute', 'call': up['id']});
+  });
 }
