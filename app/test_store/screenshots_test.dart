@@ -1,5 +1,5 @@
-// The store screenshots (app plan A7; store/README.md), drawn from the goldens' fixtures with the app's own fonts at the
-// sizes the stores ask for, light theme. Not part of `flutter test`; made with, from app/:
+// The store screenshots (app plan A7; store/README.md), drawn from fixture.json beside this file (people with names, a
+// short conversation) with the app's own fonts at the sizes the stores ask for, light theme. Not part of `flutter test`; made with, from app/:
 //   flutter test test_store/screenshots_test.dart --update-goldens
 // into ../store/screenshots/<device>-<n>-<screen>.png.
 
@@ -13,10 +13,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../test/fake_client.dart';
-import '../test/goldens/goldens_test.dart' show loadFonts, seeded;
+import '../test/goldens/goldens_test.dart' show loadFonts;
 
-Map<String, dynamic> _fixture(String name) =>
-    jsonDecode(File('test/fixtures/$name.json').readAsStringSync()) as Map<String, dynamic>;
+final _store = jsonDecode(File('test_store/fixture.json').readAsStringSync()) as Map<String, dynamic>;
+
+/// A fresh copy of the store fixture's [key], as each test changes what it is given.
+Map<String, dynamic> _fixture(String key) => jsonDecode(jsonEncode(_store[key])) as Map<String, dynamic>;
 
 /// Each store's device: its name, its size in logical pixels, and its pixel ratio.
 const devices = <(String, Size, double)>[
@@ -52,17 +54,17 @@ void main() {
         addTearDown(tester.platformDispatcher.clearAllTestValues);
         final client = FakeClient()
           ..answer = (cmd) => switch (cmd['command']) {
-            'thread' => _fixture('messages')['thread'] as Map<String, dynamic>,
+            'thread' => _fixture('thread'),
             _ => {'response': 'ok'},
           };
         final controller = Controller(client, SettingsStore(dir));
         if (tab != null) {
-          await tester.runAsync(() => SettingsStore(dir).save(_fixture('settings')['settings'] as Map<String, dynamic>));
+          await tester.runAsync(() => SettingsStore(dir).save(_fixture('settings')));
         }
         await tester.pumpWidget(DsipApp(controller: controller));
         await tester.runAsync(controller.load);
         if (tab != null) {
-          client.push(seeded());
+          client.push(_fixture('state'));
           await tester.pumpAndSettle();
           await tester.tap(find.text(tab).last);
         }
