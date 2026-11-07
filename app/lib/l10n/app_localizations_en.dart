@@ -49,6 +49,32 @@ class StringsEn extends Strings {
   String get firstRunRestore => 'Restore from a backup';
 
   @override
+  String get firstRunJoin => 'Join another device';
+
+  @override
+  String get firstRunJoinIntro =>
+      'On a device that has your identity, open Settings, Add a device, and enter this join code there. Check it shows the same check code.';
+
+  @override
+  String get firstRunJoinCode => 'Join code';
+
+  @override
+  String firstRunCheckCode(String check) {
+    return 'Check code: $check';
+  }
+
+  @override
+  String get firstRunWelcome => 'Welcome code';
+
+  @override
+  String get firstRunWelcomeHint =>
+      'What the other device shows once it has the join code';
+
+  @override
+  String get firstRunWelcomeNeeded =>
+      'Enter the welcome code from the other device.';
+
+  @override
   String get firstRunCode => 'Recovery code';
 
   @override
@@ -532,6 +558,33 @@ class StringsEn extends Strings {
   }
 
   @override
+  String get settingsDevices => 'Your devices';
+
+  @override
+  String get settingsDevicesIntro =>
+      'Add another phone or computer to your identity. It gets its own key, and never your identity\'s key.';
+
+  @override
+  String get settingsAddDevice => 'Add a device';
+
+  @override
+  String get addDeviceTitle => 'Add a device';
+
+  @override
+  String get addDeviceJoin => 'The new device\'s join code';
+
+  @override
+  String get addDeviceJoinNeeded => 'Enter the join code the new device shows.';
+
+  @override
+  String get addDeviceMake => 'Make the welcome code';
+
+  @override
+  String addDeviceWelcome(String check) {
+    return 'Enter this welcome code on the new device. It should show the same check code: $check.';
+  }
+
+  @override
   String get settingsWeb => 'Your own domain';
 
   @override
@@ -702,6 +755,32 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get firstRunRestore => '[Ŕéšţóŕé ƒŕóɱ à ƀàçķúþ one t]';
+
+  @override
+  String get firstRunJoin => '[Ĵóíñ àñóţĥéŕ đéṽíçé one ]';
+
+  @override
+  String get firstRunJoinIntro =>
+      '[Óñ à đéṽíçé ţĥàţ ĥàš ýóúŕ íđéñţíţý, óþéñ Šéţţíñĝš, Àđđ à đéṽíçé, àñđ éñţéŕ ţĥíš ĵóíñ çóđé ţĥéŕé. Çĥéçķ íţ šĥóŵš ţĥé šàɱé çĥéçķ çóđé. one two three four five six seven]';
+
+  @override
+  String get firstRunJoinCode => '[Ĵóíñ çóđé o]';
+
+  @override
+  String firstRunCheckCode(String check) {
+    return '[Çĥéçķ çóđé: $check one]';
+  }
+
+  @override
+  String get firstRunWelcome => '[Ŵéĺçóɱé çóđé on]';
+
+  @override
+  String get firstRunWelcomeHint =>
+      '[Ŵĥàţ ţĥé óţĥéŕ đéṽíçé šĥóŵš óñçé íţ ĥàš ţĥé ĵóíñ çóđé one two three]';
+
+  @override
+  String get firstRunWelcomeNeeded =>
+      '[Éñţéŕ ţĥé ŵéĺçóɱé çóđé ƒŕóɱ ţĥé óţĥéŕ đéṽíçé. one two thr]';
 
   @override
   String get firstRunCode => '[Ŕéçóṽéŕý çóđé one]';
@@ -1189,6 +1268,34 @@ class StringsEnXa extends StringsEn {
   @override
   String backupFailed(String reason) {
     return '[Ñó ƀàçķúþ: $reason one]';
+  }
+
+  @override
+  String get settingsDevices => '[Ýóúŕ đéṽíçéš on]';
+
+  @override
+  String get settingsDevicesIntro =>
+      '[Àđđ àñóţĥéŕ þĥóñé óŕ çóɱþúţéŕ ţó ýóúŕ íđéñţíţý. Íţ ĝéţš íţš óŵñ ķéý, àñđ ñéṽéŕ ýóúŕ íđéñţíţý\'š ķéý. one two three four five s]';
+
+  @override
+  String get settingsAddDevice => '[Àđđ à đéṽíçé on]';
+
+  @override
+  String get addDeviceTitle => '[Àđđ à đéṽíçé on]';
+
+  @override
+  String get addDeviceJoin => '[Ţĥé ñéŵ đéṽíçé\'š ĵóíñ çóđé one tw]';
+
+  @override
+  String get addDeviceJoinNeeded =>
+      '[Éñţéŕ ţĥé ĵóíñ çóđé ţĥé ñéŵ đéṽíçé šĥóŵš. one two th]';
+
+  @override
+  String get addDeviceMake => '[Ḿàķé ţĥé ŵéĺçóɱé çóđé one t]';
+
+  @override
+  String addDeviceWelcome(String check) {
+    return '[Éñţéŕ ţĥíš ŵéĺçóɱé çóđé óñ ţĥé ñéŵ đéṽíçé. Íţ šĥóúĺđ šĥóŵ ţĥé šàɱé çĥéçķ çóđé: $check. one two three four fi]';
   }
 
   @override

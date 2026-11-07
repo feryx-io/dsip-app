@@ -5,7 +5,7 @@ import '../controller.dart';
 import '../settings.dart';
 
 /// How the first run finds its identity.
-enum Origin { make, folder, restore }
+enum Origin { make, folder, restore, join }
 
 /// The first run: make an identity, restore one from its recovery code (A6b), or name a folder holding one; and say
 /// where its relay is, and its mailbox and a hints node if it has them. Joining as another device of an identity on
@@ -28,16 +28,29 @@ class _FirstRunState extends State<FirstRun> {
   final _hints = TextEditingController();
   final _code = TextEditingController();
   final _passphrase = TextEditingController();
+  final _welcome = TextEditingController();
   Origin _origin = Origin.make;
+
+  /// The join code and check code, once this device has started joining (A6).
+  (String, String)? _join;
   bool _busy = false;
   String? _failed;
 
   @override
   void dispose() {
-    for (final c in [_name, _folder, _relay, _mailbox, _mailboxDid, _hints, _code, _passphrase]) {
+    for (final c in [_name, _folder, _relay, _mailbox, _mailboxDid, _hints, _code, _passphrase, _welcome]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _startJoin() async {
+    try {
+      final codes = await widget.controller.client.pairingStart(widget.controller.store.defaultIdentity);
+      if (mounted) setState(() => _join = codes);
+    } catch (e) {
+      if (mounted) setState(() => _failed = Strings.of(context).firstRunFailed('$e'));
+    }
   }
 
   String? _text(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
@@ -58,8 +71,9 @@ class _FirstRunState extends State<FirstRun> {
     try {
       await widget.controller.setUp(
         settings: settings,
-        displayName: _origin == Origin.folder ? null : _text(_name),
+        displayName: _origin == Origin.folder || _origin == Origin.join ? null : _text(_name),
         restore: _origin == Origin.restore ? (_code.text.trim(), _passphrase.text) : null,
+        joinWelcome: _origin == Origin.join ? _welcome.text.trim() : null,
       );
     } catch (e) {
       if (mounted) setState(() => _failed = Strings.of(context).firstRunFailed('$e'));
@@ -90,12 +104,16 @@ class _FirstRunState extends State<FirstRun> {
                     segments: [
                       ButtonSegment(value: Origin.make, label: Text(s.firstRunNew)),
                       ButtonSegment(value: Origin.restore, label: Text(s.firstRunRestore)),
+                      ButtonSegment(value: Origin.join, label: Text(s.firstRunJoin)),
                       ButtonSegment(value: Origin.folder, label: Text(s.firstRunExisting)),
                     ],
                     selected: {_origin},
                     // the chosen one is shown by its fill; a check mark beside the label only crowds it on a phone
                     showSelectedIcon: false,
-                    onSelectionChanged: (v) => setState(() => _origin = v.first),
+                    onSelectionChanged: (v) {
+                      setState(() => _origin = v.first);
+                      if (v.first == Origin.join && _join == null) _startJoin();
+                    },
                   ),
                   const SizedBox(height: 16),
                   if (_origin == Origin.restore) ...[
@@ -117,7 +135,28 @@ class _FirstRunState extends State<FirstRun> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  if (_origin == Origin.folder)
+                  if (_origin == Origin.join) ...[
+                    Text(s.firstRunJoinIntro),
+                    const SizedBox(height: 8),
+                    if (_join case (final code, final check)) ...[
+                      InputDecorator(
+                        decoration: InputDecoration(labelText: s.firstRunJoinCode),
+                        child: SelectableText(code, key: const Key('join-code'), style: const TextStyle(fontFamily: 'monospace')),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(s.firstRunCheckCode(check), key: const Key('check-code')),
+                    ] else
+                      const LinearProgressIndicator(),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: const Key('welcome'),
+                      controller: _welcome,
+                      minLines: 2,
+                      maxLines: 6,
+                      decoration: InputDecoration(labelText: s.firstRunWelcome, helperText: s.firstRunWelcomeHint),
+                      validator: (v) => (v ?? '').trim().isEmpty ? s.firstRunWelcomeNeeded : null,
+                    ),
+                  ] else if (_origin == Origin.folder)
                     TextFormField(
                       key: const Key('folder'),
                       controller: _folder,

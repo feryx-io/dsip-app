@@ -38,6 +38,10 @@ class SettingsScreen extends StatelessWidget {
         const SizedBox(height: 8),
         BackupSettings(controller: controller),
         const Divider(height: 32),
+        Text(s.settingsDevices, style: heading),
+        const SizedBox(height: 8),
+        DevicesSettings(controller: controller),
+        const Divider(height: 32),
         Text(s.settingsWeb, style: heading),
         const SizedBox(height: 8),
         WebSettings(controller: controller),
@@ -523,6 +527,114 @@ class _WebDialogState extends State<WebDialog> {
         if (plan == null) FilledButton(onPressed: _busy ? null : _prepare, child: Text(s.webPrepare)),
         if (plan != null && differs?.isEmpty != true) FilledButton(onPressed: _busy ? null : _check, child: Text(s.webCheck)),
         if (plan != null && differs?.isEmpty == true) FilledButton(onPressed: _busy ? null : _move, child: Text(s.webMove)),
+      ],
+    );
+  }
+}
+
+/// Another device of this identity (A6): the new device's join code in, the welcome code out, and the check code
+/// both show.
+class DevicesSettings extends StatelessWidget {
+  const DevicesSettings({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(s.settingsDevicesIntro),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const Key('add-device'),
+          icon: const Icon(Icons.devices),
+          label: Text(s.settingsAddDevice),
+          onPressed: () => showDialog<void>(context: context, builder: (_) => AddDeviceDialog(controller: controller)),
+        ),
+      ],
+    );
+  }
+}
+
+class AddDeviceDialog extends StatefulWidget {
+  const AddDeviceDialog({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  State<AddDeviceDialog> createState() => _AddDeviceDialogState();
+}
+
+class _AddDeviceDialogState extends State<AddDeviceDialog> {
+  final _form = GlobalKey<FormState>();
+  final _join = TextEditingController();
+  (String, String)? _welcome;
+  bool _busy = false;
+  String? _failed;
+
+  @override
+  void dispose() {
+    _join.dispose();
+    super.dispose();
+  }
+
+  Future<void> _make() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _failed = null;
+    });
+    try {
+      final dir = widget.controller.settings?['identity'] as String? ?? '';
+      final codes = await widget.controller.client.pairingWelcome(dir, _join.text.trim());
+      if (mounted) setState(() => _welcome = codes);
+    } catch (e) {
+      if (mounted) setState(() => _failed = Strings.of(context).webFailed('$e'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final welcome = _welcome;
+    return AlertDialog(
+      title: Text(s.addDeviceTitle),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _form,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (welcome == null)
+                TextFormField(
+                  key: const Key('join'),
+                  controller: _join,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(labelText: s.addDeviceJoin),
+                  validator: (v) => (v ?? '').trim().isEmpty ? s.addDeviceJoinNeeded : null,
+                )
+              else ...[
+                Text(s.addDeviceWelcome(welcome.$2)),
+                const SizedBox(height: 8),
+                SelectableText(welcome.$1, key: const Key('welcome-code'), style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+              ],
+              if (_failed != null) ...[
+                const SizedBox(height: 12),
+                Text(_failed!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(welcome == null ? s.backupCancel : s.backupDone)),
+        if (welcome != null)
+          TextButton(onPressed: () => Clipboard.setData(ClipboardData(text: welcome.$1)), child: Text(s.backupCopy)),
+        if (welcome == null) FilledButton(onPressed: _busy ? null : _make, child: Text(s.addDeviceMake)),
       ],
     );
   }

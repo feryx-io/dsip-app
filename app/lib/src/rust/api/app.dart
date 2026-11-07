@@ -41,6 +41,20 @@ Future<String> restoreIdentity({
   displayName: displayName,
 );
 
+/// The new device's first step in joining an identity (no identity key on it): `{"code", "check"}` JSON, the join
+/// code to give a device holding the identity, and the check code both show.
+Future<String> pairingStart({required String dir}) =>
+    RustLib.instance.api.crateApiAppPairingStart(dir: dir);
+
+/// On a device holding the identity in `dir`: the welcome code for the device whose join code is `join`, as
+/// `{"code", "check"}` JSON.
+Future<String> pairingWelcome({required String dir, required String join}) =>
+    RustLib.instance.api.crateApiAppPairingWelcome(dir: dir, join: join);
+
+/// The new device's last step: joined with the `welcome` code, in `dir`; the identity's DID.
+Future<String> pairingFinish({required String dir, required String welcome}) =>
+    RustLib.instance.api.crateApiAppPairingFinish(dir: dir, welcome: welcome);
+
 /// The document the identity in `dir` would serve on a domain of its own, as `did` (a `did:web`), naming `relay` and
 /// the mailbox (`mailbox_did`, `mailbox_uri`) when given: `{"did", "url", "document"}` JSON. Nothing changes yet.
 Future<String> webPrepare({

@@ -15,6 +15,16 @@ abstract class Client {
   /// Make the identity in [code] (a recovery code, or a backup file's text) this install's, in [dir]; its DID.
   Future<String> restoreIdentity(String dir, String code, String passphrase, String displayName);
 
+  /// The new device's first step in joining an identity: the join code, and the check code both devices show (A6).
+  Future<(String, String)> pairingStart(String dir);
+
+  /// On a device holding the identity in [dir]: the welcome code for the device whose join code is [join], and the
+  /// check code.
+  Future<(String, String)> pairingWelcome(String dir, String join);
+
+  /// The new device's last step: joined with the [welcome] code, in [dir]; the identity's DID.
+  Future<String> pairingFinish(String dir, String welcome);
+
   /// The document the identity in [dir] would serve as [did] (a `did:web`), naming [relay] and the mailbox: `{did, url,
   /// document}` (A6d). Nothing changes yet.
   Future<Map<String, dynamic>> webPrepare(String dir, String did, String relay, {String? mailboxDid, String? mailboxUri});

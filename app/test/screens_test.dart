@@ -101,6 +101,32 @@ void main() {
     expect(client.started?['identity'], identity);
   });
 
+  testWidgets('another device joins by the codes, without making an identity (A6)', (tester) async {
+    await open(tester);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Join another device'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    expect(find.text('DSIP1-AAAAA-BBBBB'), findsNothing);
+    expect(find.text('DSIPJ1-AAAAA-BBBBB'), findsOneWidget);
+    expect(find.text('Check code: QX7K-2DSA'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
+    await tester.tap(find.text('Start'));
+    await tester.pump();
+    expect(find.text('Enter the welcome code from the other device.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('welcome')), ' DSIPW1-abc ');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    final identity = SettingsStore(dir).defaultIdentity;
+    expect(client.finished, [(identity, 'DSIPW1-abc')]);
+    expect(client.identities, isEmpty, reason: 'joined, not made');
+    expect(client.started?['identity'], identity);
+  });
+
   testWidgets('with settings saved, the app starts at once and shows its calls', (tester) async {
     await tester.runAsync(() => SettingsStore(dir).save({'identity': '/x', 'relay': 'wss://r/dsip'}));
     await open(tester);

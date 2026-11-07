@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dsip_app/src/app.dart';
 import 'package:dsip_app/src/controller.dart';
 import 'package:dsip_app/src/settings.dart';
+import 'package:dsip_app/src/screens/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -178,7 +179,9 @@ void main() {
 
   testWidgets('the identity moves to its own domain once the domain serves its document (A6d)', (tester) async {
     await open(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('web')), 300, scrollable: find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first);
     await tester.ensureVisible(find.byKey(const Key('web')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('web')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('web-did')), 'ann.example.com');
@@ -228,5 +231,26 @@ void main() {
     expect(client.moves, [('did:web:ann.example.com', true)], reason: 'moved while the app was stopped');
     expect(client.stops, stops + 1);
     expect(client.started, saved, reason: 'started again');
+  });
+
+  testWidgets('a device is added: its join code in, the welcome code and check code out (A6)', (tester) async {
+    await open(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('add-device')), 300, scrollable: find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first);
+    await tester.ensureVisible(find.byKey(const Key('add-device')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-device')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Make the welcome code'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter the join code the new device shows.'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('join')), 'DSIPJ1-AAAAA-BBBBB');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Make the welcome code'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(client.welcomed, ['DSIPJ1-AAAAA-BBBBB']);
+    expect(find.byKey(const Key('welcome-code')), findsOneWidget);
+    expect(find.textContaining('QX7K-2DSA'), findsOneWidget);
   });
 }

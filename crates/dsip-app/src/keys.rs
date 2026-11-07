@@ -36,7 +36,9 @@ const KEY_AGREEMENT_FILE: &str = "key-agreement.json";
 /// the delegation naming it, when it has one.
 #[derive(Serialize, Deserialize, PartialEq)]
 struct Seeds {
-    controller: String,
+    /// The identity key; none on a device that joined without it (A6, pairing).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    controller: Option<String>,
     device: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     key_agreement: Option<String>,
@@ -47,7 +49,7 @@ struct Seeds {
 impl Seeds {
     fn of(id: &dsip_phone::Identity) -> Seeds {
         Seeds {
-            controller: hex(&id.controller.seed()),
+            controller: id.controller.as_ref().map(|c| hex(&c.seed())),
             device: hex(&id.device.seed()),
             key_agreement: id.key_agreement.as_ref().map(|k| hex(&k.secret)),
             key_agreement_delegation: id.key_agreement.as_ref().map(|k| k.delegation.frame()),
@@ -150,7 +152,8 @@ pub fn load_identity(dir: &Path) -> Result<dsip_phone::Identity, Error> {
     })?;
     let seeds: Seeds = serde_json::from_slice(&secret).map_err(|e| Error::Keys(format!("the stored keys: {e}")))?;
     let key = |s: &str| unhex(s).map(KeyPair::from_seed).ok_or_else(|| Error::Keys("the stored keys are not keys".into()));
-    let (controller, device) = (key(&seeds.controller)?, key(&seeds.device)?);
+    let controller = seeds.controller.as_deref().map(key).transpose()?;
+    let device = key(&seeds.device)?;
     if device.did() != meta.device {
         return Err(Error::Keys(format!("the stored device key is not {}'s", meta.device)));
     }
@@ -238,7 +241,7 @@ pub fn ensure_key_agreement(dir: &Path) -> Result<bool, Error> {
     if id.key_agreement.is_some() {
         return Ok(false);
     }
-    let secret = id.derived_key_agreement_secret(0);
+    let secret = id.derived_key_agreement_secret(0)?;
     id.issue_key_agreement(secret, dsip_transport::now_s())?;
     keep(dir, &id)?;
     tracing::info!("keys: {} has a key agreement key", id.meta.identity);
@@ -296,7 +299,7 @@ mod tests {
         assert!(ensure_key_agreement(&dir).unwrap());
         assert!(!ensure_key_agreement(&dir).unwrap(), "once");
         let ka = load_identity(&dir).unwrap().key_agreement.expect("issued");
-        assert_eq!(ka.secret, made_with(&dir).derived_key_agreement_secret(0));
+        assert_eq!(ka.secret, made_with(&dir).derived_key_agreement_secret(0).unwrap());
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -308,7 +311,7 @@ mod tests {
         assert!(secure_identity(&dir).unwrap());
         assert!(!dir.join("controller.key").exists() && !dir.join("device.key").exists(), "the files are gone");
         let loaded = load_identity(&dir).unwrap();
-        assert_eq!((loaded.controller.did(), loaded.device.did()), (made.controller.did(), made.device.did()));
+        assert_eq!((loaded.identity_key().unwrap().did(), loaded.device.did()), (made.identity_key().unwrap().did(), made.device.did()));
         assert_eq!(loaded.delegation.frame(), made.delegation.frame());
         assert!(!dir.join(KEY_AGREEMENT_FILE).exists(), "the key agreement key moved too");
         assert_eq!(loaded.key_agreement.map(|k| (k.secret, k.delegation.frame())), Some((ka.secret, ka.delegation.frame())));
