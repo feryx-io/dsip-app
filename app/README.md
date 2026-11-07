@@ -127,6 +127,8 @@ Accessibility (A7), checked by `test/accessibility_test.dart` on every screen, a
   exactly for every colour pair the theme draws text in, both themes;
 - every screen at twice the text size without overflowing;
 - the first run done from the keyboard (Tab reaches each field and Start);
+- the calls from the keyboard, from any tab: Ctrl+Enter answers, Ctrl+Backspace declines or hangs up, Ctrl+M mutes
+  (Cmd on a Mac), named in the buttons' tooltips;
 - a call ringing in, and each change of its state, said to a screen reader.
 
 The launcher icons are drawn by `tool/icons.py` with the desktop's.

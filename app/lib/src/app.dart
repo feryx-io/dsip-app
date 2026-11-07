@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../l10n/app_localizations.dart';
@@ -102,16 +103,16 @@ class _HomeState extends State<Home> {
     );
     // A phone (or a narrow window): the tabs along the bottom, clear of the system's bars; else down the side.
     if (MediaQuery.sizeOf(context).width < 600) {
-      return Scaffold(
+      return CallKeys(controller: widget.controller, state: state, child: Scaffold(
         body: SafeArea(bottom: false, child: body),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _tab,
           onDestinationSelected: select,
           destinations: [for (final (icon, label) in destinations) NavigationDestination(icon: icon, label: label)],
         ),
-      );
+      ));
     }
-    return Scaffold(
+    return CallKeys(controller: widget.controller, state: state, child: Scaffold(
       body: Row(
         children: [
           NavigationRail(
@@ -126,6 +127,49 @@ class _HomeState extends State<Home> {
           Expanded(child: body),
         ],
       ),
+    ));
+  }
+}
+
+/// The calls from the keyboard, wherever the app is (A7): Ctrl+Enter answers the call ringing in, Ctrl+Backspace
+/// declines it or hangs up the call in progress, Ctrl+M mutes or unmutes it; Cmd in place of Ctrl on a Mac. A text
+/// field being typed in keeps its own keys (Ctrl+Backspace deletes a word there).
+class CallKeys extends StatelessWidget {
+  const CallKeys({super.key, required this.controller, required this.state, required this.child});
+  final Controller controller;
+  final AppState state;
+  final Widget child;
+
+  static final answer = [
+    const SingleActivator(LogicalKeyboardKey.enter, control: true),
+    const SingleActivator(LogicalKeyboardKey.enter, meta: true),
+  ];
+  static final end = [
+    const SingleActivator(LogicalKeyboardKey.backspace, control: true),
+    const SingleActivator(LogicalKeyboardKey.backspace, meta: true),
+  ];
+  static final mute = [
+    const SingleActivator(LogicalKeyboardKey.keyM, control: true),
+    const SingleActivator(LogicalKeyboardKey.keyM, meta: true),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final live = state.live;
+    final ringing = live.where((c) => c.ringingHere).firstOrNull;
+    final up = live.where((c) => c.state.answered).firstOrNull;
+    void run(String command, int call) => controller.run({'command': command, 'call': call});
+    return CallbackShortcuts(
+      bindings: {
+        for (final k in answer) k: () => ringing == null ? null : run('answer', ringing.id),
+        for (final k in end) k: () => switch ((ringing, up ?? live.firstOrNull)) {
+          (final r?, _) => run('decline', r.id),
+          (null, final c?) => run('hangup', c.id),
+          _ => null,
+        },
+        for (final k in mute) k: () => up == null ? null : run(up.muted ? 'unmute' : 'mute', up.id),
+      },
+      child: Focus(autofocus: true, child: child),
     );
   }
 }
