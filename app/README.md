@@ -121,6 +121,14 @@ DSIP_PUSH_GATEWAY=did:web:push.example DSIP_FCM_APP_ID=â€¦ DSIP_FCM_SENDER_ID=â€
 DSIP_PUSH_GATEWAY=did:web:push.example flutter build ios --release   # woken through the gateway by PushKit (signed builds)
 ```
 
+Accessibility (A7), checked by `test/accessibility_test.dart` on every screen, at a desktop's size and a phone's:
+- tap targets of at least 48 dp (Android) and 44 (iOS), and a label on everything tappable;
+- text contrast of WCAG AA (4.5:1): measured on the screens where Flutter's sampling reads it right, and computed
+  exactly for every colour pair the theme draws text in, both themes;
+- every screen at twice the text size without overflowing;
+- the first run done from the keyboard (Tab reaches each field and Start);
+- a call ringing in, and each change of its state, said to a screen reader.
+
 The launcher icons are drawn by `tool/icons.py` with the desktop's.
 
 ## Releases

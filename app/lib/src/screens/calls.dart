@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
@@ -100,7 +101,8 @@ class _LiveCall extends StatelessWidget {
             Text(call.peerName ?? call.peer, style: Theme.of(context).textTheme.titleMedium, overflow: TextOverflow.ellipsis),
             if (call.peerName != null) Text(call.peer, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
-            Text(_status(s)),
+            // a screen reader says a call ringing in, and each change of state, without the user moving there (A7)
+            Announced('${_status(s)}: ${call.peerName ?? call.peer}', child: Text(_status(s))),
             if (call.state.answered && !call.media) Text(s.callNoSound, style: Theme.of(context).textTheme.bodySmall),
             if (call.via != null) Text(s.callVia(call.via!), style: Theme.of(context).textTheme.bodySmall),
             if (call.error != null) Text(call.error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -117,7 +119,10 @@ class _LiveCall extends StatelessWidget {
                         onPressed: () => act('hangup'),
                         icon: const Icon(Icons.call_end),
                         label: Text(s.callHangUp),
-                        style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor: Theme.of(context).colorScheme.onError,
+                        ),
                       ),
                       if (call.state.answered)
                         OutlinedButton.icon(
@@ -209,4 +214,42 @@ class AudioRouteButton extends StatelessWidget {
       },
     );
   }
+}
+
+/// [child], and [message] said by a screen reader when it first shows and whenever it changes (an announcement, not a
+/// live region: the text keeps its own place in the screen's semantics).
+class Announced extends StatefulWidget {
+  const Announced(this.message, {super.key, required this.child});
+  final String message;
+  final Widget child;
+
+  @override
+  State<Announced> createState() => _AnnouncedState();
+}
+
+class _AnnouncedState extends State<Announced> {
+  void _say() {
+    final view = View.of(context);
+    SemanticsService.sendAnnouncement(view, widget.message, Directionality.of(context));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_said) {
+      _said = true;
+      _say();
+    }
+  }
+
+  bool _said = false;
+
+  @override
+  void didUpdateWidget(Announced old) {
+    super.didUpdateWidget(old);
+    if (old.message != widget.message) _say();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

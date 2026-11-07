@@ -291,9 +291,13 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final onBubble = message.mine ? scheme.onPrimaryContainer : scheme.onSurface;
     return Align(
       alignment: message.mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
+      // one node per bubble, its bounds the bubble's: a screen reader reads each message on its own
+      child: Semantics(
+        container: true,
+        child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         constraints: const BoxConstraints(maxWidth: 480),
@@ -304,10 +308,12 @@ class _Bubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (group && !message.mine) Text(shortDid(message.from), style: Theme.of(context).textTheme.labelSmall),
-            Text(message.text ?? s.threadNotText(message.kind)),
+            if (group && !message.mine)
+              Text(shortDid(message.from), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: onBubble)),
+            Text(message.text ?? s.threadNotText(message.kind), style: TextStyle(color: onBubble)),
           ],
         ),
+      ),
       ),
     );
   }
