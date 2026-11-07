@@ -131,6 +131,12 @@ Accessibility (A7), checked by `test/accessibility_test.dart` on every screen, a
   (Cmd on a Mac), named in the buttons' tooltips;
 - a call ringing in, and each change of its state, said to a screen reader.
 
+Ready for translation (A7), checked by `test/locales_test.dart`: every screen in the pseudo-locale `en_XA` (every
+message accented, bracketed and a third longer; `tool/pseudo_l10n.py` makes it from `app_en.arb`, keeping placeholders
+and plurals) and laid out right to left, at both sizes, without overflowing. On Android, `en_XA` is the system's own
+pseudo-locale (developer options). A right-to-left pseudo-locale is not shipped, as it would need an Arabic base
+locale: the test lays the screens out right to left itself.
+
 The launcher icons are drawn by `tool/icons.py` with the desktop's.
 
 ## Releases

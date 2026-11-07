@@ -18,9 +18,16 @@ class DsipApp extends StatelessWidget {
   const DsipApp({super.key, required this.controller});
   final Controller controller;
 
+  /// Lay every screen out in this direction whatever the locale: the tests' right-to-left check (A7), as no
+  /// right-to-left locale ships yet.
+  @visibleForTesting
+  static TextDirection? textDirection;
+
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
+    builder: (context, child) =>
+        textDirection == null ? child! : Directionality(textDirection: textDirection!, child: child!),
     onGenerateTitle: (context) => Strings.of(context).appName,
     localizationsDelegates: const [...Strings.localizationsDelegates, GlobalMaterialLocalizations.delegate],
     supportedLocales: Strings.supportedLocales,
