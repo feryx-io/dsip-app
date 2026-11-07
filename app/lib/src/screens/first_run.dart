@@ -93,6 +93,8 @@ class _FirstRunState extends State<FirstRun> {
                       ButtonSegment(value: Origin.folder, label: Text(s.firstRunExisting)),
                     ],
                     selected: {_origin},
+                    // the chosen one is shown by its fill; a check mark beside the label only crowds it on a phone
+                    showSelectedIcon: false,
                     onSelectionChanged: (v) => setState(() => _origin = v.first),
                   ),
                   const SizedBox(height: 16),

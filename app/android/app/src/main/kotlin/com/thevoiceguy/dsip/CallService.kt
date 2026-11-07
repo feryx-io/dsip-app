@@ -155,12 +155,21 @@ class CallService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /** What the service comes forward with when the calls ended before it started: shown for an instant. */
+    private fun placeholder(): Notification {
+        channels(this)
+        return NotificationCompat.Builder(this, ONGOING)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setContentTitle(getString(R.string.app_name))
+            .build()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // A service started with startForegroundService must come forward within seconds, even to stop at once:
+        // otherwise Android ends the app (ForegroundServiceDidNotStartInTimeException). The calls may have ended
+        // between `update` starting it and here, and then there is no call's notification to show.
         val notification = notification(this)
-        if (notification == null) {
-            stopSelf()
-            return START_NOT_STICKY
-        }
         var types = 0
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             types = ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
@@ -171,11 +180,16 @@ class CallService : Service() {
             types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         }
         try {
-            ServiceCompat.startForeground(this, NOTIFICATION, notification, types)
-            running = true
+            ServiceCompat.startForeground(this, NOTIFICATION, notification ?: placeholder(), types)
+            running = notification != null
         } catch (e: Exception) {
             Log.w(TAG, "the call's service could not come forward", e)
             post(this)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (notification == null) {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
         return START_NOT_STICKY
