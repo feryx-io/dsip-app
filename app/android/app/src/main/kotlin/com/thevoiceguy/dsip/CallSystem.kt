@@ -366,8 +366,12 @@ object CallSystem {
         CallService.update(context)
     }
 
+    /** Calls ended while Telecom was still making their connection: told as shown when it comes, then ended. */
+    private val endedUnattached = HashSet<Long>()
+
     fun reportEnded(context: Context, id: Long) {
         val call = calls.remove(id) ?: return
+        if (call.connection == null) endedUnattached.add(id)
         call.connection?.let {
             it.setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
             it.destroy()
@@ -383,7 +387,10 @@ object CallSystem {
     fun attached(context: Context, connection: DsipConnection) {
         val call = calls[connection.callId]
         if (call == null) {
-            // Ended while Telecom was still making it.
+            // Ended while Telecom was still making it (a pushed call whose app could not start, a call cancelled at
+            // once): it was shown, for an instant, and is gone. Every call handed to Telecom is told as shown or
+            // failed, so whoever follows the calls never waits on one.
+            if (endedUnattached.remove(connection.callId)) emit("shown", connection.callId)
             connection.setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
             connection.destroy()
             return
@@ -396,6 +403,10 @@ object CallSystem {
 
     /** Telecom could not make the call's connection. */
     fun refused(context: Context, id: Long) {
+        if (endedUnattached.remove(id)) {
+            emit("failed", id, mapOf("reason" to "unavailable"))
+            return
+        }
         calls.remove(id)
         CallService.update(context)
         emit("failed", id, mapOf("reason" to "unavailable"))
