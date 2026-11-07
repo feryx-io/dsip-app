@@ -51,6 +51,25 @@ class FakeClient implements Client {
     return 'did:key:z6MkAnn';
   }
 
+  /// The welcome codes [pairingFinish] was given, with their dirs; the join codes [pairingWelcome] was given.
+  final finished = <(String, String)>[];
+  final welcomed = <String>[];
+
+  @override
+  Future<(String, String)> pairingStart(String dir) async => ('DSIPJ1-AAAAA-BBBBB', 'QX7K-2DSA');
+
+  @override
+  Future<(String, String)> pairingWelcome(String dir, String join) async {
+    welcomed.add(join);
+    return ('DSIPW1-eyJpZGVudGl0eSI6ImRpZDprZXk6ejZNa0FubiJ9', 'QX7K-2DSA');
+  }
+
+  @override
+  Future<String> pairingFinish(String dir, String welcome) async {
+    finished.add((dir, welcome));
+    return 'did:key:z6MkAnn';
+  }
+
   /// What [webCheck] answers.
   List<String> webDiffers = const [];
 

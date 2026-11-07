@@ -20,6 +20,21 @@ class RustClient implements Client {
   Future<String> restoreIdentity(String dir, String code, String passphrase, String displayName) =>
       bridge.restoreIdentity(dir: dir, code: code, passphrase: passphrase, displayName: displayName);
 
+  (String, String) _codes(String json) {
+    final j = jsonDecode(json) as Map<String, dynamic>;
+    return (j['code'] as String, j['check'] as String);
+  }
+
+  @override
+  Future<(String, String)> pairingStart(String dir) async => _codes(await bridge.pairingStart(dir: dir));
+
+  @override
+  Future<(String, String)> pairingWelcome(String dir, String join) async =>
+      _codes(await bridge.pairingWelcome(dir: dir, join: join));
+
+  @override
+  Future<String> pairingFinish(String dir, String welcome) => bridge.pairingFinish(dir: dir, welcome: welcome);
+
   @override
   Future<Map<String, dynamic>> webPrepare(String dir, String did, String relay, {String? mailboxDid, String? mailboxUri}) async =>
       jsonDecode(await bridge.webPrepare(dir: dir, did: did, relay: relay, mailboxDid: mailboxDid, mailboxUri: mailboxUri))

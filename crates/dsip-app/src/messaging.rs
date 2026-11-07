@@ -208,7 +208,7 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
     }
     // the identity's key agreement key opens sealed introductions first (§7.3, spec-gap 179)
     let ka_secret = id.key_agreement.as_ref().map(|k| k.secret);
-    let engine_identity = dsip_messenger::engine_identity_with(&identity, &id.device, &id.controller, &id.delegation, &id.meta.display_name, ka_secret.as_ref());
+    let engine_identity = dsip_messenger::engine_identity_with(&identity, &id.device, id.controller.as_ref(), &id.delegation, &id.meta.display_name, ka_secret.as_ref());
     let engine = Engine::open(&engine_identity, &cfg.mailbox.0, &cfg.mailbox.1, store, &saved, now as f64).map_err(|e| err(&e.0))?;
     let mcfg = dsip_messenger::Config {
         identity: identity.clone(),

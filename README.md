@@ -61,6 +61,13 @@ key, the relay and the mailbox, since a `did:web` is reached by its document alo
 differs. `--move` checks, then makes the identity that `did:web` once nothing differs: its delegations are signed again,
 and its keys stay where they are. Contacts see it as a new identity. The app does the same: Settings, Your own domain.
 
+Another device of the same identity, without the identity key (A6): on the new device `dsip-app join --identity
+~/.dsip/alice-laptop` prints a join code and a check code. On a device that has the identity, `dsip-app welcome
+--identity ~/.dsip/alice <join code>` prints a welcome code (the same check code beside it). Typed back into the new
+device, it joins: its own key, the identity's delegation of it, and the identity's key agreement key, so it opens what
+is sealed to the identity and signs nothing as it. The app does the same: "Join another device" at the first run, and
+Settings, Your devices, Add a device.
+
 With a mailbox, the same app messages:
 
 ```sh

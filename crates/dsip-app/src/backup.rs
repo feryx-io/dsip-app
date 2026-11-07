@@ -120,7 +120,8 @@ fn code_in(text: &str) -> &str {
 /// A backup of the identity in `dir`, its key sealed under `passphrase`.
 pub fn export_identity(dir: &Path, passphrase: &str) -> Result<Backup, Error> {
     let id = crate::keys::load_identity(dir)?;
-    let code = seal(&id.controller.seed(), passphrase)?;
+    // only a device holding the identity key backs it up; one that joined holds none (A6, pairing)
+    let code = seal(&id.identity_key()?.seed(), passphrase)?;
     let identity = id.meta.identity.clone();
     let file = format!(
         "DSIP identity backup\n\
@@ -191,7 +192,7 @@ mod tests {
         let restored = restore_identity(&b, &backup.file.to_lowercase().replace('-', " - "), "correct horse battery", "Ann").unwrap();
         assert_eq!(restored, did);
         let (old, new) = (crate::keys::load_identity(&a).unwrap(), crate::keys::load_identity(&b).unwrap());
-        assert_eq!(new.controller.did(), old.controller.did());
+        assert_eq!(new.identity_key().unwrap().did(), old.identity_key().unwrap().did());
         assert_ne!(new.device.did(), old.device.did(), "its own device key");
         // the same key agreement key: what is sealed to the identity opens on both devices (A6c; core §7.3)
         let secret = |id: &dsip_phone::Identity| id.key_agreement.as_ref().map(|k| k.secret);

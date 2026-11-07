@@ -43,7 +43,7 @@ pub fn prepare(dir: &Path, did: &str, relay: &str, mailbox: Option<(&str, &str)>
     let url = dsip_transport::resolver::did_web_url(did).map_err(|e| bad(format!("{did}: {e}")))?;
     let mut id = crate::keys::load_identity(dir)?;
     id.meta.identity = did.to_string();
-    Ok(Plan { did: did.to_string(), url, document: id.did_web_document(Some(relay), mailbox, &[]) })
+    Ok(Plan { did: did.to_string(), url, document: id.did_web_document(Some(relay), mailbox, &[])? })
 }
 
 /// Fetch what `plan`'s URL serves (trusting `ca`, PEM, besides the web PKI) and compare it with `plan.document`: what

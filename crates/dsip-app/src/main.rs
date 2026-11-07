@@ -67,6 +67,21 @@ enum Cmd {
         #[arg(long = "move", conflicts_with = "check")]
         move_: bool,
     },
+    /// Join an identity as another device, without its identity key: print the join code (and a check code), give it
+    /// to a device that holds the identity, then type the welcome code it gives back (standard input).
+    Join {
+        /// The new device's identity folder (without one yet).
+        #[arg(long)]
+        identity: PathBuf,
+    },
+    /// On a device holding the identity key: the welcome code for the device whose join code this is.
+    Welcome {
+        /// The identity folder.
+        #[arg(long)]
+        identity: PathBuf,
+        /// The other device's join code.
+        code: String,
+    },
     /// Back up the identity in `dir`: its key sealed under a passphrase read from standard input, as a recovery code
     /// (printed) and, with `--out`, a file holding it.
     Export {
@@ -306,7 +321,7 @@ async fn main() -> Result<ExitCode> {
         .with_writer(std::io::stderr).init();
     let args = Args::parse();
     let path = args.control.clone().unwrap_or_else(control::default_path);
-    if !args.key_files && matches!(args.cmd, Cmd::Init { .. } | Cmd::Run { .. } | Cmd::Export { .. } | Cmd::Restore { .. } | Cmd::Web { .. }) {
+    if !args.key_files && matches!(args.cmd, Cmd::Init { .. } | Cmd::Run { .. } | Cmd::Export { .. } | Cmd::Restore { .. } | Cmd::Web { .. } | Cmd::Join { .. } | Cmd::Welcome { .. }) {
         dsip_app::keys::use_system_store();
     }
     let cmd = match args.cmd {
@@ -332,6 +347,20 @@ async fn main() -> Result<ExitCode> {
             if move_ {
                 println!("{}", dsip_app::web::move_to(&identity, &plan).context("moving the identity")?);
             }
+            return Ok(ExitCode::SUCCESS);
+        }
+        Cmd::Join { identity } => {
+            let (code, check) = dsip_app::pairing::start(&identity).context("starting to join")?;
+            println!("join code: {code}\ncheck: {check} (the other device shows the same)");
+            eprintln!("welcome code:");
+            let mut line = String::new();
+            std::io::stdin().read_line(&mut line).context("reading the welcome code")?;
+            println!("{}", dsip_app::pairing::finish(&identity, line.trim()).context("joining")?);
+            return Ok(ExitCode::SUCCESS);
+        }
+        Cmd::Welcome { identity, code } => {
+            let (welcome, check) = dsip_app::pairing::welcome(&identity, &code).context("welcoming the device")?;
+            println!("check: {check} (the new device shows the same)\n{welcome}");
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Export { identity, out } => {

@@ -51,6 +51,27 @@ pub fn restore_identity(dir: String, code: String, passphrase: String, display_n
     Ok(dsip_app::backup::restore_identity(std::path::Path::new(&dir), &code, &passphrase, &display_name)?)
 }
 
+/// The new device's first step in joining an identity (no identity key on it): `{"code", "check"}` JSON, the join
+/// code to give a device holding the identity, and the check code both show.
+pub fn pairing_start(dir: String) -> anyhow::Result<String> {
+    let (code, check) = dsip_app::pairing::start(std::path::Path::new(&dir))?;
+    Ok(serde_json::json!({"code": code, "check": check}).to_string())
+}
+
+/// On a device holding the identity in `dir`: the welcome code for the device whose join code is `join`, as
+/// `{"code", "check"}` JSON.
+pub fn pairing_welcome(dir: String, join: String) -> anyhow::Result<String> {
+    dsip_app::keys::use_system_store();
+    let (code, check) = dsip_app::pairing::welcome(std::path::Path::new(&dir), &join)?;
+    Ok(serde_json::json!({"code": code, "check": check}).to_string())
+}
+
+/// The new device's last step: joined with the `welcome` code, in `dir`; the identity's DID.
+pub fn pairing_finish(dir: String, welcome: String) -> anyhow::Result<String> {
+    dsip_app::keys::use_system_store();
+    Ok(dsip_app::pairing::finish(std::path::Path::new(&dir), &welcome)?)
+}
+
 /// The document the identity in `dir` would serve on a domain of its own, as `did` (a `did:web`), naming `relay` and
 /// the mailbox (`mailbox_did`, `mailbox_uri`) when given: `{"did", "url", "document"}` JSON. Nothing changes yet.
 pub fn web_prepare(dir: String, did: String, relay: String, mailbox_did: Option<String>, mailbox_uri: Option<String>) -> anyhow::Result<String> {

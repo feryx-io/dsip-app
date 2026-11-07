@@ -168,6 +168,48 @@ abstract class Strings {
   /// **'Restore from a backup'**
   String get firstRunRestore;
 
+  /// No description provided for @firstRunJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Join another device'**
+  String get firstRunJoin;
+
+  /// No description provided for @firstRunJoinIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'On a device that has your identity, open Settings, Add a device, and enter this join code there. Check it shows the same check code.'**
+  String get firstRunJoinIntro;
+
+  /// No description provided for @firstRunJoinCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Join code'**
+  String get firstRunJoinCode;
+
+  /// No description provided for @firstRunCheckCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Check code: {check}'**
+  String firstRunCheckCode(String check);
+
+  /// No description provided for @firstRunWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome code'**
+  String get firstRunWelcome;
+
+  /// No description provided for @firstRunWelcomeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What the other device shows once it has the join code'**
+  String get firstRunWelcomeHint;
+
+  /// No description provided for @firstRunWelcomeNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the welcome code from the other device.'**
+  String get firstRunWelcomeNeeded;
+
   /// No description provided for @firstRunCode.
   ///
   /// In en, this message translates to:
@@ -995,6 +1037,54 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'No backup: {reason}'**
   String backupFailed(String reason);
+
+  /// No description provided for @settingsDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Your devices'**
+  String get settingsDevices;
+
+  /// No description provided for @settingsDevicesIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another phone or computer to your identity. It gets its own key, and never your identity\'s key.'**
+  String get settingsDevicesIntro;
+
+  /// No description provided for @settingsAddDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a device'**
+  String get settingsAddDevice;
+
+  /// No description provided for @addDeviceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a device'**
+  String get addDeviceTitle;
+
+  /// No description provided for @addDeviceJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'The new device\'s join code'**
+  String get addDeviceJoin;
+
+  /// No description provided for @addDeviceJoinNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the join code the new device shows.'**
+  String get addDeviceJoinNeeded;
+
+  /// No description provided for @addDeviceMake.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the welcome code'**
+  String get addDeviceMake;
+
+  /// No description provided for @addDeviceWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter this welcome code on the new device. It should show the same check code: {check}.'**
+  String addDeviceWelcome(String check);
 
   /// No description provided for @settingsWeb.
   ///
