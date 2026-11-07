@@ -91,7 +91,10 @@ abstract class Strings {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('en', 'XA'),
+  ];
 
   /// No description provided for @appName.
   ///
@@ -1221,6 +1224,18 @@ class _StringsDelegate extends LocalizationsDelegate<Strings> {
 }
 
 Strings lookupStrings(Locale locale) {
+  // Lookup logic when language+country codes are specified.
+  switch (locale.languageCode) {
+    case 'en':
+      {
+        switch (locale.countryCode) {
+          case 'XA':
+            return StringsEnXa();
+        }
+        break;
+      }
+  }
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'en':
