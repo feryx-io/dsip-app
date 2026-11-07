@@ -84,6 +84,9 @@ void main() {
   });
 
   testWidgets('the system takes a call placed, and lets it go', (tester) async {
+    // Telecom keeps the call just ended for a moment (about 2 s before it removes it): a call placed at once, 43 ms
+    // after, was left CONNECTING and never handed to the app's ConnectionService (seen on the emulator in CI).
+    if (Platform.isAndroid) await Future<void>.delayed(const Duration(seconds: 3));
     final mobile = NativeMobile();
     final shown = next(902);
     await mobile.reportOutgoing(const SystemCall(id: 902, name: 'Carol', address: 'did:key:z6MkCarol'));

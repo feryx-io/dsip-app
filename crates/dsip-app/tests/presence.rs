@@ -59,6 +59,26 @@ fn shown(app: &App, identity: &str) -> Option<PresenceView> {
     app.state().presence.following.into_iter().find(|p| p.identity == identity)
 }
 
+/// Each of `apps` once its hint (with its mailbox) is on the hints node and verifies there: an introduction finds the
+/// other's mailbox through it. A fixed wait raced the publishing (seen in CI).
+async fn hints_published(hints: &str, apps: &[&App]) {
+    let client = dsip_transport::hints::HintsClient::new(vec![hints.to_string()], None).expect("a hints client");
+    for app in apps {
+        let did = app.state().me.identity;
+        tokio::time::timeout(Duration::from_secs(20), async {
+            loop {
+                let now = dsip_transport::now_s();
+                if client.lookup(&did, &dsip_core::did::StaticResolver::default(), now).await.is_some() {
+                    return;
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("{did}'s hint never reached the hints node"));
+    }
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn accepting_an_introduction_shares_presence_with_the_one_who_asked() {
     let dir = std::env::temp_dir().join(format!("dsip-app-presence-{}", std::process::id()));
@@ -74,7 +94,7 @@ async fn accepting_an_introduction_shares_presence_with_the_one_who_asked() {
     for (who, a) in [("Alice", &alice), ("Bob", &bob)] {
         until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
     }
-    tokio::time::sleep(Duration::from_millis(500)).await; // each has published its hint once bound
+    hints_published(&hints, &[&alice, &bob]).await;
 
     let mut a_changes = alice.subscribe();
     assert_eq!(alice.command(Command::Introduce { to: bob_did.clone(), purpose: "hello".into() }).await, Response::Ok);
@@ -144,7 +164,7 @@ async fn revoking_a_grant_sends_the_others_new_keys_through_their_mailboxes() {
     for (who, a) in [("Alice", &alice), ("Bob", &bob), ("Carol", &carol)] {
         until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
     }
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    hints_published(&hints, &[&alice, &bob, &carol]).await;
     granted(&alice, &bob).await;
     granted(&carol, &bob).await;
 
@@ -195,7 +215,7 @@ async fn following_resumes_when_the_app_starts_again() {
     for (who, a) in [("Alice", &alice), ("Bob", &bob), ("Carol", &carol)] {
         until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
     }
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    hints_published(&hints, &[&alice, &bob, &carol]).await;
     granted(&alice, &bob).await;
     granted(&alice, &carol).await;
     assert_eq!(bob.command(Command::SetPresence { state: Some("busy".into()) }).await, Response::Ok);
