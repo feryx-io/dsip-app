@@ -118,9 +118,12 @@ impl Saved {
         s
     }
 
+    /// Written whole or not at all: to a file beside it, its owner's alone, then renamed over it, so a reader never
+    /// finds it half written (a test did, in CI).
     fn save(&self, path: &Path) {
         let text = serde_json::to_vec_pretty(self).expect("JSON");
-        let written = std::fs::write(path, text).and_then(|_| restrict(path));
+        let tmp = path.with_extension("json.tmp");
+        let written = std::fs::write(&tmp, text).and_then(|_| restrict(&tmp)).and_then(|_| std::fs::rename(&tmp, path));
         if let Err(e) = written {
             tracing::warn!("waking: saving {}: {e}", path.display());
         }
