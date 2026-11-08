@@ -238,5 +238,10 @@
   "scanTitle": "[Šçàñ ţĥé çóđé on]",
   "scanHint": "[Þóíñţ ţĥé çàɱéŕà àţ ţĥé ǪŔ çóđé óñ ţĥé óţĥéŕ đéṽíçé. one two thre]",
   "scanQrLabel": "[Ţĥé çóđé àš à ǪŔ çóđé, ƒóŕ ţĥé óţĥéŕ đéṽíçé'š çàɱéŕà one two thre]",
-  "scanNoCamera": "[Ţĥé çàɱéŕà íš ñóţ àṽàíĺàƀĺé ({reason}). Ţýþé óŕ þàšţé ţĥé çóđé íñšţéàđ. one two three fou]"
+  "scanNoCamera": "[Ţĥé çàɱéŕà íš ñóţ àṽàíĺàƀĺé ({reason}). Ţýþé óŕ þàšţé ţĥé çóđé íñšţéàđ. one two three fou]",
+  "backupSaveFile": "[Šàṽé àš à ƒíĺé on]",
+  "backupSaved": "[Šàṽéđ. ]",
+  "backupSaveFailed": "[Ţĥé ƒíĺé ŵàš ñóţ šàṽéđ: {reason} one two]",
+  "firstRunOpenFile": "[Óþéñ à ƀàçķúþ ƒíĺé one ]",
+  "firstRunOpenFailed": "[Ţĥàţ ƒíĺé çóúĺđ ñóţ ƀé ŕéàđ àš à ƀàçķúþ: {reason} one two thr]"
 }

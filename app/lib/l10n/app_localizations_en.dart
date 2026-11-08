@@ -838,6 +838,25 @@ class StringsEn extends Strings {
   String scanNoCamera(String reason) {
     return 'The camera is not available ($reason). Type or paste the code instead.';
   }
+
+  @override
+  String get backupSaveFile => 'Save as a file';
+
+  @override
+  String get backupSaved => 'Saved.';
+
+  @override
+  String backupSaveFailed(String reason) {
+    return 'The file was not saved: $reason';
+  }
+
+  @override
+  String get firstRunOpenFile => 'Open a backup file';
+
+  @override
+  String firstRunOpenFailed(String reason) {
+    return 'That file could not be read as a backup: $reason';
+  }
 }
 
 /// The translations for English (`en_XA`).
@@ -1683,5 +1702,24 @@ class StringsEnXa extends StringsEn {
   @override
   String scanNoCamera(String reason) {
     return '[Ţĥé çàɱéŕà íš ñóţ àṽàíĺàƀĺé ($reason). Ţýþé óŕ þàšţé ţĥé çóđé íñšţéàđ. one two three fou]';
+  }
+
+  @override
+  String get backupSaveFile => '[Šàṽé àš à ƒíĺé on]';
+
+  @override
+  String get backupSaved => '[Šàṽéđ. ]';
+
+  @override
+  String backupSaveFailed(String reason) {
+    return '[Ţĥé ƒíĺé ŵàš ñóţ šàṽéđ: $reason one two]';
+  }
+
+  @override
+  String get firstRunOpenFile => '[Óþéñ à ƀàçķúþ ƒíĺé one ]';
+
+  @override
+  String firstRunOpenFailed(String reason) {
+    return '[Ţĥàţ ƒíĺé çóúĺđ ñóţ ƀé ŕéàđ àš à ƀàçķúþ: $reason one two thr]';
   }
 }

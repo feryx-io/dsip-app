@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../controller.dart';
 import '../settings.dart';
+import 'backup_file.dart';
 import 'scan.dart';
 
 /// How the first run finds its identity.
@@ -83,6 +84,20 @@ class _FirstRunState extends State<FirstRun> {
     }
   }
 
+  Future<void> _openFile() async {
+    try {
+      final text = await openBackupFile();
+      if (text != null && mounted) {
+        setState(() {
+          _code.text = text.trim();
+          _failed = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _failed = Strings.of(context).firstRunOpenFailed('$e'));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
@@ -125,6 +140,16 @@ class _FirstRunState extends State<FirstRun> {
                       maxLines: 6,
                       decoration: InputDecoration(labelText: s.firstRunCode, helperText: s.firstRunCodeHint),
                       validator: (v) => (v ?? '').trim().isEmpty ? s.firstRunCodeNeeded : null,
+                    ),
+                    // a backup saved as a file: its text, as if pasted
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton.icon(
+                        key: const Key('open-file'),
+                        icon: const Icon(Icons.file_open_outlined),
+                        label: Text(s.firstRunOpenFile),
+                        onPressed: _busy ? null : _openFile,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(

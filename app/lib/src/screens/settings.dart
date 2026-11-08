@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import 'backup_file.dart';
 import 'update.dart';
 import 'scan.dart';
 
@@ -327,6 +328,21 @@ class _BackupDialogState extends State<BackupDialog> {
           ],
         ),
         actions: [
+          // the whole text, the names with it, as a file kept where the person chooses: restored from on the first run
+          TextButton(
+            key: const Key('save-file'),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.maybeOf(context);
+              try {
+                if (await saveBackupFile(backupFileName(DateTime.now()), _file!)) {
+                  messenger?.showSnackBar(SnackBar(content: Text(s.backupSaved)));
+                }
+              } catch (e) {
+                messenger?.showSnackBar(SnackBar(content: Text(s.backupSaveFailed('$e'))));
+              }
+            },
+            child: Text(s.backupSaveFile),
+          ),
           if (withContacts)
             TextButton(
               key: const Key('copy-file'),

@@ -1529,6 +1529,36 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'The camera is not available ({reason}). Type or paste the code instead.'**
   String scanNoCamera(String reason);
+
+  /// Saves the whole backup text (the code, and the names and followed identities sealed under the same passphrase) as a file where the person chooses.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as a file'**
+  String get backupSaveFile;
+
+  /// No description provided for @backupSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved.'**
+  String get backupSaved;
+
+  /// No description provided for @backupSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The file was not saved: {reason}'**
+  String backupSaveFailed(String reason);
+
+  /// Opens a backup file saved earlier, putting its text in the recovery code field.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a backup file'**
+  String get firstRunOpenFile;
+
+  /// No description provided for @firstRunOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That file could not be read as a backup: {reason}'**
+  String firstRunOpenFailed(String reason);
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {
