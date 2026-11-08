@@ -71,11 +71,13 @@
       }
     }
   },
-  "callEnded": "Ended: {reason}",
+  "callEnded": "{reason}",
   "@callEnded": {
+    "description": "A recent call's line under its name: why it ended, in words (one of the reason… messages).",
     "placeholders": {
       "reason": {
-        "type": "String"
+        "type": "String",
+        "example": "Declined"
       }
     }
   },
@@ -442,5 +444,119 @@
   "nameSave": "Save",
   "@nameSave": {
     "description": "The naming dialog's button."
+  },
+  "reasonUserHangup": "Ended",
+  "@reasonUserHangup": {
+    "description": "Why a call ended, for the reason code user.hangup."
+  },
+  "reasonUserDeclined": "Declined",
+  "@reasonUserDeclined": {
+    "description": "Why a call ended, for the reason code user.declined."
+  },
+  "reasonUserNoAnswer": "No answer",
+  "@reasonUserNoAnswer": {
+    "description": "Why a call ended, for the reason code user.no-answer."
+  },
+  "reasonUserCancelled": "Cancelled",
+  "@reasonUserCancelled": {
+    "description": "Why a call ended, for the reason code user.cancelled."
+  },
+  "reasonUserBlocked": "Blocked",
+  "@reasonUserBlocked": {
+    "description": "Why a call ended, for the reason code user.blocked."
+  },
+  "reasonEndpointBusy": "Busy",
+  "@reasonEndpointBusy": {
+    "description": "Why a call ended, for the reason code endpoint.busy."
+  },
+  "reasonEndpointUnavailable": "Unavailable",
+  "@reasonEndpointUnavailable": {
+    "description": "Why a call ended, for the reason code endpoint.unavailable."
+  },
+  "reasonEndpointCapability": "Their device can't take this kind of call",
+  "@reasonEndpointCapability": {
+    "description": "Why a call ended, for the reason code endpoint.capability."
+  },
+  "reasonEndpoint": "Their device couldn't take the call",
+  "@reasonEndpoint": {
+    "description": "Why a call ended, for the reason code endpoint.* (any other code in that category, §15.3)."
+  },
+  "reasonIdentityNotInService": "Not in service",
+  "@reasonIdentityNotInService": {
+    "description": "Why a call ended, for the reason code identity.not-in-service."
+  },
+  "reasonIdentityMoved": "This identity has moved",
+  "@reasonIdentityMoved": {
+    "description": "Why a call ended, for the reason code identity.moved."
+  },
+  "reasonIdentitySuspended": "This identity is suspended",
+  "@reasonIdentitySuspended": {
+    "description": "Why a call ended, for the reason code identity.suspended."
+  },
+  "reasonIdentityUnknown": "No such identity",
+  "@reasonIdentityUnknown": {
+    "description": "Why a call ended, for the reason code identity.unknown."
+  },
+  "reasonIdentity": "This identity can't be reached",
+  "@reasonIdentity": {
+    "description": "Why a call ended, for the reason code identity.* (any other code in that category, §15.3)."
+  },
+  "reasonSessionTimeout": "No answer in time",
+  "@reasonSessionTimeout": {
+    "description": "Why a call ended, for the reason code session.timeout, session.expired."
+  },
+  "reasonSessionElsewhere": "Answered on another device",
+  "@reasonSessionElsewhere": {
+    "description": "Why a call ended, for the reason code session.answered-elsewhere, session.already-answered."
+  },
+  "reasonSessionCancelled": "Cancelled",
+  "@reasonSessionCancelled": {
+    "description": "Why a call ended, for the reason code session.cancelled."
+  },
+  "reasonSession": "The call failed",
+  "@reasonSession": {
+    "description": "Why a call ended, for the reason code session.* (any other code in that category, §15.3)."
+  },
+  "reasonMediaFailed": "The sound connection failed",
+  "@reasonMediaFailed": {
+    "description": "Why a call ended, for the reason code media.failed."
+  },
+  "reasonMedia": "Couldn't agree on how to send sound",
+  "@reasonMedia": {
+    "description": "Why a call ended, for the reason code media.* (any other code in that category, §15.3)."
+  },
+  "reasonPolicyFirstContact": "They haven't accepted you yet",
+  "@reasonPolicyFirstContact": {
+    "description": "Why a call ended, for the reason code policy.first-contact-required."
+  },
+  "reasonPolicyRateLimited": "Too many calls: try again later",
+  "@reasonPolicyRateLimited": {
+    "description": "Why a call ended, for the reason code policy.rate-limited."
+  },
+  "reasonPolicy": "Not allowed",
+  "@reasonPolicy": {
+    "description": "Why a call ended, for the reason code policy.* (any other code in that category, §15.3)."
+  },
+  "reasonTransportUnreached": "Couldn't reach them",
+  "@reasonTransportUnreached": {
+    "description": "Why a call ended, for the reason code transport.unknown-recipient, transport.no-response."
+  },
+  "reasonTransport": "The connection was lost",
+  "@reasonTransport": {
+    "description": "Why a call ended, for the reason code transport.* (any other code in that category, §15.3)."
+  },
+  "reasonGateway": "The phone network couldn't connect the call",
+  "@reasonGateway": {
+    "description": "Why a call ended, for the reason code gateway.* (any other code in that category, §15.3)."
+  },
+  "callEndedCode": "Reason code: {code}",
+  "@callEndedCode": {
+    "description": "Tooltip on why a call ended: the raw reason code, for support.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "example": "user.hangup"
+      }
+    }
   }
 }

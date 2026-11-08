@@ -396,10 +396,10 @@ abstract class Strings {
   /// **'Answered by {by}'**
   String callAnsweredBy(String by);
 
-  /// No description provided for @callEnded.
+  /// A recent call's line under its name: why it ended, in words (one of the reason… messages).
   ///
   /// In en, this message translates to:
-  /// **'Ended: {reason}'**
+  /// **'{reason}'**
   String callEnded(String reason);
 
   /// No description provided for @callNoSound.
@@ -1325,6 +1325,168 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Save'**
   String get nameSave;
+
+  /// Why a call ended, for the reason code user.hangup.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get reasonUserHangup;
+
+  /// Why a call ended, for the reason code user.declined.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get reasonUserDeclined;
+
+  /// Why a call ended, for the reason code user.no-answer.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer'**
+  String get reasonUserNoAnswer;
+
+  /// Why a call ended, for the reason code user.cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get reasonUserCancelled;
+
+  /// Why a call ended, for the reason code user.blocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get reasonUserBlocked;
+
+  /// Why a call ended, for the reason code endpoint.busy.
+  ///
+  /// In en, this message translates to:
+  /// **'Busy'**
+  String get reasonEndpointBusy;
+
+  /// Why a call ended, for the reason code endpoint.unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get reasonEndpointUnavailable;
+
+  /// Why a call ended, for the reason code endpoint.capability.
+  ///
+  /// In en, this message translates to:
+  /// **'Their device can\'t take this kind of call'**
+  String get reasonEndpointCapability;
+
+  /// Why a call ended, for the reason code endpoint.* (any other code in that category, §15.3).
+  ///
+  /// In en, this message translates to:
+  /// **'Their device couldn\'t take the call'**
+  String get reasonEndpoint;
+
+  /// Why a call ended, for the reason code identity.not-in-service.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in service'**
+  String get reasonIdentityNotInService;
+
+  /// Why a call ended, for the reason code identity.moved.
+  ///
+  /// In en, this message translates to:
+  /// **'This identity has moved'**
+  String get reasonIdentityMoved;
+
+  /// Why a call ended, for the reason code identity.suspended.
+  ///
+  /// In en, this message translates to:
+  /// **'This identity is suspended'**
+  String get reasonIdentitySuspended;
+
+  /// Why a call ended, for the reason code identity.unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'No such identity'**
+  String get reasonIdentityUnknown;
+
+  /// Why a call ended, for the reason code identity.* (any other code in that category, §15.3).
+  ///
+  /// In en, this message translates to:
+  /// **'This identity can\'t be reached'**
+  String get reasonIdentity;
+
+  /// Why a call ended, for the reason code session.timeout, session.expired.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer in time'**
+  String get reasonSessionTimeout;
+
+  /// Why a call ended, for the reason code session.answered-elsewhere, session.already-answered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered on another device'**
+  String get reasonSessionElsewhere;
+
+  /// Why a call ended, for the reason code session.cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get reasonSessionCancelled;
+
+  /// Why a call ended, for the reason code session.* (any other code in that category, §15.3).
+  ///
+  /// In en, this message translates to:
+  /// **'The call failed'**
+  String get reasonSession;
+
+  /// Why a call ended, for the reason code media.failed.
+  ///
+  /// In en, this message translates to:
+  /// **'The sound connection failed'**
+  String get reasonMediaFailed;
+
+  /// Why a call ended, for the reason code media.* (any other code in that category, §15.3).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t agree on how to send sound'**
+  String get reasonMedia;
+
+  /// Why a call ended, for the reason code policy.first-contact-required.
+  ///
+  /// In en, this message translates to:
+  /// **'They haven\'t accepted you yet'**
+  String get reasonPolicyFirstContact;
+
+  /// Why a call ended, for the reason code policy.rate-limited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many calls: try again later'**
+  String get reasonPolicyRateLimited;
+
+  /// Why a call ended, for the reason code policy.* (any other code in that category, §15.3).
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed'**
+  String get reasonPolicy;
+
+  /// Why a call ended, for the reason code transport.unknown-recipient, transport.no-response.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach them'**
+  String get reasonTransportUnreached;
+
+  /// Why a call ended, for the reason code transport.* (any other code in that category, §15.3).
+  ///
+  /// In en, this message translates to:
+  /// **'The connection was lost'**
+  String get reasonTransport;
+
+  /// Why a call ended, for the reason code gateway.* (any other code in that category, §15.3).
+  ///
+  /// In en, this message translates to:
+  /// **'The phone network couldn\'t connect the call'**
+  String get reasonGateway;
+
+  /// Tooltip on why a call ended: the raw reason code, for support.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason code: {code}'**
+  String callEndedCode(String code);
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

@@ -142,7 +142,9 @@ void main() {
     expect(find.descendant(of: answered, matching: find.text('In call')), findsOneWidget);
     await tester.tap(find.descendant(of: answered, matching: find.text('Unmute')));
     await tester.tap(find.descendant(of: answered, matching: find.text('Hang up')));
-    expect(find.text('Ended: user.hangup'), findsOneWidget);
+    // why it ended in words, the code in the tooltip (§15)
+    expect(find.text('Ended'), findsOneWidget);
+    expect(find.byTooltip('Reason code: user.hangup'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('call-to')), 'did:key:z6MkCarol');
     await tester.tap(find.text('Call'));

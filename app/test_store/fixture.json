@@ -27,7 +27,7 @@
       "mine": "available",
       "following": [
         {"identity": "did:web:priya.example", "state": "available", "source": "record"},
-        {"identity": "did:web:jonas.example", "state": "busy", "token": "in-a-meeting", "source": "record"},
+        {"identity": "did:web:jonas.example", "state": "busy", "source": "record"},
         {"identity": "did:web:mei.example", "state": "away", "source": "assertion"}
       ]
     },
