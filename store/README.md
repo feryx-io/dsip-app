@@ -12,8 +12,8 @@ submitted anywhere yet.
   for. Made with `flutter test ../store/screenshots_test.dart --update-goldens` from `app/` (not part of the test run).
 
 The screenshots are drawn from `app/test_store/fixture.json`: people on domains of their own, a short conversation.
-Edit it for other content. What they show that is the app's, not the fixture's: a call that ended shows its reason code
-(`user.hangup`), and a presence note shows its token (`in-a-meeting`).
+Edit it for other content. A presence state the app does not know is shown with its token as it came (the Presence
+Profile asks for it, P§5), so the fixture keeps to the registered states.
 
 Before submitting, fill in what is marked `<…>`: the support and privacy URLs and a contact address.
 

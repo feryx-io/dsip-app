@@ -175,7 +175,7 @@ class StringsEn extends Strings {
 
   @override
   String callEnded(String reason) {
-    return 'Ended: $reason';
+    return '$reason';
   }
 
   @override
@@ -729,6 +729,90 @@ class StringsEn extends Strings {
 
   @override
   String get nameSave => 'Save';
+
+  @override
+  String get reasonUserHangup => 'Ended';
+
+  @override
+  String get reasonUserDeclined => 'Declined';
+
+  @override
+  String get reasonUserNoAnswer => 'No answer';
+
+  @override
+  String get reasonUserCancelled => 'Cancelled';
+
+  @override
+  String get reasonUserBlocked => 'Blocked';
+
+  @override
+  String get reasonEndpointBusy => 'Busy';
+
+  @override
+  String get reasonEndpointUnavailable => 'Unavailable';
+
+  @override
+  String get reasonEndpointCapability =>
+      'Their device can\'t take this kind of call';
+
+  @override
+  String get reasonEndpoint => 'Their device couldn\'t take the call';
+
+  @override
+  String get reasonIdentityNotInService => 'Not in service';
+
+  @override
+  String get reasonIdentityMoved => 'This identity has moved';
+
+  @override
+  String get reasonIdentitySuspended => 'This identity is suspended';
+
+  @override
+  String get reasonIdentityUnknown => 'No such identity';
+
+  @override
+  String get reasonIdentity => 'This identity can\'t be reached';
+
+  @override
+  String get reasonSessionTimeout => 'No answer in time';
+
+  @override
+  String get reasonSessionElsewhere => 'Answered on another device';
+
+  @override
+  String get reasonSessionCancelled => 'Cancelled';
+
+  @override
+  String get reasonSession => 'The call failed';
+
+  @override
+  String get reasonMediaFailed => 'The sound connection failed';
+
+  @override
+  String get reasonMedia => 'Couldn\'t agree on how to send sound';
+
+  @override
+  String get reasonPolicyFirstContact => 'They haven\'t accepted you yet';
+
+  @override
+  String get reasonPolicyRateLimited => 'Too many calls: try again later';
+
+  @override
+  String get reasonPolicy => 'Not allowed';
+
+  @override
+  String get reasonTransportUnreached => 'Couldn\'t reach them';
+
+  @override
+  String get reasonTransport => 'The connection was lost';
+
+  @override
+  String get reasonGateway => 'The phone network couldn\'t connect the call';
+
+  @override
+  String callEndedCode(String code) {
+    return 'Reason code: $code';
+  }
 }
 
 /// The translations for English (`en_XA`).
@@ -903,7 +987,7 @@ class StringsEnXa extends StringsEn {
 
   @override
   String callEnded(String reason) {
-    return '[Éñđéđ: $reason on]';
+    return '[$reason o]';
   }
 
   @override
@@ -1461,4 +1545,92 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get nameSave => '[Šàṽé ]';
+
+  @override
+  String get reasonUserHangup => '[Éñđéđ ]';
+
+  @override
+  String get reasonUserDeclined => '[Đéçĺíñéđ o]';
+
+  @override
+  String get reasonUserNoAnswer => '[Ñó àñšŵéŕ o]';
+
+  @override
+  String get reasonUserCancelled => '[Çàñçéĺĺéđ on]';
+
+  @override
+  String get reasonUserBlocked => '[Ɓĺóçķéđ o]';
+
+  @override
+  String get reasonEndpointBusy => '[Ɓúšý ]';
+
+  @override
+  String get reasonEndpointUnavailable => '[Úñàṽàíĺàƀĺé on]';
+
+  @override
+  String get reasonEndpointCapability =>
+      '[Ţĥéíŕ đéṽíçé çàñ\'ţ ţàķé ţĥíš ķíñđ óƒ çàĺĺ one two th]';
+
+  @override
+  String get reasonEndpoint =>
+      '[Ţĥéíŕ đéṽíçé çóúĺđñ\'ţ ţàķé ţĥé çàĺĺ one two ]';
+
+  @override
+  String get reasonIdentityNotInService => '[Ñóţ íñ šéŕṽíçé one]';
+
+  @override
+  String get reasonIdentityMoved => '[Ţĥíš íđéñţíţý ĥàš ɱóṽéđ one t]';
+
+  @override
+  String get reasonIdentitySuspended => '[Ţĥíš íđéñţíţý íš šúšþéñđéđ one tw]';
+
+  @override
+  String get reasonIdentityUnknown => '[Ñó šúçĥ íđéñţíţý one]';
+
+  @override
+  String get reasonIdentity => '[Ţĥíš íđéñţíţý çàñ\'ţ ƀé ŕéàçĥéđ one two]';
+
+  @override
+  String get reasonSessionTimeout => '[Ñó àñšŵéŕ íñ ţíɱé one]';
+
+  @override
+  String get reasonSessionElsewhere => '[Àñšŵéŕéđ óñ àñóţĥéŕ đéṽíçé one tw]';
+
+  @override
+  String get reasonSessionCancelled => '[Çàñçéĺĺéđ on]';
+
+  @override
+  String get reasonSession => '[Ţĥé çàĺĺ ƒàíĺéđ one]';
+
+  @override
+  String get reasonMediaFailed => '[Ţĥé šóúñđ çóññéçţíóñ ƒàíĺéđ one two]';
+
+  @override
+  String get reasonMedia => '[Çóúĺđñ\'ţ àĝŕéé óñ ĥóŵ ţó šéñđ šóúñđ one two ]';
+
+  @override
+  String get reasonPolicyFirstContact =>
+      '[Ţĥéý ĥàṽéñ\'ţ àççéþţéđ ýóú ýéţ one two]';
+
+  @override
+  String get reasonPolicyRateLimited =>
+      '[Ţóó ɱàñý çàĺĺš: ţŕý àĝàíñ ĺàţéŕ one two]';
+
+  @override
+  String get reasonPolicy => '[Ñóţ àĺĺóŵéđ on]';
+
+  @override
+  String get reasonTransportUnreached => '[Çóúĺđñ\'ţ ŕéàçĥ ţĥéɱ one ]';
+
+  @override
+  String get reasonTransport => '[Ţĥé çóññéçţíóñ ŵàš ĺóšţ one t]';
+
+  @override
+  String get reasonGateway =>
+      '[Ţĥé þĥóñé ñéţŵóŕķ çóúĺđñ\'ţ çóññéçţ ţĥé çàĺĺ one two thr]';
+
+  @override
+  String callEndedCode(String code) {
+    return '[Ŕéàšóñ çóđé: $code one]';
+  }
 }

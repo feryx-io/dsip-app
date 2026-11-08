@@ -8,6 +8,7 @@ import '../controller.dart';
 import '../mobile/calls.dart';
 import '../mobile/platform.dart';
 import 'name_dialog.dart';
+import 'reasons.dart';
 
 /// Calls: place one to an identity, answer or decline one ringing here, hang up, mute; the ones that ended below.
 class CallsScreen extends StatefulWidget {
@@ -67,7 +68,10 @@ class _CallsScreenState extends State<CallsScreen> {
             ListTile(
               leading: Icon(c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
               title: Text(widget.state.nameOf(c.peer, offered: c.peerName), overflow: TextOverflow.ellipsis),
-              subtitle: Text(s.callEnded(c.state.reason ?? '')),
+              subtitle: Tooltip(
+                message: s.callEndedCode(c.state.reason ?? '—'),
+                child: Text(s.callEnded(endedReason(s, c.state.reason))),
+              ),
               trailing: IconButton(
                 key: Key('name-call-${c.id}'),
                 tooltip: s.nameAction,
