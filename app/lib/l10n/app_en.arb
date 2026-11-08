@@ -566,5 +566,31 @@
   "backupCopyFile": "Copy with names",
   "@backupCopyFile": {
     "description": "Copies the whole backup text (the code, and the names and followed identities sealed under the same passphrase)."
+  },
+  "scanButton": "Scan",
+  "@scanButton": {
+    "description": "A button that opens the camera to read a pairing code shown as a QR code on another device."
+  },
+  "scanTitle": "Scan the code",
+  "@scanTitle": {
+    "description": "The camera page's title."
+  },
+  "scanHint": "Point the camera at the QR code on the other device.",
+  "@scanHint": {
+    "description": "Under the camera's view."
+  },
+  "scanQrLabel": "The code as a QR code, for the other device's camera",
+  "@scanQrLabel": {
+    "description": "What a screen reader says of a pairing code's QR code."
+  },
+  "scanNoCamera": "The camera is not available ({reason}). Type or paste the code instead.",
+  "@scanNoCamera": {
+    "description": "When the camera cannot be used: no permission, no camera.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "permissionDenied"
+      }
+    }
   }
 }

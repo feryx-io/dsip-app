@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../controller.dart';
 import '../settings.dart';
+import 'scan.dart';
 
 /// How the first run finds its identity.
 enum Origin { make, folder, restore, join }
@@ -143,6 +144,8 @@ class _FirstRunState extends State<FirstRun> {
                         decoration: InputDecoration(labelText: s.firstRunJoinCode),
                         child: SelectableText(code, key: const Key('join-code'), style: const TextStyle(fontFamily: 'monospace')),
                       ),
+                      const SizedBox(height: 8),
+                      Center(child: CodeQr(code, key: const Key('join-qr'))),
                       const SizedBox(height: 4),
                       Text(s.firstRunCheckCode(check), key: const Key('check-code')),
                     ] else
@@ -156,6 +159,7 @@ class _FirstRunState extends State<FirstRun> {
                       decoration: InputDecoration(labelText: s.firstRunWelcome, helperText: s.firstRunWelcomeHint),
                       validator: (v) => (v ?? '').trim().isEmpty ? s.firstRunWelcomeNeeded : null,
                     ),
+                    ScanButton(prefix: 'DSIPW', into: _welcome),
                   ] else if (_origin == Origin.folder)
                     TextFormField(
                       key: const Key('folder'),

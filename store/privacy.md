@@ -16,6 +16,8 @@ app sends goes to the services that carry them, which you choose in its settings
   folder. The names you give people are never sent anywhere; a backup you copy yourself holds them, sealed under its
   passphrase.
 - **The microphone** is used during calls only, to send your voice to the person you are talking to.
+- **The camera** (phones) is used only when you choose to scan a pairing code from another of your devices. What it
+  sees is read on the device for that code and is neither kept nor sent.
 
 ## What each service sees
 

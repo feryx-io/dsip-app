@@ -6,6 +6,8 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>To scan the pairing code another of your devices shows, when you add a device.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The person you call hears you through the microphone.</string>
 	<key>DsipPushGateway</key>

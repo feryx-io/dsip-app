@@ -1499,6 +1499,36 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Copy with names'**
   String get backupCopyFile;
+
+  /// A button that opens the camera to read a pairing code shown as a QR code on another device.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan'**
+  String get scanButton;
+
+  /// The camera page's title.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the code'**
+  String get scanTitle;
+
+  /// Under the camera's view.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the QR code on the other device.'**
+  String get scanHint;
+
+  /// What a screen reader says of a pairing code's QR code.
+  ///
+  /// In en, this message translates to:
+  /// **'The code as a QR code, for the other device\'s camera'**
+  String get scanQrLabel;
+
+  /// When the camera cannot be used: no permission, no camera.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera is not available ({reason}). Type or paste the code instead.'**
+  String scanNoCamera(String reason);
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

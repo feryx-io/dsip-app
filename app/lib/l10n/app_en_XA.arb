@@ -233,5 +233,10 @@
   "reasonGateway": "[Ţĥé þĥóñé ñéţŵóŕķ çóúĺđñ'ţ çóññéçţ ţĥé çàĺĺ one two thr]",
   "callEndedCode": "[Ŕéàšóñ çóđé: {code} one]",
   "backupContactsBody": "[Ţĥé ñàɱéš ýóú ĝàṽé þéóþĺé, àñđ ŵĥó ýóú ƒóĺĺóŵ, àŕé ñóţ íñ ţĥé çóđé. Çóþý ţĥé ƀàçķúþ ŵíţĥ ñàɱéš, ķééþ ţĥàţ ţéẋţ ŵíţĥ ţĥé çóđé, àñđ ŕéšţóŕé ƒŕóɱ íţ ţó ƀŕíñĝ ţĥéɱ ƀàçķ. one two three four five six seven eight n]",
-  "backupCopyFile": "[Çóþý ŵíţĥ ñàɱéš one]"
+  "backupCopyFile": "[Çóþý ŵíţĥ ñàɱéš one]",
+  "scanButton": "[Šçàñ ]",
+  "scanTitle": "[Šçàñ ţĥé çóđé on]",
+  "scanHint": "[Þóíñţ ţĥé çàɱéŕà àţ ţĥé ǪŔ çóđé óñ ţĥé óţĥéŕ đéṽíçé. one two thre]",
+  "scanQrLabel": "[Ţĥé çóđé àš à ǪŔ çóđé, ƒóŕ ţĥé óţĥéŕ đéṽíçé'š çàɱéŕà one two thre]",
+  "scanNoCamera": "[Ţĥé çàɱéŕà íš ñóţ àṽàíĺàƀĺé ({reason}). Ţýþé óŕ þàšţé ţĥé çóđé íñšţéàđ. one two three fou]"
 }

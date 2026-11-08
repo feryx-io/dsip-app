@@ -820,6 +820,24 @@ class StringsEn extends Strings {
 
   @override
   String get backupCopyFile => 'Copy with names';
+
+  @override
+  String get scanButton => 'Scan';
+
+  @override
+  String get scanTitle => 'Scan the code';
+
+  @override
+  String get scanHint => 'Point the camera at the QR code on the other device.';
+
+  @override
+  String get scanQrLabel =>
+      'The code as a QR code, for the other device\'s camera';
+
+  @override
+  String scanNoCamera(String reason) {
+    return 'The camera is not available ($reason). Type or paste the code instead.';
+  }
 }
 
 /// The translations for English (`en_XA`).
@@ -1647,4 +1665,23 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get backupCopyFile => '[Çóþý ŵíţĥ ñàɱéš one]';
+
+  @override
+  String get scanButton => '[Šçàñ ]';
+
+  @override
+  String get scanTitle => '[Šçàñ ţĥé çóđé on]';
+
+  @override
+  String get scanHint =>
+      '[Þóíñţ ţĥé çàɱéŕà àţ ţĥé ǪŔ çóđé óñ ţĥé óţĥéŕ đéṽíçé. one two thre]';
+
+  @override
+  String get scanQrLabel =>
+      '[Ţĥé çóđé àš à ǪŔ çóđé, ƒóŕ ţĥé óţĥéŕ đéṽíçé\'š çàɱéŕà one two thre]';
+
+  @override
+  String scanNoCamera(String reason) {
+    return '[Ţĥé çàɱéŕà íš ñóţ àṽàíĺàƀĺé ($reason). Ţýþé óŕ þàšţé ţĥé çóđé íñšţéàđ. one two three fou]';
+  }
 }
