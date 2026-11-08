@@ -711,6 +711,24 @@ class StringsEn extends Strings {
 
   @override
   String get routeWired => 'Headset';
+
+  @override
+  String get nameAction => 'Name';
+
+  @override
+  String nameTitle(String who) {
+    return 'Name $who';
+  }
+
+  @override
+  String get nameField => 'Name';
+
+  @override
+  String get nameHint =>
+      'Kept on this device only. Leave it empty to remove the name.';
+
+  @override
+  String get nameSave => 'Save';
 }
 
 /// The translations for English (`en_XA`).
@@ -1425,4 +1443,22 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get routeWired => '[Ĥéàđšéţ o]';
+
+  @override
+  String get nameAction => '[Ñàɱé ]';
+
+  @override
+  String nameTitle(String who) {
+    return '[Ñàɱé $who o]';
+  }
+
+  @override
+  String get nameField => '[Ñàɱé ]';
+
+  @override
+  String get nameHint =>
+      '[Ķéþţ óñ ţĥíš đéṽíçé óñĺý. Ĺéàṽé íţ éɱþţý ţó ŕéɱóṽé ţĥé ñàɱé. one two three ]';
+
+  @override
+  String get nameSave => '[Šàṽé ]';
 }

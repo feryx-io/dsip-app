@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
 import 'form_dialog.dart';
+import 'name_dialog.dart';
 
 /// Automatic, in the menu: no record (the relay says available while the app is bound); `set_presence` without a state.
 const automatic = '';
@@ -34,7 +35,7 @@ class PresenceScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(s.presenceStopSharing),
-        content: Text(s.presenceStopSharingConfirm(shortDid(identity))),
+        content: Text(s.presenceStopSharingConfirm(state.nameOf(identity))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.cancel)),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(s.presenceStopSharing)),
@@ -45,7 +46,7 @@ class PresenceScreen extends StatelessWidget {
     final r = await controller.run({'command': 'revoke_grants', 'identity': identity});
     if (r['response'] == 'revoked' && context.mounted) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(s.presenceRevoked(r['count'] as int, shortDid(identity)))));
+          .showSnackBar(SnackBar(content: Text(s.presenceRevoked(r['count'] as int, state.nameOf(identity)))));
     }
   }
 
@@ -96,15 +97,17 @@ class PresenceScreen extends StatelessWidget {
           ListTile(
             key: Key('following-${f.identity}'),
             leading: PresenceDot(f.state),
-            title: Text(shortDid(f.identity)),
-            subtitle: Text(_followed(s, f)),
+            title: Text(state.nameOf(f.identity)),
+            subtitle: Text([if (state.named(f.identity)) shortDid(f.identity), _followed(s, f)].join(' · ')),
             trailing: PopupMenuButton<String>(
               tooltip: s.presenceMore,
               onSelected: (v) => switch (v) {
                 'unwatch' => controller.run({'command': 'unwatch_presence', 'identity': f.identity}),
+                'name' => editName(context, controller, state, f.identity),
                 _ => _stopSharing(context, f.identity),
               },
               itemBuilder: (_) => [
+                PopupMenuItem(value: 'name', child: Text(s.nameAction)),
                 PopupMenuItem(value: 'unwatch', child: Text(s.presenceUnfollow)),
                 PopupMenuItem(value: 'revoke', child: Text(s.presenceStopSharing)),
               ],

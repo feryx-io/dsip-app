@@ -2,6 +2,7 @@
   "_comment": "The store screenshots' state, by hand, in the shapes of test/fixtures (which dsip-app's wire_fixture test makes). People on domains of their own (did:web), so the app shows names it would really show.",
   "state": {
     "me": {"identity": "did:web:sam.example", "device": "did:key:z6MkSamPhone", "display_name": "Sam"},
+    "names": {"did:web:priya.example": "Priya Patel", "did:web:jonas.example": "Jonas", "did:web:mei.example": "Mei"},
     "relay": "wss://relay.sam.example/dsip",
     "calls": [
       {"id": 1, "session": "01M6BTTMQ9QMKY9SYTY8415VZ1", "peer": "did:web:mei.example", "peer_name": "Mei", "direction": "outgoing",

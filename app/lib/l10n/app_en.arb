@@ -16,7 +16,13 @@
   "firstRunJoinIntro": "On a device that has your identity, open Settings, Add a device, and enter this join code there. Check it shows the same check code.",
   "firstRunJoinCode": "Join code",
   "firstRunCheckCode": "Check code: {check}",
-  "@firstRunCheckCode": {"placeholders": {"check": {"type": "String"}}},
+  "@firstRunCheckCode": {
+    "placeholders": {
+      "check": {
+        "type": "String"
+      }
+    }
+  },
   "firstRunWelcome": "Welcome code",
   "firstRunWelcomeHint": "What the other device shows once it has the join code",
   "firstRunWelcomeNeeded": "Enter the welcome code from the other device.",
@@ -268,7 +274,9 @@
   "backupFailed": "No backup: {reason}",
   "@backupFailed": {
     "placeholders": {
-      "reason": {"type": "String"}
+      "reason": {
+        "type": "String"
+      }
     }
   },
   "settingsDevices": "Your devices",
@@ -279,7 +287,13 @@
   "addDeviceJoinNeeded": "Enter the join code the new device shows.",
   "addDeviceMake": "Make the welcome code",
   "addDeviceWelcome": "Enter this welcome code on the new device. It should show the same check code: {check}.",
-  "@addDeviceWelcome": {"placeholders": {"check": {"type": "String"}}},
+  "@addDeviceWelcome": {
+    "placeholders": {
+      "check": {
+        "type": "String"
+      }
+    }
+  },
   "settingsWeb": "Your own domain",
   "settingsWebIntro": "Use a DID on a domain you control (did:web) in place of this device's key. You can then change keys without losing the identity. People who know you now will see it as a new identity, and need to accept you again.",
   "settingsWebStart": "Set up",
@@ -289,17 +303,41 @@
   "webDidNeeded": "Enter a DID that starts with did:web:",
   "webPrepare": "Make the document",
   "webServe": "Serve this at {url}, then check.",
-  "@webServe": {"placeholders": {"url": {"type": "String"}}},
+  "@webServe": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
   "webCheck": "Check",
   "webServed": "Your domain serves the document.",
   "webDiffers": "Not yet: {differences}",
-  "@webDiffers": {"placeholders": {"differences": {"type": "String"}}},
+  "@webDiffers": {
+    "placeholders": {
+      "differences": {
+        "type": "String"
+      }
+    }
+  },
   "webMove": "Move to it",
   "webMoveConfirmTitle": "Move your identity?",
   "webMoveConfirm": "You become {did}. The app restarts, and calls in progress end. Contacts see a new identity and need to accept you again.",
-  "@webMoveConfirm": {"placeholders": {"did": {"type": "String"}}},
+  "@webMoveConfirm": {
+    "placeholders": {
+      "did": {
+        "type": "String"
+      }
+    }
+  },
   "webFailed": "That did not work: {reason}",
-  "@webFailed": {"placeholders": {"reason": {"type": "String"}}},
+  "@webFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAbout": "About",
   "settingsVersion": "DSIP {version}",
   "@settingsVersion": {
@@ -360,13 +398,49 @@
   "updateLater": "Later",
   "updateNotes": "What's new",
   "microphoneRefused": "DSIP may not use the microphone, so the people you call will not hear you. Allow it in the system's settings for DSIP.",
-  "@microphoneRefused": {"description": "On a phone, when the system refused the microphone."},
+  "@microphoneRefused": {
+    "description": "On a phone, when the system refused the microphone."
+  },
   "routeEarpiece": "Phone",
-  "@routeEarpiece": {"description": "A call's audio at the phone's earpiece, held to the ear."},
+  "@routeEarpiece": {
+    "description": "A call's audio at the phone's earpiece, held to the ear."
+  },
   "routeSpeaker": "Speaker",
-  "@routeSpeaker": {"description": "A call's audio on the phone's loudspeaker."},
+  "@routeSpeaker": {
+    "description": "A call's audio on the phone's loudspeaker."
+  },
   "routeBluetooth": "Bluetooth",
-  "@routeBluetooth": {"description": "A call's audio on a Bluetooth headset or car, when the system gives no name."},
+  "@routeBluetooth": {
+    "description": "A call's audio on a Bluetooth headset or car, when the system gives no name."
+  },
   "routeWired": "Headset",
-  "@routeWired": {"description": "A call's audio on a headset on a wire."}
+  "@routeWired": {
+    "description": "A call's audio on a headset on a wire."
+  },
+  "nameAction": "Name",
+  "@nameAction": {
+    "description": "Opens the dialog to give an identity a name on this device (a menu item, a button's tooltip)."
+  },
+  "nameTitle": "Name {who}",
+  "@nameTitle": {
+    "description": "The naming dialog's title.",
+    "placeholders": {
+      "who": {
+        "type": "String",
+        "example": "did:web:priya.example"
+      }
+    }
+  },
+  "nameField": "Name",
+  "@nameField": {
+    "description": "The naming dialog's field."
+  },
+  "nameHint": "Kept on this device only. Leave it empty to remove the name.",
+  "@nameHint": {
+    "description": "Under the naming dialog's field."
+  },
+  "nameSave": "Save",
+  "@nameSave": {
+    "description": "The naming dialog's button."
+  }
 }

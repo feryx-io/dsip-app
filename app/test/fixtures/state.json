@@ -90,6 +90,9 @@
           "unreadable": 1
         }
       ]
+    },
+    "names": {
+      "did:key:z6MkCarol": "Carol Jones"
     }
   },
   "change": {

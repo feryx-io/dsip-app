@@ -194,6 +194,7 @@ class AppState {
     required this.audio,
     required this.messaging,
     required this.presence,
+    this.names = const {},
   });
   final Me me;
   final String relay;
@@ -203,6 +204,16 @@ class AppState {
   final AudioState audio;
   final Messaging messaging;
   final PresenceState presence;
+
+  /// The names this device's user gave identities, by identity (`set_name`): the app's own address book.
+  final Map<String, String> names;
+
+  /// What to call [did]: the name the user gave it, else the name it [offered] (a caller's own, unchecked), else the
+  /// identity, shortened.
+  String nameOf(String did, {String? offered}) => names[did] ?? offered ?? shortDid(did);
+
+  /// Whether [did] has a name of the user's, or [offered] one, so that the identity is worth showing beside it.
+  bool named(String did, {String? offered}) => names.containsKey(did) || offered != null;
 
   /// Calls not ended, the latest first.
   List<CallView> get live => calls.where((c) => !c.state.ended).toList().reversed.toList();
@@ -214,6 +225,7 @@ class AppState {
     audio: AudioState.fromJson(j['audio'] as Map<String, dynamic>),
     messaging: Messaging.fromJson(j['messaging'] as Map<String, dynamic>),
     presence: PresenceState.fromJson(j['presence'] as Map<String, dynamic>? ?? const {}),
+    names: (j['names'] as Map<String, dynamic>? ?? const {}).cast<String, String>(),
   );
 }
 

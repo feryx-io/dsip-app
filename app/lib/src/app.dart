@@ -61,9 +61,10 @@ class _HomeState extends State<Home> {
     final s = Strings.of(context);
     final error = widget.controller.takeError();
     final notice = widget.controller.takeNotice();
+    String who(String did) => widget.controller.state?.nameOf(did) ?? shortDid(did);
     final told = switch (notice?['change']) {
-      'granted' => s.noticeGranted(shortDid(notice!['by'] as String)),
-      'removed' => s.noticeRemoved(shortDid(notice!['by'] as String)),
+      'granted' => s.noticeGranted(who(notice!['by'] as String)),
+      'removed' => s.noticeRemoved(who(notice!['by'] as String)),
       _ => null,
     };
     for (final text in [if (error != null) s.commandFailed(error), ?told]) {

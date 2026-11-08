@@ -111,6 +111,16 @@ pub enum Command {
         /// The identity.
         identity: String,
     },
+    /// Give an identity a name on this device, or with no `name` (or a blank one), take its name away. The app's own
+    /// address book: kept in [`crate::NAMES_FILE`], shown in place of the identity, never sent. At most
+    /// [`crate::NAME_MAX`] characters, no control characters.
+    SetName {
+        /// The identity.
+        identity: String,
+        /// Its name.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
     /// Stop following an identity's presence.
     UnwatchPresence {
         /// The identity.

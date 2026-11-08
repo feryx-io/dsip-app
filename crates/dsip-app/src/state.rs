@@ -27,6 +27,9 @@ pub struct State {
     /// Waking this device while it sleeps (A5d), once the phone has given its push token; `None`: not woken.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub push: Option<Push>,
+    /// The names this device's user gave identities (`SetName`), by identity: shown before a caller's own name.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub names: BTreeMap<String, String>,
 }
 
 /// Waking this device while it sleeps (app plan A5d; the Wake Profile): enrolled at the publisher's push gateway with
@@ -289,6 +292,11 @@ pub struct AudioDevice {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "change")]
 pub enum Change {
+    /// The names given identities, all of them as they are now.
+    Names {
+        /// Identity to name.
+        names: BTreeMap<String, String>,
+    },
     /// A call was placed or came in.
     CallAdded {
         /// The call.
@@ -389,6 +397,7 @@ impl State {
             Change::Unfollowed { identity } => self.presence.following.retain(|p| &p.identity != identity),
             Change::Audio { audio } => self.audio = audio.clone(),
             Change::Push { push } => self.push = push.clone(),
+            Change::Names { names } => self.names = names.clone(),
             Change::Message { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }

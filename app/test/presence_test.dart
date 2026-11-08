@@ -54,7 +54,8 @@ void main() {
   testWidgets('each followed identity says what is known of it', (tester) async {
     await open(tester);
     expect(subtitle(tester, 'did:key:z6MkBob'), 'Away · 1 device sealed to others');
-    expect(subtitle(tester, 'did:key:z6MkCarol'), 'Available · their relay says they are connected');
+    // named by the user (the fixture's names): the identity said beside it
+    expect(subtitle(tester, 'did:key:z6MkCarol'), 'did:key:z6MkCarol · Available · their relay says they are connected');
     expect(subtitle(tester, 'did:key:z6MkDave'), 'Busy (in-a-meeting)');
     expect(subtitle(tester, 'did:key:z6MkErin'), startsWith('Not shown'));
   });

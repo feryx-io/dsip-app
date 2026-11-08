@@ -199,5 +199,10 @@
   "routeEarpiece": "[Þĥóñé ]",
   "routeSpeaker": "[Šþéàķéŕ o]",
   "routeBluetooth": "[Ɓĺúéţóóţĥ on]",
-  "routeWired": "[Ĥéàđšéţ o]"
+  "routeWired": "[Ĥéàđšéţ o]",
+  "nameAction": "[Ñàɱé ]",
+  "nameTitle": "[Ñàɱé {who} o]",
+  "nameField": "[Ñàɱé ]",
+  "nameHint": "[Ķéþţ óñ ţĥíš đéṽíçé óñĺý. Ĺéàṽé íţ éɱþţý ţó ŕéɱóṽé ţĥé ñàɱé. one two three ]",
+  "nameSave": "[Šàṽé ]"
 }

@@ -52,10 +52,18 @@ void main() {
     expect(shortDid('did:key:z6MkBob'), 'did:key:z6MkBob');
   });
 
+  testWidgets('a request not named by the user says the name it offers', (tester) async {
+    state.remove('names');
+    await open(tester);
+    expect(find.text('Carol (says they are)'), findsOneWidget);
+  });
+
   testWidgets('a request is answered from the list', (tester) async {
     await open(tester);
     expect(find.text('Asking to message you'), findsOneWidget);
-    expect(find.text('Carol (says they are)'), findsOneWidget);
+    // the fixture's names: Carol named by the user, so not as she says she is
+    expect(find.text('Carol Jones'), findsOneWidget);
+    expect(find.text('Carol (says they are)'), findsNothing);
     await tester.tap(find.byTooltip('Accept'));
     await tester.tap(find.byTooltip('Decline'));
     expect(client.commands, [
