@@ -1487,6 +1487,18 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Reason code: {code}'**
   String callEndedCode(String code);
+
+  /// In the recovery code dialog, when there are names or followed identities to keep: the code holds the identity only; the backup text holds them too, sealed under the same passphrase.
+  ///
+  /// In en, this message translates to:
+  /// **'The names you gave people, and who you follow, are not in the code. Copy the backup with names, keep that text with the code, and restore from it to bring them back.'**
+  String get backupContactsBody;
+
+  /// Copies the whole backup text (the code, and the names and followed identities sealed under the same passphrase).
+  ///
+  /// In en, this message translates to:
+  /// **'Copy with names'**
+  String get backupCopyFile;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

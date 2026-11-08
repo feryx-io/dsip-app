@@ -231,5 +231,7 @@
   "reasonTransportUnreached": "[Çóúĺđñ'ţ ŕéàçĥ ţĥéɱ one ]",
   "reasonTransport": "[Ţĥé çóññéçţíóñ ŵàš ĺóšţ one t]",
   "reasonGateway": "[Ţĥé þĥóñé ñéţŵóŕķ çóúĺđñ'ţ çóññéçţ ţĥé çàĺĺ one two thr]",
-  "callEndedCode": "[Ŕéàšóñ çóđé: {code} one]"
+  "callEndedCode": "[Ŕéàšóñ çóđé: {code} one]",
+  "backupContactsBody": "[Ţĥé ñàɱéš ýóú ĝàṽé þéóþĺé, àñđ ŵĥó ýóú ƒóĺĺóŵ, àŕé ñóţ íñ ţĥé çóđé. Çóþý ţĥé ƀàçķúþ ŵíţĥ ñàɱéš, ķééþ ţĥàţ ţéẋţ ŵíţĥ ţĥé çóđé, àñđ ŕéšţóŕé ƒŕóɱ íţ ţó ƀŕíñĝ ţĥéɱ ƀàçķ. one two three four five six seven eight n]",
+  "backupCopyFile": "[Çóþý ŵíţĥ ñàɱéš one]"
 }
