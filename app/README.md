@@ -121,6 +121,9 @@ DSIP_PUSH_GATEWAY=did:web:push.example DSIP_FCM_APP_ID=â€¦ DSIP_FCM_SENDER_ID=â€
 DSIP_PUSH_GATEWAY=did:web:push.example flutter build ios --release   # woken through the gateway by PushKit (signed builds)
 ```
 
+What CI cannot check (the camera reading a QR code off another screen, the system's save and open dialogs, a backup
+restored on another platform) is a list run by hand before a release: `DEVICE-TESTS.md`.
+
 Accessibility (A7), checked by `test/accessibility_test.dart` on every screen, at a desktop's size and a phone's:
 - tap targets of at least 48 dp (Android) and 44 (iOS), and a label on everything tappable;
 - text contrast of WCAG AA (4.5:1): measured on the screens where Flutter's sampling reads it right, and computed
