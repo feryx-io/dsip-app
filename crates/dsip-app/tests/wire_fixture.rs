@@ -50,6 +50,7 @@ fn state() -> State {
         }],
     });
     s.apply(&Change::Requests { requests: vec![RequestView { id: "01M6EKRTVG3C55DFMQ401G3MB0".into(), from: "did:key:z6MkCarol".into(), name: Some("Carol".into()) }] });
+    s.apply(&Change::Names { names: [("did:key:z6MkCarol".to_string(), "Carol Jones".to_string())].into() });
     s.apply(&Change::MyPresence { state: Some("busy".into()) });
     s.apply(&Change::Presence {
         presence: PresenceView { identity: "did:key:z6MkBob".into(), state: Some("away".into()), token: None, source: Some("record".into()), unreadable: 1 },

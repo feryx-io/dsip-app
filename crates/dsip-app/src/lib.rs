@@ -59,6 +59,13 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Where the identities followed are kept, in the identity directory beside the phone's `contacts.json`.
 pub const FOLLOWING_FILE: &str = "following.json";
 
+/// The names this device's user gave identities, kept in the identity directory: the app's own address book, never
+/// sent anywhere.
+pub const NAMES_FILE: &str = "names.json";
+
+/// The longest name the user may give an identity, in characters.
+pub const NAME_MAX: usize = 64;
+
 /// The presence states a device may publish (the `dsip-presence-state` registry, P§5).
 pub const PRESENCE_STATES: &[&str] = &["available", "busy", "away", "dnd", "offline"];
 
@@ -151,6 +158,8 @@ pub(crate) struct Inner {
     /// The identities followed, kept across restarts ([`FOLLOWING_FILE`] in the identity directory); held while
     /// writing it.
     following_file: std::sync::Mutex<std::path::PathBuf>,
+    /// The names given identities ([`NAMES_FILE`] in the identity directory); held while writing it.
+    names_file: std::sync::Mutex<std::path::PathBuf>,
     /// The identity's folder.
     identity_dir: std::path::PathBuf,
     /// The waking task, when the app has a push gateway.
@@ -221,6 +230,7 @@ impl App {
             messaging: Messaging::default(),
             presence: PresenceState::default(),
             push: None,
+            names: std::fs::read(identity_dir.join(NAMES_FILE)).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
             relay: cfg.relay,
             calls: Default::default(),
             audio: audio.as_ref().map(|a| a.view()).unwrap_or_else(|| AudioState { host: "none".into(), ..Default::default() }),
@@ -237,6 +247,7 @@ impl App {
                 messaging: std::sync::OnceLock::new(),
                 stopped: tokio::sync::watch::channel(false).0,
                 following_file: std::sync::Mutex::new(identity_dir.join(FOLLOWING_FILE)),
+                names_file: std::sync::Mutex::new(identity_dir.join(NAMES_FILE)),
                 identity_dir: identity_dir.clone(),
                 wake: std::sync::OnceLock::new(),
             }),
@@ -362,6 +373,28 @@ impl App {
                 self.follow(&identity).await;
                 Response::Ok
             }
+            Command::SetName { identity, name } => {
+                let name = name.as_deref().map(str::trim).filter(|n| !n.is_empty());
+                if let Some(n) = name {
+                    if n.chars().count() > NAME_MAX {
+                        return Response::error(format!("a name is at most {NAME_MAX} characters"));
+                    }
+                    if n.chars().any(char::is_control) {
+                        return Response::error("a name has no control characters");
+                    }
+                }
+                if identity.trim().is_empty() {
+                    return Response::error("no identity");
+                }
+                let mut names = self.state().names;
+                match name {
+                    Some(n) => names.insert(identity, n.to_string()),
+                    None => names.remove(&identity),
+                };
+                self.publish(Change::Names { names });
+                self.save_names();
+                Response::Ok
+            }
             Command::UnwatchPresence { identity } => {
                 self.inner.phone.unwatch(&identity);
                 self.publish(Change::Unfollowed { identity });
@@ -463,6 +496,18 @@ impl App {
         let ids: Vec<String> = self.state().presence.following.into_iter().map(|p| p.identity).collect();
         let tmp = path.with_extension("json.tmp");
         let r = serde_json::to_vec(&ids).map_err(std::io::Error::other)
+            .and_then(|b| std::fs::write(&tmp, b))
+            .and_then(|()| std::fs::rename(&tmp, &*path));
+        if let Err(e) = r {
+            tracing::warn!("saving {}: {e}", path.display());
+        }
+    }
+
+    /// Keep the names given identities, for the next start: written whole, then renamed over the file.
+    fn save_names(&self) {
+        let path = self.inner.names_file.lock().unwrap_or_else(|e| e.into_inner());
+        let tmp = path.with_extension("json.tmp");
+        let r = serde_json::to_vec_pretty(&self.state().names).map_err(std::io::Error::other)
             .and_then(|b| std::fs::write(&tmp, b))
             .and_then(|()| std::fs::rename(&tmp, &*path));
         if let Err(e) = r {

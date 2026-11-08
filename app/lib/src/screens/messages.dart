@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
 import 'form_dialog.dart';
+import 'name_dialog.dart';
 
 /// Messages: the requests to answer, the conversations, and the one open; first contact (introduce yourself), a new
 /// message to someone who accepted you, a new group.
@@ -89,7 +90,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 for (final r in m.requests)
                   ListTile(
                     key: Key('request-${r.id}'),
-                    title: Text(r.name == null ? shortDid(r.from) : s.requestFrom(r.name!)),
+                    title: Text(switch ((widget.state.names[r.from], r.name)) {
+                      (final String mine, _) => mine,
+                      (null, final String offered) => s.requestFrom(offered),
+                      _ => shortDid(r.from),
+                    }),
                     subtitle: Text(shortDid(r.from)),
                     trailing: Wrap(
                       spacing: 4,
@@ -115,7 +120,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   key: Key('conversation-${x.group}'),
                   selected: x.group == _open,
                   leading: Icon(x.kind == 'group' ? Icons.group : Icons.person),
-                  title: Text(_title(s, x, widget.state.me.identity)),
+                  title: Text(_title(s, x, widget.state)),
                   subtitle: x.pending > 0 ? Text(s.conversationPending(x.pending)) : null,
                   onTap: () => _select(x.group),
                 ),
@@ -126,7 +131,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       key: ValueKey(open.group),
       controller: c,
       conversation: open,
-      me: widget.state.me.identity,
+      state: widget.state,
       onLeft: () => setState(() => _open = null),
       onBack: narrow ? () => setState(() => _open = null) : null,
     );
@@ -142,9 +147,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 }
 
-String _title(Strings s, ConversationView x, String me) => x.kind == 'group'
-    ? '${s.conversationGroup(x.members.length)}: ${x.members.where((m) => m != me).map(shortDid).join(', ')}'
-    : shortDid(x.peer ?? x.members.firstWhere((m) => m != me, orElse: () => x.group));
+/// The other one in a direct conversation; null in a group.
+String? _peer(ConversationView x, String me) =>
+    x.kind == 'group' ? null : x.peer ?? x.members.where((m) => m != me).firstOrNull;
+
+String _title(Strings s, ConversationView x, AppState state) {
+  final me = state.me.identity;
+  return x.kind == 'group'
+      ? '${s.conversationGroup(x.members.length)}: ${x.members.where((m) => m != me).map(state.nameOf).join(', ')}'
+      : state.nameOf(_peer(x, me) ?? x.group);
+}
 
 class _Heading extends StatelessWidget {
   const _Heading(this.text);
@@ -160,13 +172,13 @@ class _Thread extends StatefulWidget {
     super.key,
     required this.controller,
     required this.conversation,
-    required this.me,
+    required this.state,
     required this.onLeft,
     this.onBack,
   });
   final Controller controller;
   final ConversationView conversation;
-  final String me;
+  final AppState state;
   final VoidCallback onLeft;
 
   /// Back to the list, on a phone (the list is not beside the conversation there).
@@ -224,15 +236,23 @@ class _ThreadState extends State<_Thread> {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final x = widget.conversation;
+    final me = widget.state.me.identity;
     final messages = widget.controller.threads[group] ?? const <MessageView>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ListTile(
           leading: widget.onBack == null ? null : BackButton(key: const Key('thread-back'), onPressed: widget.onBack),
-          title: Text(_title(s, x, widget.me)),
+          title: Text(_title(s, x, widget.state)),
           trailing: x.kind != 'group'
-              ? null
+              ? (_peer(x, me) == null
+                    ? null
+                    : IconButton(
+                        key: const Key('name-thread'),
+                        tooltip: s.nameAction,
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => editName(context, widget.controller, widget.state, _peer(x, me)!),
+                      ))
               : Wrap(
                   spacing: 4,
                   children: [
@@ -242,8 +262,8 @@ class _ThreadState extends State<_Thread> {
                       tooltip: s.threadMembers,
                       icon: const Icon(Icons.group),
                       itemBuilder: (_) => [
-                        for (final m in x.members.where((m) => m != widget.me))
-                          PopupMenuItem(value: m, child: Text('${s.threadRemove} ${shortDid(m)}')),
+                        for (final m in x.members.where((m) => m != me))
+                          PopupMenuItem(value: m, child: Text('${s.threadRemove} ${widget.state.nameOf(m)}')),
                       ],
                       onSelected: (m) => widget.controller.run({'command': 'remove_member', 'conversation': group, 'identity': m}),
                     ),
@@ -257,7 +277,10 @@ class _ThreadState extends State<_Thread> {
               ? Center(child: Text(s.threadEmpty))
               : ListView(
                   padding: const EdgeInsets.all(16),
-                  children: [for (final m in messages) _Bubble(message: m, group: x.kind == 'group')],
+                  children: [
+                    for (final m in messages)
+                      _Bubble(message: m, group: x.kind == 'group', from: widget.state.nameOf(m.from)),
+                  ],
                 ),
         ),
         const Divider(height: 1),
@@ -283,9 +306,12 @@ class _ThreadState extends State<_Thread> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.group});
+  const _Bubble({required this.message, required this.group, required this.from});
   final MessageView message;
   final bool group;
+
+  /// What to call its sender.
+  final String from;
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +335,7 @@ class _Bubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (group && !message.mine)
-              Text(shortDid(message.from), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: onBubble)),
+              Text(from, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: onBubble)),
             Text(message.text ?? s.threadNotText(message.kind), style: TextStyle(color: onBubble)),
           ],
         ),

@@ -1295,6 +1295,36 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Headset'**
   String get routeWired;
+
+  /// Opens the dialog to give an identity a name on this device (a menu item, a button's tooltip).
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameAction;
+
+  /// The naming dialog's title.
+  ///
+  /// In en, this message translates to:
+  /// **'Name {who}'**
+  String nameTitle(String who);
+
+  /// The naming dialog's field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameField;
+
+  /// Under the naming dialog's field.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept on this device only. Leave it empty to remove the name.'**
+  String get nameHint;
+
+  /// The naming dialog's button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get nameSave;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

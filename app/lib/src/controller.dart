@@ -189,7 +189,7 @@ class Controller extends ChangeNotifier {
     await client.start(settings);
     _updates = client.updates().listen((u) {
       state = u.state;
-      _system?.sync(u.state.calls);
+      _system?.sync(u.state.calls, u.state);
       switch (u.kind) {
         case 'message':
           final m = MessageView.fromJson(u.change!['message'] as Map<String, dynamic>);

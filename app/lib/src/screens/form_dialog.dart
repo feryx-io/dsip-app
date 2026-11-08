@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 
-/// A dialog of text fields, answered with their values (trimmed) once every one is filled; null when cancelled.
+/// A dialog of text fields, answered with their values (trimmed) once every one is filled (or at once, when [optional]);
+/// null when cancelled.
 class FormDialog extends StatefulWidget {
   const FormDialog({
     super.key,
@@ -11,6 +12,8 @@ class FormDialog extends StatefulWidget {
     this.hints = const [],
     this.action,
     this.lines = 1,
+    this.initial = const [],
+    this.optional = false,
   });
   final String title;
   final List<String> fields;
@@ -18,12 +21,20 @@ class FormDialog extends StatefulWidget {
   final String? action;
   final int lines;
 
+  /// What the fields start with.
+  final List<String> initial;
+
+  /// Whether a field may be left empty.
+  final bool optional;
+
   @override
   State<FormDialog> createState() => _FormDialogState();
 }
 
 class _FormDialogState extends State<FormDialog> {
-  late final _controllers = [for (final _ in widget.fields) TextEditingController()];
+  late final _controllers = [
+    for (var i = 0; i < widget.fields.length; i++) TextEditingController(text: i < widget.initial.length ? widget.initial[i] : null),
+  ];
 
   @override
   void dispose() {
@@ -62,7 +73,10 @@ class _FormDialogState extends State<FormDialog> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(s.cancel)),
         FilledButton(
-          onPressed: values.every((v) => v.isNotEmpty) ? () => Navigator.pop(context, values) : null,
+          // the fields as they are when pressed, not as they were drawn
+          onPressed: widget.optional || values.every((v) => v.isNotEmpty)
+              ? () => Navigator.pop(context, [for (final c in _controllers) c.text.trim()])
+              : null,
           child: Text(widget.action ?? widget.title),
         ),
       ],

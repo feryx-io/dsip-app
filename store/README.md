@@ -12,9 +12,8 @@ submitted anywhere yet.
   for. Made with `flutter test ../store/screenshots_test.dart --update-goldens` from `app/` (not part of the test run).
 
 The screenshots are drawn from `app/test_store/fixture.json`: people on domains of their own, a short conversation.
-Edit it for other content. What they show that is the app's, not the fixture's: conversations and presence name people
-by their identity, as the app has no contact names yet; a call that ended shows its reason code (`user.hangup`); and a
-presence note shows its token (`in-a-meeting`).
+Edit it for other content. What they show that is the app's, not the fixture's: a call that ended shows its reason code
+(`user.hangup`), and a presence note shows its token (`in-a-meeting`).
 
 Before submitting, fill in what is marked `<…>`: the support and privacy URLs and a contact address.
 

@@ -7,6 +7,7 @@ import '../client/models.dart';
 import '../controller.dart';
 import '../mobile/calls.dart';
 import '../mobile/platform.dart';
+import 'name_dialog.dart';
 
 /// Calls: place one to an identity, answer or decline one ringing here, hang up, mute; the ones that ended below.
 class CallsScreen extends StatefulWidget {
@@ -58,15 +59,21 @@ class _CallsScreenState extends State<CallsScreen> {
         ),
         const SizedBox(height: 16),
         if (live.isEmpty && ended.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Text(s.callsNone)),
-        for (final c in live) _LiveCall(call: c, controller: widget.controller),
+        for (final c in live) _LiveCall(call: c, controller: widget.controller, state: widget.state),
         if (ended.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(s.callsRecent, style: Theme.of(context).textTheme.titleMedium),
           for (final c in ended)
             ListTile(
               leading: Icon(c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
-              title: Text(c.peerName ?? c.peer, overflow: TextOverflow.ellipsis),
+              title: Text(widget.state.nameOf(c.peer, offered: c.peerName), overflow: TextOverflow.ellipsis),
               subtitle: Text(s.callEnded(c.state.reason ?? '')),
+              trailing: IconButton(
+                key: Key('name-call-${c.id}'),
+                tooltip: s.nameAction,
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => editName(context, widget.controller, widget.state, c.peer),
+              ),
             ),
         ],
       ],
@@ -75,9 +82,10 @@ class _CallsScreenState extends State<CallsScreen> {
 }
 
 class _LiveCall extends StatelessWidget {
-  const _LiveCall({required this.call, required this.controller});
+  const _LiveCall({required this.call, required this.controller, required this.state});
   final CallView call;
   final Controller controller;
+  final AppState state;
 
   String _status(Strings s) => switch (call.state.name) {
     'calling' => s.callCalling,
@@ -96,6 +104,7 @@ class _LiveCall extends StatelessWidget {
     final mod = defaultTargetPlatform == TargetPlatform.macOS ? '⌘' : 'Ctrl+';
     final desktop = controller.mobile == null;
     Widget keyed(String keys, Widget button) => desktop ? Tooltip(message: '$mod$keys', child: button) : button;
+    final name = state.nameOf(call.peer, offered: call.peerName);
     return Card(
       key: Key('call-${call.id}'),
       child: Padding(
@@ -103,11 +112,12 @@ class _LiveCall extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(call.peerName ?? call.peer, style: Theme.of(context).textTheme.titleMedium, overflow: TextOverflow.ellipsis),
-            if (call.peerName != null) Text(call.peer, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
+            Text(name, style: Theme.of(context).textTheme.titleMedium, overflow: TextOverflow.ellipsis),
+            if (state.named(call.peer, offered: call.peerName))
+              Text(call.peer, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
             // a screen reader says a call ringing in, and each change of state, without the user moving there (A7)
-            Announced('${_status(s)}: ${call.peerName ?? call.peer}', child: Text(_status(s))),
+            Announced('${_status(s)}: $name', child: Text(_status(s))),
             if (call.state.answered && !call.media) Text(s.callNoSound, style: Theme.of(context).textTheme.bodySmall),
             if (call.via != null) Text(s.callVia(call.via!), style: Theme.of(context).textTheme.bodySmall),
             if (call.error != null) Text(call.error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),

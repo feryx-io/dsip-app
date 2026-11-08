@@ -73,14 +73,16 @@ class SystemCalls {
   /// The calls the system has been told of, and whether it was told they were answered.
   final _told = <int, bool>{};
 
-  /// Tell the system what changed in [now] (the state's calls; empty when the app stops).
-  void sync(List<CallView> now) {
+  /// Tell the system what changed in [now] (the state's calls; empty when the app stops), naming each call's peer as
+  /// [state] does.
+  void sync(List<CallView> now, [AppState? state]) {
     final live = {for (final c in now.where((c) => !c.state.ended)) c.id: c};
     final changed = live.length != _told.length || live.values.any((c) => _told[c.id] != c.state.answered);
     for (final call in live.values) {
       final answered = _told[call.id];
       if (answered == null) {
-        final system = SystemCall(id: call.id, name: call.peerName ?? shortDid(call.peer), address: call.peer);
+        final name = state?.nameOf(call.peer, offered: call.peerName) ?? call.peerName ?? shortDid(call.peer);
+        final system = SystemCall(id: call.id, name: name, address: call.peer);
         _told[call.id] = call.state.answered;
         // where the system follows the core, the core told it already
         if (mobile.systemFollowsCore) continue;
