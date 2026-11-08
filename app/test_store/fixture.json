@@ -1,0 +1,65 @@
+{
+  "_comment": "The store screenshots' state, by hand, in the shapes of test/fixtures (which dsip-app's wire_fixture test makes). People on domains of their own (did:web), so the app shows names it would really show.",
+  "state": {
+    "me": {"identity": "did:web:sam.example", "device": "did:key:z6MkSamPhone", "display_name": "Sam"},
+    "relay": "wss://relay.sam.example/dsip",
+    "calls": [
+      {"id": 1, "session": "01M6BTTMQ9QMKY9SYTY8415VZ1", "peer": "did:web:mei.example", "peer_name": "Mei", "direction": "outgoing",
+       "state": {"state": "ended", "reason": "user.hangup"}, "muted": false, "media": false},
+      {"id": 2, "session": "01M6BTTMQ9QMKY9SYTY8415VZ2", "peer": "did:web:jonas.example", "peer_name": "Jonas", "direction": "outgoing",
+       "state": {"state": "answered", "answered_by": "user"}, "muted": false, "media": true, "via": "wss://relay.jonas.example/dsip"},
+      {"id": 3, "session": "01M6BTTMQ9QMKY9SYTY8415VZ3", "peer": "did:web:priya.example", "peer_name": "Priya", "direction": "incoming",
+       "state": {"state": "ringing"}, "muted": false, "media": false}
+    ],
+    "messaging": {
+      "mailbox": "did:key:z6MkMailbox",
+      "connected": true,
+      "conversations": [
+        {"group": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk", "conversation": "01M6EKRTVG3C55DFMQ401G3MA9", "kind": "direct",
+         "peer": "did:web:priya.example", "members": ["did:web:sam.example", "did:web:priya.example"], "pending": 1},
+        {"group": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQjE", "conversation": "01M6EKRTVG3C55DFMQ401G3MB1", "kind": "group",
+         "members": ["did:web:sam.example", "did:web:jonas.example", "did:web:mei.example"], "pending": 0}
+      ],
+      "requests": [{"id": "01M6EKRTVG3C55DFMQ401G3MB0", "from": "did:web:tomas.example", "name": "Tomás"}]
+    },
+    "presence": {
+      "mine": "available",
+      "following": [
+        {"identity": "did:web:priya.example", "state": "available", "source": "record"},
+        {"identity": "did:web:jonas.example", "state": "busy", "token": "in-a-meeting", "source": "record"},
+        {"identity": "did:web:mei.example", "state": "away", "source": "assertion"}
+      ]
+    },
+    "audio": {
+      "host": "system",
+      "devices": [
+        {"id": "mic-1", "name": "Built-in microphone", "kind": "input", "default": true},
+        {"id": "spk-1", "name": "Built-in speaker", "kind": "output", "default": true},
+        {"id": "bt-1", "name": "Wireless earbuds", "kind": "output", "default": false}
+      ],
+      "output": "bt-1"
+    }
+  },
+  "thread": {
+    "response": "thread",
+    "messages": [
+      {"conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk", "id": "01M6EKRTVG3C55DFMQ401G3MC1", "from": "did:web:priya.example", "mine": false,
+       "kind": "text", "text": "Are we still on for Saturday?", "sent_at": 1793600000},
+      {"conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk", "id": "01M6EKRTVG3C55DFMQ401G3MC2", "from": "did:web:sam.example", "mine": true,
+       "kind": "text", "text": "Yes! 10 at the market, then lunch.", "sent_at": 1793600060},
+      {"conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk", "id": "01M6EKRTVG3C55DFMQ401G3MC3", "from": "did:web:priya.example", "mine": false,
+       "kind": "audio", "sent_at": 1793600120},
+      {"conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk", "id": "01M6EKRTVG3C55DFMQ401G3MC4", "from": "did:web:priya.example", "mine": false,
+       "kind": "text", "text": "Perfect. I'll call you when I'm on the way.", "sent_at": 1793600180}
+    ]
+  },
+  "settings": {
+    "identity": "/home/sam/.local/share/dsip/identity",
+    "relay": "wss://relay.sam.example/dsip",
+    "audio_input": "mic-1",
+    "audio_output": "bt-1",
+    "stun": [],
+    "mailbox": {"uri": "wss://mailbox.sam.example/dsip", "did": "did:key:z6MkMailbox"},
+    "hints_nodes": []
+  }
+}
