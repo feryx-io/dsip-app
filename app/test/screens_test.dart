@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dsip_app/src/app.dart';
+import 'package:dsip_app/src/client/client.dart';
 import 'package:dsip_app/src/controller.dart';
 import 'package:dsip_app/src/settings.dart';
 import 'package:flutter/material.dart';
@@ -171,6 +172,28 @@ void main() {
     expect(client.finished, [(identity, 'DSIPW1-abc')]);
     expect(client.identities, isEmpty, reason: 'joined, not made');
     expect(client.started?['identity'], identity);
+  });
+
+  testWidgets('the welcome code comes back over the local network: whose it is is said before Start (A6)', (tester) async {
+    client.listenQr = 'DSIPJ1-AAAAA-BBBBB/192.168.1.20:40123';
+    client.toReceive = const WelcomeReceived(welcome: 'DSIPW2-SENT', identity: 'did:key:z6MkAnn', name: 'Ann');
+    await open(tester);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Join another device'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+    expect(find.text('DSIPJ1-AAAAA-BBBBB'), findsOneWidget, reason: 'the code as text, without the addresses');
+    expect(find.textContaining('Received from Ann (did:key:z6MkAnn)'), findsOneWidget);
+    expect(client.handoffStopped, isTrue, reason: 'one welcome code, then no more listening');
+    expect(client.finished, isEmpty, reason: 'nothing joins until Start');
+    await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
+    await tester.ensureVisible(find.text('Start'));
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    expect(client.finished, [(SettingsStore(dir).defaultIdentity, 'DSIPW2-SENT')]);
   });
 
   testWidgets('on a phone, the welcome code is scanned from the other device\'s screen (A6)', (tester) async {

@@ -1559,6 +1559,30 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'That file could not be read as a backup: {reason}'**
   String firstRunOpenFailed(String reason);
+
+  /// No description provided for @firstRunJoinNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'A phone with your identity can scan this QR code instead. On the same network, the welcome code then comes back here by itself.'**
+  String get firstRunJoinNearby;
+
+  /// A welcome code arrived over the local network; it names the identity it would join.
+  ///
+  /// In en, this message translates to:
+  /// **'Received from {name} ({identity}). Start only if this is your identity.'**
+  String firstRunWelcomeReceived(String name, String identity);
+
+  /// No description provided for @addDeviceSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the new device. Check that it shows the same check code: {check}.'**
+  String addDeviceSent(String check);
+
+  /// No description provided for @addDeviceNotSent.
+  ///
+  /// In en, this message translates to:
+  /// **'The new device could not be reached ({reason}). Enter this welcome code on it instead.'**
+  String addDeviceNotSent(String reason);
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

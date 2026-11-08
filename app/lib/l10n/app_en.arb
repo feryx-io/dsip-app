@@ -617,5 +617,34 @@
         "type": "String"
       }
     }
+  },
+  "firstRunJoinNearby": "A phone with your identity can scan this QR code instead. On the same network, the welcome code then comes back here by itself.",
+  "firstRunWelcomeReceived": "Received from {name} ({identity}). Start only if this is your identity.",
+  "@firstRunWelcomeReceived": {
+    "description": "A welcome code arrived over the local network; it names the identity it would join.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "identity": {
+        "type": "String"
+      }
+    }
+  },
+  "addDeviceSent": "Sent to the new device. Check that it shows the same check code: {check}.",
+  "@addDeviceSent": {
+    "placeholders": {
+      "check": {
+        "type": "String"
+      }
+    }
+  },
+  "addDeviceNotSent": "The new device could not be reached ({reason}). Enter this welcome code on it instead.",
+  "@addDeviceNotSent": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }

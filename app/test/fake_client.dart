@@ -77,6 +77,36 @@ class FakeClient implements Client {
     return 'did:key:z6MkAnn';
   }
 
+  /// The join code's QR form [pairingListen] gives (null: it does not listen); what [pairingReceive] gives next, once;
+  /// whether the handoff is stopped; what [pairingSend] was given, and what it answers or throws.
+  String? listenQr;
+  WelcomeReceived? toReceive;
+  bool handoffStopped = false;
+  final sent = <(String, String)>[];
+  String? sendTo;
+  Object? sendFails;
+
+  @override
+  Future<String?> pairingListen(String dir, String code) async => listenQr;
+
+  @override
+  Future<WelcomeReceived?> pairingReceive(Duration wait) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    final r = toReceive;
+    toReceive = null;
+    return r;
+  }
+
+  @override
+  Future<void> pairingStop() async => handoffStopped = true;
+
+  @override
+  Future<String?> pairingSend(String join, String welcome) async {
+    sent.add((join, welcome));
+    if (sendFails != null) throw sendFails!;
+    return sendTo;
+  }
+
   /// What [webCheck] answers.
   List<String> webDiffers = const [];
 

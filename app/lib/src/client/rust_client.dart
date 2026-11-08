@@ -36,6 +36,21 @@ class RustClient implements Client {
   Future<String> pairingFinish(String dir, String welcome) => bridge.pairingFinish(dir: dir, welcome: welcome);
 
   @override
+  Future<String?> pairingListen(String dir, String code) => bridge.pairingListen(dir: dir, code: code);
+
+  @override
+  Future<WelcomeReceived?> pairingReceive(Duration wait) async {
+    final j = await bridge.pairingReceive(waitMs: wait.inMilliseconds);
+    return j == null ? null : WelcomeReceived.fromJson(jsonDecode(j) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> pairingStop() => bridge.pairingStop();
+
+  @override
+  Future<String?> pairingSend(String join, String welcome) => bridge.pairingSend(join: join, welcome: welcome);
+
+  @override
   Future<Map<String, dynamic>> webPrepare(String dir, String did, String relay, {String? mailboxDid, String? mailboxUri}) async =>
       jsonDecode(await bridge.webPrepare(dir: dir, did: did, relay: relay, mailboxDid: mailboxDid, mailboxUri: mailboxUri))
           as Map<String, dynamic>;

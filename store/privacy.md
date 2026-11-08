@@ -18,6 +18,9 @@ app sends goes to the services that carry them, which you choose in its settings
 - **The microphone** is used during calls only, to send your voice to the person you are talking to.
 - **The camera** (phones) is used only when you choose to scan a pairing code from another of your devices. What it
   sees is read on the device for that code and is neither kept nor sent.
+- **Pairing on your network:** while a device you are adding shows its join code, it listens on your local network
+  for the reply. Its QR code holds the device's local network address. The reply goes straight from your other device
+  to it, sealed so that only the new device can open it. Nothing is sent to us or to any other service.
 
 ## What each service sees
 

@@ -68,13 +68,16 @@ enum Cmd {
         move_: bool,
     },
     /// Join an identity as another device, without its identity key: print the join code (and a check code), give it
-    /// to a device that holds the identity, then type the welcome code it gives back (standard input).
+    /// to a device that holds the identity, then type the welcome code it gives back (standard input). Meanwhile it
+    /// listens on the local network: given the join code's QR form (printed too), the other device sends the welcome
+    /// code itself, and it is taken once the identity it is from is said.
     Join {
         /// The new device's identity folder (without one yet).
         #[arg(long)]
         identity: PathBuf,
     },
-    /// On a device holding the identity key: the welcome code for the device whose join code this is.
+    /// On a device holding the identity key: the welcome code for the device whose join code this is. Given the join
+    /// code's QR form (with the new device's addresses), it is sent there too.
     Welcome {
         /// The identity folder.
         #[arg(long)]
@@ -352,15 +355,44 @@ async fn main() -> Result<ExitCode> {
         Cmd::Join { identity } => {
             let (code, check) = dsip_app::pairing::start(&identity).context("starting to join")?;
             println!("join code: {code}\ncheck: {check} (the other device shows the same)");
+            let handoff = dsip_app::pairing::Handoff::listen(&identity)
+                .map_err(|e| eprintln!("not listening for the welcome code: {e}"))
+                .ok();
+            if let Some(h) = handoff.as_ref().filter(|h| !h.addresses().is_empty()) {
+                println!("for a QR code (the welcome code then comes back by itself): {}", h.qr(&code));
+            }
             eprintln!("welcome code:");
-            let mut line = String::new();
-            std::io::stdin().read_line(&mut line).context("reading the welcome code")?;
-            println!("{}", dsip_app::pairing::finish(&identity, line.trim()).context("joining")?);
+            // typed, or sent over the local network: whichever comes first
+            let (tx, rx) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let mut line = String::new();
+                let _ = std::io::stdin().read_line(&mut line);
+                let _ = tx.send(line);
+            });
+            let welcome = loop {
+                if let Ok(line) = rx.try_recv() {
+                    break line.trim().to_string();
+                }
+                let wait = std::time::Duration::from_millis(500);
+                if let Some(r) = handoff.as_ref().map(|h| h.receive(wait)).transpose().context("listening")?.flatten() {
+                    eprintln!("received from {} ({})", r.name, r.identity);
+                    break r.welcome;
+                }
+                if handoff.is_none() {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                }
+            };
+            println!("{}", dsip_app::pairing::finish(&identity, &welcome).context("joining")?);
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Welcome { identity, code } => {
             let (welcome, check) = dsip_app::pairing::welcome(&identity, &code).context("welcoming the device")?;
             println!("check: {check} (the new device shows the same)\n{welcome}");
+            match dsip_app::pairing::send(&code, &welcome) {
+                Ok(Some(to)) => println!("sent to the new device at {to}"),
+                Ok(None) => {}
+                Err(e) => eprintln!("not sent ({e}): give it the welcome code"),
+            }
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Export { identity, out } => {
