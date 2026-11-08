@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_client.dart';
 import 'package:dsip_app/src/screens/scan.dart';
+import 'package:dsip_app/src/screens/backup_file.dart';
 
 /// The settings fixture, from `dsip-app`'s `wire_fixture` test: an `audio` change with microphones and speakers (a
 /// speaker chosen), and `Settings` with every field the screen edits, which `dsip-app` reads back.
@@ -209,6 +210,41 @@ void main() {
     await tester.tap(find.byKey(const Key('copy-file')));
     await tester.pumpAndSettle();
     expect(copied, file);
+  });
+
+  testWidgets('a backup is saved as a file: its whole text, the names with it, under the day\'s name', (tester) async {
+    const file = 'DSIP identity backup\n\nDSIP1-AAAAA-BBBBB\n\nDSIPC1-CCCCC-DDDDD\n';
+    client.backup = const IdentityBackup(identity: 'did:key:z6MkAnn', code: 'DSIP1-AAAAA-BBBBB', file: file);
+    final saved = <(String, String)>[];
+    saveBackupFile = (name, text) async {
+      saved.add((name, text));
+      return true;
+    };
+    addTearDown(() => saveBackupFile = (_, _) async => false);
+    await open(tester);
+    await backUp(tester);
+    await tester.tap(find.byKey(const Key('save-file')));
+    await tester.pumpAndSettle();
+    expect(saved, [(backupFileName(DateTime.now()), file)]);
+    expect(find.text('Saved.'), findsOneWidget);
+  });
+
+  testWidgets('a backup file not saved says why, and the code is still shown', (tester) async {
+    saveBackupFile = (_, _) async => throw Exception('no room');
+    addTearDown(() => saveBackupFile = (_, _) async => false);
+    await open(tester);
+    await backUp(tester);
+    await tester.tap(find.byKey(const Key('save-file')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('The file was not saved'), findsOneWidget);
+    expect(find.text('DSIP1-AAAAA-BBBBB'), findsOneWidget);
+  });
+
+  test('a backup file is named for its day, and only text of a backup\'s size is read from one', () {
+    expect(backupFileName(DateTime(2026, 3, 7)), 'dsip-backup-2026-03-07.txt');
+    expect(backupText(utf8.encode('DSIP1-AAAAA\n')), 'DSIP1-AAAAA\n');
+    expect(() => backupText(List.filled(backupFileMax + 1, 0x41)), throwsFormatException);
+    expect(() => backupText([0xff, 0xfe, 0x00]), throwsFormatException);
   });
 
   testWidgets('a backup with no names to keep offers the code only', (tester) async {

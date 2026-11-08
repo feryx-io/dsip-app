@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_client.dart';
 import 'package:dsip_app/src/screens/scan.dart';
+import 'package:dsip_app/src/screens/backup_file.dart';
 
 void main() {
   late Directory dir;
@@ -84,6 +85,7 @@ void main() {
     await tester.tap(find.text('Restore from a backup'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
+    await tester.ensureVisible(find.text('Start'));
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();
     expect(find.text('Enter the recovery code.'), findsOneWidget);
@@ -100,6 +102,45 @@ void main() {
     expect(client.restored, [(identity, 'DSIP1-AAAAA-BBBBB', 'a long passphrase', 'Ann')]);
     expect(client.identities, isEmpty, reason: 'restored, not made');
     expect(client.started?['identity'], identity);
+  });
+
+  testWidgets('an identity is restored from a backup file: its text, the names with it (A6b)', (tester) async {
+    const file = 'DSIP identity backup\n\nDSIP1-AAAAA-BBBBB\n\nDSIPC1-CCCCC-DDDDD\n';
+    openBackupFile = () async => file;
+    addTearDown(() => openBackupFile = () async => null);
+    await open(tester);
+    await tester.tap(find.text('Restore from a backup'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('open-file')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('passphrase')), 'a long passphrase');
+    await tester.enterText(find.byKey(const Key('name')), 'Ann');
+    await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
+    await tester.ensureVisible(find.text('Start'));
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    final identity = SettingsStore(dir).defaultIdentity;
+    expect(client.restored, [(identity, file.trim(), 'a long passphrase', 'Ann')]);
+  });
+
+  testWidgets('a file that is not a backup says so, and nothing is restored', (tester) async {
+    openBackupFile = () async => throw const FormatException('too large to be a backup');
+    addTearDown(() => openBackupFile = () async => null);
+    await open(tester);
+    await tester.tap(find.text('Restore from a backup'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('open-file')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(find.textContaining('could not be read as a backup'), findsOneWidget);
+    expect(client.restored, isEmpty);
   });
 
   testWidgets('another device joins by the codes, without making an identity (A6)', (tester) async {

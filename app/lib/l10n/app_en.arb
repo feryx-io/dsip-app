@@ -592,5 +592,30 @@
         "example": "permissionDenied"
       }
     }
+  },
+  "backupSaveFile": "Save as a file",
+  "@backupSaveFile": {
+    "description": "Saves the whole backup text (the code, and the names and followed identities sealed under the same passphrase) as a file where the person chooses."
+  },
+  "backupSaved": "Saved.",
+  "backupSaveFailed": "The file was not saved: {reason}",
+  "@backupSaveFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "firstRunOpenFile": "Open a backup file",
+  "@firstRunOpenFile": {
+    "description": "Opens a backup file saved earlier, putting its text in the recovery code field."
+  },
+  "firstRunOpenFailed": "That file could not be read as a backup: {reason}",
+  "@firstRunOpenFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }
