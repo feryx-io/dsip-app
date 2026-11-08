@@ -11,8 +11,14 @@
 //! | 48 | the identity key's seed, sealed with XChaCha20-Poly1305 under a key Argon2id makes from the passphrase (64 MiB, 3 passes); the version and salt are its associated data |
 //! | 2 | the first two bytes of the SHA-256 of what comes before, so a mistyped code is told apart from a wrong passphrase before the slow KDF |
 //!
-//! Only the identity key is in it: the identity's DID is the key's (`did:key`), and a restored install makes its own
-//! device key and delegation. Restoring makes that install the one holding the identity key, as the first device does
+//! Only the identity key is in the code: the identity's DID is the key's (`did:key`), and a restored install makes its
+//! own device key and delegation.
+//!
+//! The file holds a second line, `DSIPC1-` and base32 in groups of five: the names the user gave identities and the
+//! identities followed ([`crate::NAMES_FILE`], [`crate::FOLLOWING_FILE`]) as they were when it was made, as JSON,
+//! sealed with XChaCha20-Poly1305 under SHA-256("dsip backup contacts v1" ‖ the code's key), so one Argon2id opens
+//! both; `DSIPC1` and the code's salt are its associated data, binding it to that code. 1 byte of version, 24 of
+//! nonce, the sealed JSON. Restored from the file, they come back; from the code alone, only the identity does. Restoring makes that install the one holding the identity key, as the first device does
 //! (decision 5 (a)); adding a device that holds only its own key is A6c.
 //!
 //! Spec: none (infrastructure). §7.3–§7.4 name the keys and the delegation a restored install signs.
@@ -29,6 +35,8 @@ use crate::Error;
 
 /// The code's prefix and version.
 const PREFIX: &str = "DSIP1-";
+/// The contacts line's prefix (the file only).
+const CONTACTS_PREFIX: &str = "DSIPC1-";
 const VERSION: u8 = 1;
 const SALT: usize = 16;
 const NONCE: usize = 24;
@@ -69,7 +77,19 @@ fn checksum(body: &[u8]) -> [u8; 2] {
 }
 
 /// `seed` sealed under `passphrase`, as a code.
+#[cfg(test)]
 fn seal(seed: &[u8; 32], passphrase: &str) -> Result<String, Error> {
+    seal_keyed(seed, passphrase).map(|(code, _)| code)
+}
+
+/// The key a code's passphrase makes, and its salt: what seals the contacts line beside it.
+struct CodeKey {
+    key: [u8; 32],
+    salt: [u8; SALT],
+}
+
+/// `seed` sealed under `passphrase`, as a code, and the key that sealed it.
+fn seal_keyed(seed: &[u8; 32], passphrase: &str) -> Result<(String, CodeKey), Error> {
     if passphrase.chars().count() < MIN_PASSPHRASE {
         return Err(bad(format!("the passphrase needs at least {MIN_PASSPHRASE} characters")));
     }
@@ -85,12 +105,23 @@ fn seal(seed: &[u8; 32], passphrase: &str) -> Result<String, Error> {
     let sum = checksum(&bytes);
     bytes.extend_from_slice(&sum);
     let text = data_encoding::BASE32_NOPAD.encode(&bytes);
+    Ok((format!("{PREFIX}{}", grouped(&text)), CodeKey { key, salt }))
+}
+
+/// `text` in groups of five, between dashes.
+fn grouped(text: &str) -> String {
     let groups: Vec<&str> = text.as_bytes().chunks(5).map(|c| std::str::from_utf8(c).expect("base32")).collect();
-    Ok(format!("{PREFIX}{}", groups.join("-")))
+    groups.join("-")
 }
 
 /// The seed in `code`, opened with `passphrase`.
+#[cfg(test)]
 fn open(code: &str, passphrase: &str) -> Result<[u8; 32], Error> {
+    open_keyed(code, passphrase).map(|(seed, _)| seed)
+}
+
+/// The seed in `code`, opened with `passphrase`, and the key that opened it.
+fn open_keyed(code: &str, passphrase: &str) -> Result<([u8; 32], CodeKey), Error> {
     let text = normal(code);
     let text = text.strip_prefix(&PREFIX[..PREFIX.len() - 1]).ok_or_else(|| bad("not a DSIP recovery code (it starts DSIP1-)"))?;
     let bytes = data_encoding::BASE32_NOPAD.decode(text.as_bytes()).map_err(|_| bad("the recovery code has a character that is not in it"))?;
@@ -103,7 +134,81 @@ fn open(code: &str, passphrase: &str) -> Result<[u8; 32], Error> {
     let seed = XChaCha20Poly1305::new((&key).into())
         .decrypt(XNonce::from_slice(nonce), Payload { msg: sealed, aad })
         .map_err(|_| bad("the passphrase does not open this recovery code"))?;
-    seed.try_into().map_err(|_| bad("the recovery code holds no key"))
+    let seed = seed.try_into().map_err(|_| bad("the recovery code holds no key"))?;
+    Ok((seed, CodeKey { key, salt: aad[1..].try_into().expect("the salt") }))
+}
+
+/// The names given identities, and the identities followed: what the file keeps beside the code.
+#[derive(Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+struct Contacts {
+    #[serde(default)]
+    names: std::collections::BTreeMap<String, String>,
+    #[serde(default)]
+    following: Vec<String>,
+}
+
+impl Contacts {
+    /// Those kept in `dir` now.
+    fn read(dir: &Path) -> Contacts {
+        let json = |f: &str| std::fs::read(dir.join(f)).ok();
+        Contacts {
+            names: json(crate::NAMES_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
+            following: json(crate::FOLLOWING_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
+        }
+    }
+
+    /// Keep them in `dir`, where the app reads them at its start; a file there already is kept.
+    fn write(&self, dir: &Path) -> Result<(), Error> {
+        for (file, json) in [
+            (crate::NAMES_FILE, (!self.names.is_empty()).then(|| serde_json::to_vec_pretty(&self.names))),
+            (crate::FOLLOWING_FILE, (!self.following.is_empty()).then(|| serde_json::to_vec(&self.following))),
+        ] {
+            let path = dir.join(file);
+            if let (Some(json), false) = (json, path.exists()) {
+                std::fs::write(&path, json.map_err(|e| bad(e.to_string()))?).map_err(|e| bad(e.to_string()))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The key that seals the contacts line, from the code's.
+fn contacts_key(k: &CodeKey) -> [u8; 32] {
+    Sha256::digest([&b"dsip backup contacts v1"[..], &k.key].concat()).into()
+}
+
+fn contacts_aad(k: &CodeKey) -> Vec<u8> {
+    [&b"DSIPC1"[..], &k.salt].concat()
+}
+
+/// `contacts` sealed beside the code `k` made, as the file's line; none when there are none.
+fn seal_contacts(contacts: &Contacts, k: &CodeKey) -> Result<Option<String>, Error> {
+    if contacts == &Contacts::default() {
+        return Ok(None);
+    }
+    let mut nonce = [0u8; NONCE];
+    getrandom::getrandom(&mut nonce).map_err(|e| bad(e.to_string()))?;
+    let json = serde_json::to_vec(contacts).map_err(|e| bad(e.to_string()))?;
+    let sealed = XChaCha20Poly1305::new((&contacts_key(k)).into())
+        .encrypt(XNonce::from_slice(&nonce), Payload { msg: &json, aad: &contacts_aad(k) })
+        .map_err(|_| bad("sealing the contacts"))?;
+    let bytes = [&[VERSION][..], &nonce, &sealed].concat();
+    Ok(Some(format!("{CONTACTS_PREFIX}{}", grouped(&data_encoding::BASE32_NOPAD.encode(&bytes)))))
+}
+
+/// The contacts in the file's line, opened with the code's key.
+fn open_contacts(line: &str, k: &CodeKey) -> Result<Contacts, Error> {
+    let text = normal(line);
+    let text = text.strip_prefix(&CONTACTS_PREFIX[..CONTACTS_PREFIX.len() - 1]).ok_or_else(|| bad("no contacts line"))?;
+    let bytes = data_encoding::BASE32_NOPAD.decode(text.as_bytes()).map_err(|_| bad("the contacts line is damaged"))?;
+    if bytes.len() < 1 + NONCE || bytes[0] != VERSION {
+        return Err(bad("the contacts line is damaged"));
+    }
+    let (nonce, sealed) = bytes[1..].split_at(NONCE);
+    let json = XChaCha20Poly1305::new((&contacts_key(k)).into())
+        .decrypt(XNonce::from_slice(nonce), Payload { msg: sealed, aad: &contacts_aad(k) })
+        .map_err(|_| bad("the contacts line is damaged, or not this code's"))?;
+    serde_json::from_slice(&json).map_err(|e| bad(e.to_string()))
 }
 
 /// `code` as typed, in capitals, without the spaces and dashes between groups.
@@ -117,13 +222,20 @@ fn code_in(text: &str) -> &str {
     text.lines().find(|l| normal(l).starts_with(prefix)).unwrap_or(text)
 }
 
+/// The contacts line in a backup file's `text`, if it has one.
+fn contacts_in(text: &str) -> Option<&str> {
+    let prefix = &CONTACTS_PREFIX[..CONTACTS_PREFIX.len() - 1];
+    text.lines().find(|l| normal(l).starts_with(prefix))
+}
+
 /// A backup of the identity in `dir`, its key sealed under `passphrase`.
 pub fn export_identity(dir: &Path, passphrase: &str) -> Result<Backup, Error> {
     let id = crate::keys::load_identity(dir)?;
     // only a device holding the identity key backs it up; one that joined holds none (A6, pairing)
-    let code = seal(&id.identity_key()?.seed(), passphrase)?;
+    let (code, key) = seal_keyed(&id.identity_key()?.seed(), passphrase)?;
     let identity = id.meta.identity.clone();
-    let file = format!(
+    let contacts = Contacts::read(dir);
+    let mut file = format!(
         "DSIP identity backup\n\
          Identity: {identity}\n\
          Name: {}\n\
@@ -132,6 +244,16 @@ pub fn export_identity(dir: &Path, passphrase: &str) -> Result<Backup, Error> {
          {code}\n",
         id.meta.display_name
     );
+    if let Some(line) = seal_contacts(&contacts, &key)? {
+        file.push_str(&format!(
+            "\nThe names you gave {} identities, and the {} you follow, as they are today, sealed under the same passphrase.\n\
+             Restoring from this file brings them back; the code alone does not.\n\
+             \n\
+             {line}\n",
+            contacts.names.len(),
+            contacts.following.len()
+        ));
+    }
     Ok(Backup { identity, code, file })
 }
 
@@ -139,7 +261,8 @@ pub fn export_identity(dir: &Path, passphrase: &str) -> Result<Backup, Error> {
 /// opened with `passphrase`, a new device key, and the delegation between them; the keys moved into the platform's
 /// store when this process uses one. Its DID.
 pub fn restore_identity(dir: &Path, code: &str, passphrase: &str, display_name: &str) -> Result<String, Error> {
-    let controller = KeyPair::from_seed(open(code_in(code), passphrase)?);
+    let (seed, key) = open_keyed(code_in(code), passphrase)?;
+    let controller = KeyPair::from_seed(seed);
     if dir.join("identity.json").exists() {
         return Err(bad(format!("{} holds an identity already", dir.display())));
     }
@@ -160,6 +283,13 @@ pub fn restore_identity(dir: &Path, code: &str, passphrase: &str, display_name: 
     }
     // the same key agreement key as the identity's other devices: derived from the identity key restored (A6c)
     crate::keys::ready_identity(dir);
+    // the names and identities followed, when the file has them: the identity is restored whatever comes of these
+    if let Some(line) = contacts_in(code) {
+        match open_contacts(line, &key).and_then(|c| c.write(dir)) {
+            Ok(()) => {}
+            Err(e) => tracing::warn!("restoring the contacts: {e}"),
+        }
+    }
     Ok(did)
 }
 
@@ -202,6 +332,71 @@ mod tests {
         for d in [a, b] {
             std::fs::remove_dir_all(d).unwrap();
         }
+    }
+
+    #[test]
+    fn names_and_following_come_back_from_the_file_not_from_the_code() {
+        let _one = crate::keys::STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let (a, b, c, d) = (temp("ca"), temp("cb"), temp("cc"), temp("cd"));
+        crate::init_identity(&a, "Ann").unwrap();
+        let names = r#"{"did:web:priya.example": "Priya Patel", "did:key:z6MkBob": "Bob"}"#;
+        std::fs::write(a.join(crate::NAMES_FILE), names).unwrap();
+        std::fs::write(a.join(crate::FOLLOWING_FILE), r#"["did:web:priya.example"]"#).unwrap();
+        let backup = export_identity(&a, "correct horse battery").unwrap();
+        let line = contacts_in(&backup.file).expect("a contacts line");
+        assert!(line.starts_with(CONTACTS_PREFIX) && !backup.code.contains("DSIPC1"), "in the file, not the code");
+        assert!(!backup.file.contains("Priya"), "sealed");
+
+        // from the file (typed in lower case, as the code may be): both come back
+        restore_identity(&b, &backup.file.to_lowercase(), "correct horse battery", "Ann").unwrap();
+        let read = Contacts::read(&b);
+        assert_eq!(read.names.get("did:web:priya.example").map(String::as_str), Some("Priya Patel"));
+        assert_eq!(read.names.len(), 2);
+        assert_eq!(read.following, ["did:web:priya.example"]);
+
+        // from the code alone: the identity, not them
+        restore_identity(&c, &backup.code, "correct horse battery", "Ann").unwrap();
+        assert_eq!(Contacts::read(&c), Contacts::default());
+
+        // a damaged contacts line: the identity is restored all the same, without them
+        let i = backup.file.find(line).unwrap() + line.len() - 3;
+        let flip = if &backup.file[i..i + 1] == "A" { "B" } else { "A" };
+        let damaged = format!("{}{flip}{}", &backup.file[..i], &backup.file[i + 1..]);
+        restore_identity(&d, &damaged, "correct horse battery", "Ann").unwrap();
+        assert_eq!(Contacts::read(&d), Contacts::default());
+
+        // nothing to keep: no line
+        let e = temp("ce");
+        crate::init_identity(&e, "Eve").unwrap();
+        assert!(contacts_in(&export_identity(&e, "correct horse battery").unwrap().file).is_none());
+        for x in [a, b, c, d, e] {
+            std::fs::remove_dir_all(x).unwrap();
+        }
+    }
+
+    #[test]
+    fn a_contacts_line_opens_only_beside_its_own_code() {
+        let (_, mine) = seal_keyed(&[1u8; 32], "a long passphrase").unwrap();
+        let (_, other) = seal_keyed(&[1u8; 32], "a long passphrase").unwrap();
+        let c = Contacts { names: [("did:key:z6MkBob".into(), "Bob".into())].into(), following: vec![] };
+        let line = seal_contacts(&c, &mine).unwrap().unwrap();
+        assert_eq!(open_contacts(&line, &mine).unwrap(), c);
+        // same passphrase, another code (another salt): refused
+        assert!(open_contacts(&line, &other).is_err());
+    }
+
+    #[test]
+    fn restored_contacts_do_not_replace_what_is_there() {
+        let dir = temp("keep");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(crate::NAMES_FILE), r#"{"did:key:z6MkBob": "Robert"}"#).unwrap();
+        Contacts { names: [("did:key:z6MkBob".into(), "Bob".into())].into(), following: vec!["did:key:z6MkBob".into()] }
+            .write(&dir)
+            .unwrap();
+        let read = Contacts::read(&dir);
+        assert_eq!(read.names.get("did:key:z6MkBob").map(String::as_str), Some("Robert"));
+        assert_eq!(read.following, ["did:key:z6MkBob"]);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

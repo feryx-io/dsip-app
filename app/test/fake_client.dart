@@ -39,10 +39,17 @@ class FakeClient implements Client {
   /// What [exportIdentity] was given: dir, passphrase.
   final exported = <(String, String)>[];
 
+  /// What [exportIdentity] answers: a code, and a file holding only it.
+  IdentityBackup backup = const IdentityBackup(
+    identity: 'did:key:z6MkAnn',
+    code: 'DSIP1-AAAAA-BBBBB',
+    file: 'DSIP identity backup\n\nDSIP1-AAAAA-BBBBB\n',
+  );
+
   @override
   Future<IdentityBackup> exportIdentity(String dir, String passphrase) async {
     exported.add((dir, passphrase));
-    return const IdentityBackup(identity: 'did:key:z6MkAnn', code: 'DSIP1-AAAAA-BBBBB', file: 'DSIP identity backup\n\nDSIP1-AAAAA-BBBBB\n');
+    return backup;
   }
 
   @override

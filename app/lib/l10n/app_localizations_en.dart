@@ -813,6 +813,13 @@ class StringsEn extends Strings {
   String callEndedCode(String code) {
     return 'Reason code: $code';
   }
+
+  @override
+  String get backupContactsBody =>
+      'The names you gave people, and who you follow, are not in the code. Copy the backup with names, keep that text with the code, and restore from it to bring them back.';
+
+  @override
+  String get backupCopyFile => 'Copy with names';
 }
 
 /// The translations for English (`en_XA`).
@@ -1633,4 +1640,11 @@ class StringsEnXa extends StringsEn {
   String callEndedCode(String code) {
     return '[Ŕéàšóñ çóđé: $code one]';
   }
+
+  @override
+  String get backupContactsBody =>
+      '[Ţĥé ñàɱéš ýóú ĝàṽé þéóþĺé, àñđ ŵĥó ýóú ƒóĺĺóŵ, àŕé ñóţ íñ ţĥé çóđé. Çóþý ţĥé ƀàçķúþ ŵíţĥ ñàɱéš, ķééþ ţĥàţ ţéẋţ ŵíţĥ ţĥé çóđé, àñđ ŕéšţóŕé ƒŕóɱ íţ ţó ƀŕíñĝ ţĥéɱ ƀàçķ. one two three four five six seven eight n]';
+
+  @override
+  String get backupCopyFile => '[Çóþý ŵíţĥ ñàɱéš one]';
 }

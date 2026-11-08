@@ -558,5 +558,13 @@
         "example": "user.hangup"
       }
     }
+  },
+  "backupContactsBody": "The names you gave people, and who you follow, are not in the code. Copy the backup with names, keep that text with the code, and restore from it to bring them back.",
+  "@backupContactsBody": {
+    "description": "In the recovery code dialog, when there are names or followed identities to keep: the code holds the identity only; the backup text holds them too, sealed under the same passphrase."
+  },
+  "backupCopyFile": "Copy with names",
+  "@backupCopyFile": {
+    "description": "Copies the whole backup text (the code, and the names and followed identities sealed under the same passphrase)."
   }
 }

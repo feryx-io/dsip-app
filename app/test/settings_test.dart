@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dsip_app/src/app.dart';
+import 'package:dsip_app/src/client/client.dart';
 import 'package:dsip_app/src/controller.dart';
 import 'package:dsip_app/src/settings.dart';
 import 'package:dsip_app/src/screens/settings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_client.dart';
@@ -175,6 +177,44 @@ void main() {
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.text('Your recovery code'), findsNothing);
+  });
+
+  /// Make a backup with [passphrase] from the settings, up to the code shown.
+  Future<void> backUp(WidgetTester tester) async {
+    await tester.ensureVisible(find.byKey(const Key('backup')));
+    await tester.tap(find.byKey(const Key('backup')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('passphrase')), 'a long passphrase');
+    await tester.enterText(find.byKey(const Key('again')), 'a long passphrase');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Make the code'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a backup with names to keep offers its whole text to copy: the code alone does not hold them', (tester) async {
+    const file = 'DSIP identity backup\n\nDSIP1-AAAAA-BBBBB\n\nDSIPC1-CCCCC-DDDDD\n';
+    client.backup = const IdentityBackup(identity: 'did:key:z6MkAnn', code: 'DSIP1-AAAAA-BBBBB', file: file);
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await open(tester);
+    await backUp(tester);
+    expect(find.textContaining('are not in the code'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('copy-file')));
+    await tester.pumpAndSettle();
+    expect(copied, file);
+  });
+
+  testWidgets('a backup with no names to keep offers the code only', (tester) async {
+    await open(tester);
+    await backUp(tester);
+    expect(find.byKey(const Key('copy-file')), findsNothing);
+    expect(find.textContaining('are not in the code'), findsNothing);
   });
 
   testWidgets('the identity moves to its own domain once the domain serves its document (A6d)', (tester) async {

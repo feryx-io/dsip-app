@@ -274,6 +274,9 @@ class _BackupDialogState extends State<BackupDialog> {
   String? _failed;
   String? _code;
 
+  /// The backup file's text: the code, and the names and identities followed, sealed (when there are any).
+  String? _file;
+
   @override
   void dispose() {
     _passphrase.dispose();
@@ -290,7 +293,12 @@ class _BackupDialogState extends State<BackupDialog> {
     try {
       final dir = widget.controller.settings?['identity'] as String? ?? '';
       final backup = await widget.controller.client.exportIdentity(dir, _passphrase.text);
-      if (mounted) setState(() => _code = backup.code);
+      if (mounted) {
+        setState(() {
+          _code = backup.code;
+          _file = backup.file;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _failed = Strings.of(context).backupFailed('$e'));
     } finally {
@@ -302,6 +310,7 @@ class _BackupDialogState extends State<BackupDialog> {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final code = _code;
+    final withContacts = _file?.contains('DSIPC1-') ?? false;
     if (code != null) {
       return AlertDialog(
         title: Text(s.backupCodeTitle),
@@ -312,9 +321,20 @@ class _BackupDialogState extends State<BackupDialog> {
             Text(s.backupCodeBody),
             const SizedBox(height: 12),
             SelectableText(code, key: const Key('code'), style: const TextStyle(fontFamily: 'monospace')),
+            // the names given and the identities followed are in the file's text, sealed, not in the code
+            if (withContacts) ...[const SizedBox(height: 12), Text(s.backupContactsBody)],
           ],
         ),
         actions: [
+          if (withContacts)
+            TextButton(
+              key: const Key('copy-file'),
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: _file!));
+                if (context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(s.backupCopied)));
+              },
+              child: Text(s.backupCopyFile),
+            ),
           TextButton(
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: code));

@@ -13,7 +13,8 @@ app sends goes to the services that carry them, which you choose in its settings
   none, in files only your user account can read. They never leave the device, except inside a recovery code you make
   yourself (sealed under your passphrase), or the welcome code you give a device you add (sealed to that device).
 - **Your contacts, conversations and messages**, the names you give people, and the app's settings, in the app's own
-  folder. The names you give people are never sent anywhere.
+  folder. The names you give people are never sent anywhere; a backup you copy yourself holds them, sealed under its
+  passphrase.
 - **The microphone** is used during calls only, to send your voice to the person you are talking to.
 
 ## What each service sees
