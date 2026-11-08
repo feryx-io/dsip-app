@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
 import 'update.dart';
+import 'scan.dart';
 
 /// The settings: the sound devices calls use (chosen at once, kept for the next start), where the app connects (its
 /// relay, mailbox, hints node and STUN server: saved, then the app starts again with them), and the identity's backup
@@ -636,9 +637,12 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
                   maxLines: 4,
                   decoration: InputDecoration(labelText: s.addDeviceJoin),
                   validator: (v) => (v ?? '').trim().isEmpty ? s.addDeviceJoinNeeded : null,
-                )
+                ),
+              if (welcome == null) ScanButton(prefix: 'DSIPJ1-', into: _join, onScanned: () => setState(() {}))
               else ...[
                 Text(s.addDeviceWelcome(welcome.$2)),
+                const SizedBox(height: 8),
+                Center(child: CodeQr(welcome.$1, key: const Key('welcome-qr'), size: 260)),
                 const SizedBox(height: 8),
                 SelectableText(welcome.$1, key: const Key('welcome-code'), style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
               ],

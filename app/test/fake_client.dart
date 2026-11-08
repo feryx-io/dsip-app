@@ -68,7 +68,7 @@ class FakeClient implements Client {
   @override
   Future<(String, String)> pairingWelcome(String dir, String join) async {
     welcomed.add(join);
-    return ('DSIPW1-eyJpZGVudGl0eSI6ImRpZDprZXk6ejZNa0FubiJ9', 'QX7K-2DSA');
+    return ('DSIPW2-q1bKTClKzSvJLM6sUrJSSkzJyy9KTcxRqsoDAA', 'QX7K-2DSA');
   }
 
   @override

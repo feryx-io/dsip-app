@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_client.dart';
+import 'package:dsip_app/src/screens/scan.dart';
 
 /// The settings fixture, from `dsip-app`'s `wire_fixture` test: an `audio` change with microphones and speakers (a
 /// speaker chosen), and `Settings` with every field the screen edits, which `dsip-app` reads back.
@@ -291,6 +292,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(client.welcomed, ['DSIPJ1-AAAAA-BBBBB']);
     expect(find.byKey(const Key('welcome-code')), findsOneWidget);
+    expect(find.byKey(const Key('welcome-qr')), findsOneWidget, reason: 'the welcome code as a QR code too');
     expect(find.textContaining('QX7K-2DSA'), findsOneWidget);
+  });
+
+  testWidgets('on a phone, the join code is scanned from the new device\'s screen (A6)', (tester) async {
+    scanAvailable = () => true;
+    scanCode = (_, prefix) async => prefix == 'DSIPJ1-' ? 'DSIPJ1-SCANNED' : null;
+    addTearDown(() {
+      scanAvailable = () => false;
+      scanCode = (_, _) async => null;
+    });
+    await open(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('add-device')), 300, scrollable: find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first);
+    await tester.ensureVisible(find.byKey(const Key('add-device')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-device')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('scan-DSIPJ1-')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Make the welcome code'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(client.welcomed, ['DSIPJ1-SCANNED']);
   });
 }

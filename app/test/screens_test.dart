@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_client.dart';
+import 'package:dsip_app/src/screens/scan.dart';
 
 void main() {
   late Directory dir;
@@ -111,12 +112,16 @@ void main() {
     expect(find.text('DSIP1-AAAAA-BBBBB'), findsNothing);
     expect(find.text('DSIPJ1-AAAAA-BBBBB'), findsOneWidget);
     expect(find.text('Check code: QX7K-2DSA'), findsOneWidget);
+    expect(find.byKey(const Key('join-qr')), findsOneWidget, reason: 'the join code as a QR code too');
+    expect(find.byKey(const Key('scan-DSIPW')), findsNothing, reason: 'no camera to scan with on a desktop');
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
+    await tester.ensureVisible(find.text('Start'));
     await tester.tap(find.text('Start'));
     await tester.pump();
     expect(find.text('Enter the welcome code from the other device.'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('welcome')), ' DSIPW1-abc ');
+    await tester.ensureVisible(find.text('Start'));
     await tester.runAsync(() async {
       await tester.tap(find.text('Start'));
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -125,6 +130,31 @@ void main() {
     expect(client.finished, [(identity, 'DSIPW1-abc')]);
     expect(client.identities, isEmpty, reason: 'joined, not made');
     expect(client.started?['identity'], identity);
+  });
+
+  testWidgets('on a phone, the welcome code is scanned from the other device\'s screen (A6)', (tester) async {
+    scanAvailable = () => true;
+    final asked = <String>[];
+    scanCode = (_, prefix) async {
+      asked.add(prefix);
+      return 'DSIPW2-SCANNED';
+    };
+    addTearDown(() {
+      scanAvailable = () => false;
+      scanCode = (_, _) async => null;
+    });
+    await open(tester);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Join another device'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('scan-DSIPW')));
+    await tester.tap(find.byKey(const Key('scan-DSIPW')));
+    await tester.pump();
+    expect(asked, ['DSIPW']);
+    expect(tester.widget<TextField>(find.descendant(of: find.byKey(const Key('welcome')), matching: find.byType(TextField))).controller!.text,
+        'DSIPW2-SCANNED');
   });
 
   testWidgets('with settings saved, the app starts at once and shows its calls', (tester) async {

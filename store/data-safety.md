@@ -49,6 +49,8 @@ chooses, or to the person they call, never to the developer.
 
 **Permissions to explain in the listing:**
 - **Microphone:** calls.
+- **Camera:** scanning a pairing code from another of the user's devices; images are read on the device, never kept or
+  sent (not "collected").
 - **Notifications:** calls and messages.
 - **Phone calls (`MANAGE_OWN_CALLS`):** the system's call screen.
 - **Foreground service (phone call):** a call that continues with the screen off.

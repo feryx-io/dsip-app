@@ -7,8 +7,9 @@
 //!    done, and a **join code**, `DSIPJ1-` and base32 of the device's public key, the one-time public key and a
 //!    checksum, short enough to type.
 //! 2. [`welcome`], on a device holding the identity key: the identity's delegation of that device, and the key
-//!    agreement secret sealed to the one-time key (HPKE, as M§6.9's suite), as a **welcome code**, `DSIPW1-` and
-//!    base64url of a small JSON object.
+//!    agreement secret sealed to the one-time key (HPKE, as M§6.9's suite), as a **welcome code**, `DSIPW2-` and
+//!    base64url of a JSON object compressed with DEFLATE (RFC 1951): about half the length of `DSIPW1-` (the same JSON
+//!    uncompressed), so that as a QR code a phone's camera reads it off another screen. [`finish`] reads both.
 //! 3. [`finish`], on the new device: the secret opened, the delegation checked, and the device joined
 //!    (`Identity::join`), its keys moved into the store.
 //!
@@ -27,7 +28,12 @@ use serde_json::{json, Value};
 use crate::Error;
 
 const JOIN: &str = "DSIPJ1";
-const WELCOME: &str = "DSIPW1-";
+/// The welcome code's prefix: its JSON compressed.
+const WELCOME: &str = "DSIPW2-";
+/// The first welcome codes' (v0.2.0): the JSON as it is.
+const WELCOME_V1: &str = "DSIPW1-";
+/// The most a welcome code's JSON may decompress to: it is under 2 KiB; more is not a welcome code.
+const WELCOME_MAX: usize = 16 * 1024;
 const INFO: &[u8] = b"dsip pairing v1";
 const PENDING: &str = "pairing.json";
 
@@ -125,7 +131,8 @@ pub fn welcome(dir: &Path, join_code: &str) -> Result<(String, String), Error> {
         "enc": dsip_core::b64::encode(&enc),
         "ct": dsip_core::b64::encode(&ct),
     });
-    Ok((format!("{WELCOME}{}", dsip_core::b64::encode(w.to_string().as_bytes())), check_code(&device)))
+    let packed = miniz_oxide::deflate::compress_to_vec(w.to_string().as_bytes(), 10);
+    Ok((format!("{WELCOME}{}", dsip_core::b64::encode(&packed)), check_code(&device)))
 }
 
 /// The new device's last step: the welcome code read, the key agreement secret opened with its one-time key, the
@@ -140,10 +147,14 @@ pub fn finish(dir: &Path, welcome_code: &str) -> Result<String, Error> {
         _ => return Err(bad(format!("{PENDING} is damaged: start again"))),
     };
     let text = welcome_code.trim();
-    let text = text.strip_prefix(WELCOME).ok_or_else(|| bad("not a welcome code (it starts DSIPW1-)"))?;
-    let w: Value = dsip_core::b64::decode(text)
-        .and_then(|b| serde_json::from_slice(&b).ok())
-        .ok_or_else(|| bad("the welcome code is incomplete"))?;
+    let json = if let Some(text) = text.strip_prefix(WELCOME) {
+        dsip_core::b64::decode(text).and_then(|b| miniz_oxide::inflate::decompress_to_vec_with_limit(&b, WELCOME_MAX).ok())
+    } else if let Some(text) = text.strip_prefix(WELCOME_V1) {
+        dsip_core::b64::decode(text)
+    } else {
+        return Err(bad("not a welcome code (it starts DSIPW2-)"));
+    };
+    let w: Value = json.and_then(|b| serde_json::from_slice(&b).ok()).ok_or_else(|| bad("the welcome code is incomplete"))?;
     let s = |k: &str| w[k].as_str().unwrap_or_default().to_string();
     let bytes = |k: &str| dsip_core::b64::decode(&s(k)).unwrap_or_default();
     let secret: [u8; 32] = dsip_core::hpke::hpke_open(&bytes("enc"), &once, INFO, device.did().as_bytes(), &bytes("ct"))
@@ -197,6 +208,8 @@ mod tests {
         assert!(join.starts_with("DSIPJ1-") && join.len() <= 136, "67 bytes: {join}");
         let (welcome_code, check_there) = welcome(&first, &join.to_lowercase().replace('-', " ")).unwrap();
         assert_eq!(check_there, check, "the same check code on both screens");
+        // compressed: small enough for a QR code a camera reads off another screen
+        assert!(welcome_code.starts_with(WELCOME) && welcome_code.len() < 1300, "{} characters", welcome_code.len());
 
         assert_eq!(finish(&second, &welcome_code).unwrap(), did);
         let (a, b) = (crate::keys::load_identity(&first).unwrap(), crate::keys::load_identity(&second).unwrap());
@@ -218,5 +231,35 @@ mod tests {
         let typo = format!("{}{}{}", &join[..i], if &join[i..i + 1] == "A" { "B" } else { "A" }, &join[i + 1..]);
         assert!(matches!(welcome(&first, &typo), Err(Error::Keys(m)) if m.contains("mistyped")));
         std::fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn a_welcome_code_of_the_first_form_is_still_read() {
+        let _one = crate::keys::STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let base = std::env::temp_dir().join(format!("dsip-app-pairing-v1-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let (first, second) = (base.join("first"), base.join("second"));
+        let did = crate::init_identity(&first, "Ann").unwrap();
+        let (join, _) = start(&second).unwrap();
+        let (w2, _) = welcome(&first, &join).unwrap();
+        // the same JSON as v0.2.0 wrote it: uncompressed, `DSIPW1-`
+        let json = miniz_oxide::inflate::decompress_to_vec(&dsip_core::b64::decode(&w2[WELCOME.len()..]).unwrap()).unwrap();
+        let w1 = format!("{WELCOME_V1}{}", dsip_core::b64::encode(&json));
+        assert!(w1.len() > w2.len() * 3 / 2, "W2 is the shorter by far: {} against {}", w2.len(), w1.len());
+        assert_eq!(finish(&second, &w1).unwrap(), did);
+        std::fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn a_welcome_code_that_would_decompress_too_far_is_refused() {
+        let _one = crate::keys::STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = std::env::temp_dir().join(format!("dsip-app-pairing-bomb-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        start(&dir).unwrap();
+        let bomb = miniz_oxide::deflate::compress_to_vec(&vec![b' '; WELCOME_MAX * 64], 10);
+        let code = format!("{WELCOME}{}", dsip_core::b64::encode(&bomb));
+        assert!(matches!(finish(&dir, &code), Err(Error::Keys(m)) if m.contains("incomplete")));
+        assert!(matches!(finish(&dir, "DSIPX9-hello"), Err(Error::Keys(m)) if m.contains("not a welcome code")));
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }
