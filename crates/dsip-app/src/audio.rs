@@ -20,6 +20,11 @@ pub const FRAME_SAMPLES: usize = 960;
 /// 48 kHz mono, 20 ms: one Opus frame.
 pub const FORMAT: AudioFormat = AudioFormat { sample_rate: 48_000, channels: 1, frame_ms: 20 };
 
+/// The ringback tone's two frequencies, Hz: North America's (440 + 480 Hz).
+pub const RINGBACK_HZ: (f32, f32) = (440.0, 480.0);
+/// Its cadence: on, then off, milliseconds (2 s on, 4 s off).
+pub const RINGBACK_CADENCE_MS: (u64, u64) = (2_000, 4_000);
+
 /// Which audio host the app uses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum HostKind {
@@ -49,6 +54,8 @@ pub struct Audio {
     heard: Arc<Mutex<mpsc::UnboundedReceiver<Bytes>>>,
     tap: mpsc::UnboundedSender<Bytes>,
     active: std::sync::Mutex<Option<(u64, Vec<JoinHandle<()>>)>>,
+    /// The ringback tone playing, and for which call.
+    ringback: std::sync::Mutex<Option<(u64, JoinHandle<()>)>>,
     tone: Option<Arc<anvil_audio::ToneStats>>,
 }
 
@@ -65,7 +72,8 @@ impl Audio {
         };
         let (feed, feed_rx) = dsip_media::Feed::channel();
         let (tap, heard) = mpsc::unbounded_channel();
-        Ok(Audio { host, kind, feed, feed_rx, heard: Arc::new(Mutex::new(heard)), tap, active: std::sync::Mutex::new(None), tone })
+        Ok(Audio { host, kind, feed, feed_rx, heard: Arc::new(Mutex::new(heard)), tap, active: std::sync::Mutex::new(None),
+                   ringback: std::sync::Mutex::new(None), tone })
     }
 
     /// The media every call's leg is made from: it sends what the microphone gives and taps what it receives.
@@ -114,8 +122,62 @@ impl Audio {
         self.tone.as_ref().map(|s| (s.frames(), s.peak_rms()))
     }
 
-    /// Give the devices to call `id`, `muted` read for every frame. A call that had them stops.
+    /// Play the ringback tone on the speaker for call `id`, placed here and ringing at the callee (§12.4's
+    /// `ringing` progress): [`RINGBACK_HZ`] in [`RINGBACK_CADENCE_MS`], until [`Audio::stop_ringback`], the call's
+    /// [`Audio::start`], or another call's ringback. Made here: nothing comes from the callee before the answer.
+    pub fn ringback(&self, id: u64) -> Result<(), String> {
+        let mut playback = self.host.make_playback(FORMAT).map_err(|e| e.to_string())?;
+        let task = tokio::spawn(async move {
+            let (on, off) = (RINGBACK_CADENCE_MS.0 / 20, RINGBACK_CADENCE_MS.1 / 20); // in 20 ms frames
+            let rate = FORMAT.sample_rate as f32;
+            let mut n: u64 = 0; // samples since the tone started
+            let mut clock = tokio::time::interval(std::time::Duration::from_millis(20));
+            loop {
+                clock.tick().await;
+                let frame_no = n / FRAME_SAMPLES as u64;
+                let sounding = frame_no % (on + off) < on;
+                let samples: Vec<i16> = (0..FRAME_SAMPLES as u64)
+                    .map(|i| {
+                        if !sounding {
+                            return 0;
+                        }
+                        let t = (n + i) as f32 / rate;
+                        let v = (2.0 * std::f32::consts::PI * RINGBACK_HZ.0 * t).sin() + (2.0 * std::f32::consts::PI * RINGBACK_HZ.1 * t).sin();
+                        (v * 0.15 * i16::MAX as f32) as i16
+                    })
+                    .collect();
+                n += FRAME_SAMPLES as u64;
+                if let Err(e) = playback.write_frame(&AudioFrame { samples, format: FORMAT }).await {
+                    tracing::warn!("audio: ringback: {e}");
+                    return;
+                }
+            }
+        });
+        if let Some((_, old)) = self.ringback.lock().unwrap_or_else(|e| e.into_inner()).replace((id, task)) {
+            old.abort();
+        }
+        Ok(())
+    }
+
+    /// Stop call `id`'s ringback tone, if it plays.
+    pub fn stop_ringback(&self, id: u64) {
+        let mut r = self.ringback.lock().unwrap_or_else(|e| e.into_inner());
+        if r.as_ref().is_some_and(|(a, _)| *a == id) {
+            if let Some((_, t)) = r.take() {
+                t.abort();
+            }
+        }
+    }
+
+    /// Whether call `id`'s ringback tone plays.
+    pub fn ringing_back(&self, id: u64) -> bool {
+        self.ringback.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|(a, t)| *a == id && !t.is_finished())
+    }
+
+    /// Give the devices to call `id`, `muted` read for every frame. A call that had them stops, and so does `id`'s
+    /// ringback tone.
     pub fn start(&self, id: u64, muted: Arc<AtomicBool>) -> Result<(), String> {
+        self.stop_ringback(id);
         self.stop_any();
         // frames left over from a call before this one
         if let Ok(mut rx) = self.feed_rx.0.try_lock() {
@@ -185,6 +247,9 @@ impl Audio {
     }
 
     fn stop_any(&self) {
+        if let Some((_, t)) = self.ringback.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            t.abort();
+        }
         let mut active = self.active.lock().unwrap_or_else(|e| e.into_inner());
         for t in active.take().map(|(_, t)| t).unwrap_or_default() {
             t.abort();

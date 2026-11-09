@@ -59,12 +59,14 @@ async fn a_call_rings_is_answered_carries_sound_both_ways_and_hangs_up() {
     until(&alice, "answered at Alice", answered).await;
     until(&bob, "answered at Bob", answered).await;
 
-    // each side's tone reaches the other's speaker
+    // each side's tone reaches the other's speaker: counted from the answer, as Alice's played the ringback before it
+    // (after the answer the speaker plays only what arrives)
     for (who, a) in [("Alice", &alice), ("Bob", &bob)] {
+        let before = a.tone_heard().unwrap().0;
         tokio::time::timeout(Duration::from_secs(15), async {
             loop {
                 let (frames, peak) = a.tone_heard().unwrap();
-                if frames > 25 && peak > 0.05 {
+                if frames > before + 25 && peak > 0.05 {
                     return;
                 }
                 tokio::time::sleep(Duration::from_millis(100)).await;
@@ -84,6 +86,25 @@ async fn a_call_rings_is_answered_carries_sound_both_ways_and_hangs_up() {
     until(&alice, "ended at Alice", |s| s.calls[&id].state.ended()).await;
     until(&bob, "ended at Bob", |s| s.calls.values().all(|c| c.state.ended())).await;
     assert!(matches!(alice.command(Command::Hangup { call: None }).await, Response::Error { .. }), "nothing left to hang up");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_caller_hears_ringback_while_it_rings_and_not_after() {
+    let net = Network::new();
+    let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity }).await);
+    until(&alice, "ringing at Bob", |s| s.calls[&id].state == CallState::Ringing).await;
+    tokio::time::sleep(Duration::from_millis(600)).await;
+    let (frames, peak) = alice.tone_heard().unwrap();
+    assert!(frames >= 10 && peak > 0.05, "Alice's speaker plays the ringback: {frames} frames, peak {peak}");
+    assert_eq!(bob.tone_heard().unwrap().0, 0, "nothing at the callee's speaker before the answer");
+
+    call_of(bob.command(Command::Decline { call: None }).await);
+    until(&alice, "declined at Alice", |s| s.calls[&id].state.ended()).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let stopped = alice.tone_heard().unwrap().0;
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    assert_eq!(alice.tone_heard().unwrap().0, stopped, "the ringback stops with the call");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -180,8 +201,9 @@ async fn a_call_to_someone_on_another_relay_goes_through_theirs_and_carries_soun
     call_of(bob.command(Command::Answer { call: None }).await);
     until(&alice, "answered at Alice", |s| matches!(s.calls[&id].state, CallState::Answered { .. })).await;
     for (who, a) in [("Alice", &alice), ("Bob", &bob)] {
+        let before = a.tone_heard().unwrap().0; // Alice's speaker played the ringback before the answer
         tokio::time::timeout(Duration::from_secs(15), async {
-            while !a.tone_heard().is_some_and(|(frames, peak)| frames > 25 && peak > 0.05) {
+            while !a.tone_heard().is_some_and(|(frames, peak)| frames > before + 25 && peak > 0.05) {
                 tokio::time::sleep(Duration::from_millis(100)).await;
             }
         })
