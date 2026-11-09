@@ -119,7 +119,7 @@
         "peer_name": "Carol",
         "direction": "incoming",
         "answered": false,
-        "reason": "user.cancel",
+        "reason": "user.cancelled",
         "ended_at": 1794200200
       }
     ]

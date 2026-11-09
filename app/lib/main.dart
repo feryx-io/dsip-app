@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'src/alerts.dart';
 import 'src/app.dart';
 import 'src/client/rust_client.dart';
 import 'src/controller.dart';
@@ -18,6 +19,7 @@ Future<void> main() async {
     // A phone's store updates its app.
     checkUpdates: mobile == null,
     mobile: mobile,
+    alerter: SystemAlerter(),
   );
   runApp(DsipApp(controller: controller));
   await controller.load();

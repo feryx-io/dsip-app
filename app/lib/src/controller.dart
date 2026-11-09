@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../l10n/app_localizations.dart';
+import 'alerts.dart';
 import 'client/client.dart';
 import 'client/models.dart';
 import 'mobile/calls.dart';
@@ -22,7 +24,7 @@ abstract final class Tabs {
 /// The app as the screens see it: first run until there are settings, then the running app's state, one update at a
 /// time. Every action is a `dsip-app` command; nothing here decides what the protocol does.
 class Controller extends ChangeNotifier {
-  Controller(this.client, this.store, {this.checkUpdates = false, this.mobile, void Function()? quit})
+  Controller(this.client, this.store, {this.checkUpdates = false, this.mobile, this.alerter, void Function()? quit})
     : quit = quit ?? (() => exit(0)) {
     final mobile = this.mobile;
     if (mobile != null) {
@@ -48,6 +50,24 @@ class Controller extends ChangeNotifier {
   /// The phone around the app, on Android and iOS; null on a desktop. A phone's app is updated by its store, not by
   /// itself.
   final MobilePlatform? mobile;
+
+  /// Where alerts go while the app is not in front: the system's notifications; none in tests that do not look.
+  final Alerter? alerter;
+
+  /// Which alerts the user wants.
+  AlertSettings alertSettings = const AlertSettings();
+
+  /// The app is in front (its window focused, on a desktop): alerts are shown in it ([popup]), not by the system.
+  bool foreground = true;
+
+  /// The screens' strings, for alerts said outside a screen; set by the home screen.
+  Strings? strings;
+
+  /// The conversation open on the messages screen, if any.
+  String? visibleConversation;
+
+  /// An alert to show in the app once ([takePopup]): the app is in front, but not where it happened.
+  Alert? popup;
 
   /// The system said no to the microphone: calls still ring and connect, but the other side hears nothing.
   bool microphoneRefused = false;
@@ -114,6 +134,8 @@ class Controller extends ChangeNotifier {
 
   /// Read the settings; start the app when there are some.
   Future<void> load() async {
+    alertSettings = await AlertSettings.load(store.dir);
+    await alerter?.init(openAlert);
     final settings = this.settings = await store.load();
     configured = settings != null;
     notifyListeners();
@@ -213,7 +235,9 @@ class Controller extends ChangeNotifier {
     }
     await client.start(settings);
     _updates = client.updates().listen((u) {
+      final before = state;
       state = u.state;
+      _alertFor(u, before);
       _system?.sync(u.state.calls, u.state);
       switch (u.kind) {
         case 'message':
@@ -225,6 +249,69 @@ class Controller extends ChangeNotifier {
       }
       notifyListeners();
     });
+  }
+
+  /// Keep [settings] for alerts from now on.
+  Future<void> setAlerts(AlertSettings settings) async {
+    alertSettings = settings;
+    notifyListeners();
+    await settings.save(store.dir);
+  }
+
+  /// Go where the alert with [payload] points: a conversation, the messages, the calls.
+  void openAlert(String payload) {
+    if (payload.startsWith('conversation:')) {
+      showConversation(payload.substring('conversation:'.length));
+    } else {
+      showTab(payload == 'messages' ? Tabs.messages : Tabs.calls);
+    }
+  }
+
+  /// The in-app alert to show: cleared once read.
+  Alert? takePopup() {
+    final a = popup;
+    popup = null;
+    return a;
+  }
+
+  /// Alert the user to what update [u] brought, as they asked ([alertSettings]): from the system while the app is not
+  /// in front, else in the app, and not at all for a conversation they are reading.
+  void _alertFor(Update u, AppState? before) {
+    final (s, now, a) = (strings, u.state, alertSettings);
+    if (s == null || before == null || !a.enabled) return;
+    void alert(int id, Alert alert) {
+      if (foreground) {
+        popup = alert;
+      } else {
+        alerter?.show(id, alert);
+      }
+    }
+
+    switch (u.kind) {
+      case 'message' when a.messages:
+        final m = MessageView.fromJson(u.change!['message'] as Map<String, dynamic>);
+        final reading = foreground && tab == Tabs.messages && visibleConversation == m.conversation;
+        if (m.mine || reading) return;
+        alert(m.conversation.hashCode & 0x3fffffff, Alert(now.nameOf(m.from), m.text ?? s.threadNotText(m.kind),
+            'conversation:${m.conversation}'));
+      case 'requests' when a.requests:
+        final known = {for (final r in before.messaging.requests) r.id};
+        for (final r in now.messaging.requests.where((r) => !known.contains(r.id))) {
+          alert(1, Alert(s.alertRequest(now.names[r.from] ?? r.name ?? shortDid(r.from)), r.purpose ?? r.from, 'messages'));
+        }
+      // told in the app already (a notice); from the system only while the app is not in front
+      case 'granted' when a.requests && !foreground:
+        alerter?.show(2, Alert(s.alertGranted(now.nameOf(u.change!['by'] as String)), s.alertGrantedBody, 'messages'));
+      case 'history' when a.calls:
+        final known = {for (final c in before.history) c.session};
+        for (final c in now.history.where((c) => c.missed && !known.contains(c.session))) {
+          alert(3, Alert(s.alertMissed(now.nameOf(c.peer, offered: c.peerName)), shortDid(c.peer), 'calls'));
+        }
+      // a phone rings on its own call screen; a desktop's window may be behind others
+      case 'call_added' when a.calls && mobile == null && !foreground:
+        final c = CallView.fromJson(u.change!['call'] as Map<String, dynamic>);
+        if (c.ringingHere) alerter?.show(4, Alert(s.alertIncoming(now.nameOf(c.peer, offered: c.peerName)), shortDid(c.peer), 'calls'));
+    }
   }
 
   /// Do [command]; on an error response, [error] says why. Returns the response.

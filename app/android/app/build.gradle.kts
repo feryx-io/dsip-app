@@ -20,6 +20,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications (the app's alerts) needs Java 8+'s time APIs on every Android it runs on
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -76,4 +78,5 @@ dependencies {
     // The pushes that wake the app (Push.kt).
     implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
     implementation("com.google.firebase:firebase-messaging")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

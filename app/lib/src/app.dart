@@ -57,11 +57,30 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int get _tab => widget.controller.tab;
 
+  /// Whether the app is in front, for alerts: from the system while it is not, in the app while it is.
+  late final AppLifecycleListener _life = AppLifecycleListener(
+    onStateChange: (state) => widget.controller.foreground = state == AppLifecycleState.resumed,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _life;
+  }
+
+  @override
+  void dispose() {
+    _life.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
+    widget.controller.strings = s;
     final error = widget.controller.takeError();
     final notice = widget.controller.takeNotice();
+    final popup = widget.controller.takePopup();
     String who(String did) => widget.controller.state?.nameOf(did) ?? shortDid(did);
     final told = switch (notice?['change']) {
       'granted' => s.noticeGranted(who(notice!['by'] as String)),
@@ -71,6 +90,15 @@ class _HomeState extends State<Home> {
     for (final text in [if (error != null) s.commandFailed(error), ?told]) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text))),
+      );
+    }
+    if (popup != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          key: const Key('alert'),
+          content: Text('${popup.title}: ${popup.body}', maxLines: 3, overflow: TextOverflow.ellipsis),
+          action: SnackBarAction(label: s.alertOpen, onPressed: () => widget.controller.openAlert(popup.payload)),
+        )),
       );
     }
     final state = widget.state;

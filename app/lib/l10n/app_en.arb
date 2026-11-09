@@ -685,5 +685,45 @@
   "callMissed": "Missed",
   "callsClear": "Clear history",
   "callsClearConfirm": "Delete your whole call history on this device?",
-  "callForget": "Delete from history"
+  "callForget": "Delete from history",
+  "settingsAlerts": "Alerts",
+  "alertsEnabled": "Show alerts",
+  "alertsEnabledHint": "In the app, and from the system while the app is in the background",
+  "alertsMessages": "New messages",
+  "alertsRequests": "Requests to message you, and answers to yours",
+  "alertsCalls": "Missed calls, and calls ringing while the app is in the background",
+  "alertOpen": "Open",
+  "alertRequest": "{name} asks to message you",
+  "@alertRequest": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "alertGranted": "{name} accepted you",
+  "@alertGranted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "alertGrantedBody": "You can message them now.",
+  "alertMissed": "Missed call from {name}",
+  "@alertMissed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "alertIncoming": "{name} is calling",
+  "@alertIncoming": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

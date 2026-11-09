@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../alerts.dart';
 import '../client/models.dart';
 import '../controller.dart';
 import 'backup_file.dart';
@@ -48,9 +49,46 @@ class SettingsScreen extends StatelessWidget {
         const SizedBox(height: 8),
         WebSettings(controller: controller),
         const Divider(height: 32),
+        Text(s.settingsAlerts, style: heading),
+        AlertsSettings(controller: controller),
+        const Divider(height: 32),
         Text(s.settingsAbout, style: heading),
         const SizedBox(height: 8),
         AboutSettings(controller: controller),
+      ],
+    );
+  }
+}
+
+/// Which alerts to show: any at all, then messages, requests and calls (all on by default).
+class AlertsSettings extends StatelessWidget {
+  const AlertsSettings({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final a = controller.alertSettings;
+    Widget kind(String key, String title, bool on, AlertSettings Function(bool) set) => SwitchListTile(
+      key: Key(key),
+      contentPadding: const EdgeInsetsDirectional.only(start: 16),
+      title: Text(title),
+      value: a.enabled && on,
+      onChanged: a.enabled ? (v) => controller.setAlerts(set(v)) : null,
+    );
+    return Column(
+      children: [
+        SwitchListTile(
+          key: const Key('alerts-enabled'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(s.alertsEnabled),
+          subtitle: Text(s.alertsEnabledHint),
+          value: a.enabled,
+          onChanged: (v) => controller.setAlerts(a.copyWith(enabled: v)),
+        ),
+        kind('alerts-messages', s.alertsMessages, a.messages, (v) => a.copyWith(messages: v)),
+        kind('alerts-requests', s.alertsRequests, a.requests, (v) => a.copyWith(requests: v)),
+        kind('alerts-calls', s.alertsCalls, a.calls, (v) => a.copyWith(calls: v)),
       ],
     );
   }
