@@ -1689,7 +1689,7 @@ dependencies = [
 [[package]]
 name = "dsip-broadcast"
 version = "0.1.1"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "dsip-schema",
@@ -1701,7 +1701,7 @@ dependencies = [
 [[package]]
 name = "dsip-core"
 version = "0.2.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "aes-gcm 0.10.3",
  "base64 0.22.1",
@@ -1719,7 +1719,7 @@ dependencies = [
 [[package]]
 name = "dsip-dht"
 version = "0.2.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "dsip-schema",
@@ -1731,7 +1731,7 @@ dependencies = [
 [[package]]
 name = "dsip-endpoint"
 version = "0.4.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "dsip-recording",
@@ -1747,7 +1747,7 @@ dependencies = [
 [[package]]
 name = "dsip-events"
 version = "0.2.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "aes 0.8.4",
  "base64 0.22.1",
@@ -1763,7 +1763,7 @@ dependencies = [
 [[package]]
 name = "dsip-mailbox"
 version = "0.4.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1801,7 +1801,7 @@ dependencies = [
 [[package]]
 name = "dsip-media"
 version = "0.1.1"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "audiopus",
  "bytes",
@@ -1819,7 +1819,7 @@ dependencies = [
 [[package]]
 name = "dsip-messaging"
 version = "0.4.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "aes-gcm 0.10.3",
  "dsip-core",
@@ -1836,7 +1836,7 @@ dependencies = [
 [[package]]
 name = "dsip-messaging-device"
 version = "0.4.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "dsip-endpoint",
@@ -1854,7 +1854,7 @@ dependencies = [
 [[package]]
 name = "dsip-messenger"
 version = "0.5.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "dsip-messaging",
@@ -1874,7 +1874,7 @@ dependencies = [
 [[package]]
 name = "dsip-mls"
 version = "0.1.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "dsip-messaging",
@@ -1892,7 +1892,7 @@ dependencies = [
 [[package]]
 name = "dsip-phone"
 version = "0.5.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-broadcast",
  "dsip-core",
@@ -1911,7 +1911,7 @@ dependencies = [
 [[package]]
 name = "dsip-push"
 version = "0.1.1"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "aes-gcm 0.10.3",
  "anyhow",
@@ -1934,7 +1934,7 @@ dependencies = [
 [[package]]
 name = "dsip-recording"
 version = "0.1.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "serde_json",
  "sha2 0.10.9",
@@ -1943,7 +1943,7 @@ dependencies = [
 [[package]]
 name = "dsip-relay"
 version = "0.3.1"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1971,7 +1971,7 @@ dependencies = [
 [[package]]
 name = "dsip-schema"
 version = "0.2.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "curve25519-dalek 4.1.3",
  "dsip-core",
@@ -1982,7 +1982,7 @@ dependencies = [
 [[package]]
 name = "dsip-session"
 version = "0.2.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "serde",
@@ -1992,7 +1992,7 @@ dependencies = [
 [[package]]
 name = "dsip-testkit"
 version = "0.3.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "dsip-endpoint",
@@ -2007,7 +2007,7 @@ dependencies = [
 [[package]]
 name = "dsip-transport"
 version = "0.9.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "base64 0.22.1",
  "clap",
@@ -2037,12 +2037,13 @@ dependencies = [
  "tracing",
  "tracing-journald",
  "tracing-subscriber",
+ "webpki-roots 1.0.11",
 ]
 
 [[package]]
 name = "dsip-wake"
 version = "0.2.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "jsonschema",
@@ -2052,7 +2053,7 @@ dependencies = [
 [[package]]
 name = "dsip-webrtc-binding"
 version = "0.1.0"
-source = "git+https://github.com/thevoiceguy/dsip-rs?tag=v2026.11.10#3e82b83aa08f8e472ca86235064aae6520c7daf0"
+source = "git+https://github.com/thevoiceguy/dsip-rs?rev=fcc138bf165d250980c2a1a97fcaa1a5746e6849#fcc138bf165d250980c2a1a97fcaa1a5746e6849"
 dependencies = [
  "dsip-core",
  "serde",
