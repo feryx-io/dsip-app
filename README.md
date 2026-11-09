@@ -21,6 +21,11 @@ sit on:
   sealed (P§12): only the identities you granted read them, never a relay. `revoke` withdraws a grant, and the
   others you granted get new keys at their mailboxes. The identities you follow are kept (`following.json` in the
   identity directory) and followed again when the app starts.
+- **Contacts and history:** the names you give identities are the app's address book (`names.json` in the identity
+  directory, never sent). Whoever accepts your introduction, and whoever you accept, is added to it. Ended calls are
+  kept (`calls.json`, the latest 200), and so are the introductions you sent (`introductions.json`). A call, a
+  contact, a message or a conversation is deleted on this device only; a deleted message is not shown again when its
+  copy comes back from the archive.
 - **Control:** a local control channel that the `dsip-app` CLI drives: a Unix socket on Linux and macOS, a named pipe
   on Windows (`\\.\pipe\dsip-app-<user>`), each open to its user alone.
 

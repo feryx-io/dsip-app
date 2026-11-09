@@ -54,7 +54,7 @@ async fn until(app: &App, what: &str, want: impl Fn(&dsip_app::State) -> bool) {
 async fn granted(from: &App, to: &App) {
     let to_did = to.state().me.identity;
     let mut changes = from.subscribe();
-    assert_eq!(from.command(Command::Introduce { to: to_did.clone(), purpose: "hello".into() }).await, Response::Ok);
+    assert_eq!(from.command(Command::Introduce { to: to_did.clone(), purpose: "hello".into(), name: None }).await, Response::Ok);
     let me = from.state().me.identity;
     until(to, "the request", |s| s.messaging.requests.iter().any(|r| r.from == me)).await;
     let id = to.state().messaging.requests.iter().find(|r| r.from == me).unwrap().id.clone();

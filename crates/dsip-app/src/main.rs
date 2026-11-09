@@ -158,6 +158,30 @@ enum Cmd {
         to: String,
         /// Why (shown to it).
         purpose: String,
+        /// What to call it here once it accepts (its contact's name; never sent).
+        #[arg(long)]
+        name: Option<String>,
+    },
+    /// Delete one message of a conversation, on this device only.
+    DeleteMessage {
+        /// The conversation's group id.
+        conversation: String,
+        /// The message's id (`thread` lists them).
+        id: String,
+    },
+    /// Delete a conversation's messages on this device (a group is left too).
+    DeleteConversation {
+        /// The group id.
+        conversation: String,
+    },
+    /// Delete one call from the history (`state` lists it), or with `--all` all of it.
+    ForgetCall {
+        /// The call's session id.
+        #[arg(required_unless_present = "all")]
+        session: Option<String>,
+        /// The whole history.
+        #[arg(long, conflicts_with = "session")]
+        all: bool,
     },
     /// Grant a request (`state` lists them under messaging.requests).
     Accept {
@@ -450,7 +474,11 @@ async fn main() -> Result<ExitCode> {
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Call { to } => Command::Call { to },
-        Cmd::Introduce { to, purpose } => Command::Introduce { to, purpose },
+        Cmd::Introduce { to, purpose, name } => Command::Introduce { to, purpose, name },
+        Cmd::DeleteMessage { conversation, id } => Command::DeleteMessage { conversation, id },
+        Cmd::DeleteConversation { conversation } => Command::DeleteConversation { conversation },
+        Cmd::ForgetCall { session: Some(session), .. } => Command::ForgetCall { session },
+        Cmd::ForgetCall { session: None, .. } => Command::ClearHistory,
         Cmd::Accept { id } => Command::AcceptRequest { id },
         Cmd::DeclineRequest { id } => Command::DeclineRequest { id },
         Cmd::Message { to, text } => Command::Message { to, text: text.join(" ") },

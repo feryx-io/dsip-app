@@ -27,6 +27,7 @@ final screens = <(String, String?, Future<void> Function(WidgetTester)?, bool)>[
   ('first run', null, null, false),
   ('calls', 'Calls', null, true),
   ('messages', 'Messages', (t) => t.tap(find.byKey(const Key('conversation-MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk'))), false),
+  ('contacts', 'Contacts', null, true),
   ('presence', 'Presence', null, true),
   ('me', 'Me', null, true),
   ('settings', 'Settings', null, true),

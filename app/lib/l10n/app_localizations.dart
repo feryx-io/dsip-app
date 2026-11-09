@@ -1583,6 +1583,156 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'The new device could not be reached ({reason}). Enter this welcome code on it instead.'**
   String addDeviceNotSent(String reason);
+
+  /// No description provided for @navContacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contacts'**
+  String get navContacts;
+
+  /// No description provided for @contactsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No contacts yet. Whoever accepts your introduction, and whoever you accept, is added here.'**
+  String get contactsNone;
+
+  /// No description provided for @contactAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a contact'**
+  String get contactAdd;
+
+  /// No description provided for @contactAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New contact'**
+  String get contactAddTitle;
+
+  /// No description provided for @contactCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get contactCall;
+
+  /// No description provided for @contactMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get contactMessage;
+
+  /// No description provided for @contactRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get contactRename;
+
+  /// No description provided for @deleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteAction;
+
+  /// No description provided for @contactDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name} from your contacts? Your calls and conversations with them stay.'**
+  String contactDeleteConfirm(String name);
+
+  /// No description provided for @contactMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Message {name}'**
+  String contactMessageTitle(String name);
+
+  /// No description provided for @introduceName.
+  ///
+  /// In en, this message translates to:
+  /// **'What to call them'**
+  String get introduceName;
+
+  /// No description provided for @introduceNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Saved as your contact once they accept'**
+  String get introduceNameHint;
+
+  /// No description provided for @introducedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your introductions'**
+  String get introducedTitle;
+
+  /// No description provided for @introducedWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for them to accept'**
+  String get introducedWaiting;
+
+  /// No description provided for @introducedAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted: you can message them'**
+  String get introducedAccepted;
+
+  /// No description provided for @introducedForget.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from this list'**
+  String get introducedForget;
+
+  /// No description provided for @messageDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this message from this device? The others in the conversation keep theirs.'**
+  String get messageDeleteConfirm;
+
+  /// No description provided for @conversationDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversation'**
+  String get conversationDelete;
+
+  /// No description provided for @conversationDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this conversation\'s messages from this device? It comes back if a new message arrives.'**
+  String get conversationDeleteConfirm;
+
+  /// No description provided for @groupDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave this group and delete its messages from this device?'**
+  String get groupDeleteConfirm;
+
+  /// No description provided for @callBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Call back'**
+  String get callBack;
+
+  /// No description provided for @callMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get callMissed;
+
+  /// No description provided for @callsClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear history'**
+  String get callsClear;
+
+  /// No description provided for @callsClearConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your whole call history on this device?'**
+  String get callsClearConfirm;
+
+  /// No description provided for @callForget.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete from history'**
+  String get callForget;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

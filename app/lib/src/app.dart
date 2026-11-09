@@ -7,6 +7,7 @@ import 'client/models.dart';
 import 'controller.dart';
 import 'screens/update.dart';
 import 'screens/calls.dart';
+import 'screens/contacts.dart';
 import 'screens/first_run.dart';
 import 'screens/me.dart';
 import 'screens/messages.dart';
@@ -83,6 +84,7 @@ class _HomeState extends State<Home> {
         ),
         s.navMessages,
       ),
+      (const Icon(Icons.contacts), s.navContacts),
       (PresenceDot(state.presence.mine ?? 'available'), s.navPresence),
       (const Icon(Icons.person), s.navMe),
       (const Icon(Icons.settings), s.navSettings),
@@ -100,10 +102,11 @@ class _HomeState extends State<Home> {
           ),
         Expanded(
           child: switch (_tab) {
-            0 => CallsScreen(controller: widget.controller, state: state),
-            1 => MessagesScreen(controller: widget.controller, state: state),
-            2 => PresenceScreen(controller: widget.controller, state: state),
-            3 => MeScreen(state: state),
+            Tabs.calls => CallsScreen(controller: widget.controller, state: state),
+            Tabs.messages => MessagesScreen(controller: widget.controller, state: state),
+            Tabs.contacts => ContactsScreen(controller: widget.controller, state: state),
+            Tabs.presence => PresenceScreen(controller: widget.controller, state: state),
+            Tabs.me => MeScreen(state: state),
             _ => SettingsScreen(controller: widget.controller, state: state),
           },
         ),

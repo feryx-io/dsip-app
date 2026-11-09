@@ -146,18 +146,27 @@ async fn introduced_granted_messaged_and_answered_through_mailboxes_found_by_hin
     let mut b_changes = bob.subscribe();
 
     // first contact: Alice asks, Bob's app shows it, he grants
-    let r = alice.command(Command::Introduce { to: bob_did.clone(), purpose: "hello from Alice".into() }).await;
+    let r = alice.command(Command::Introduce { to: bob_did.clone(), purpose: "hello from Alice".into(), name: Some("Bob".into()) }).await;
     assert_eq!(r, Response::Ok);
+    // her app lists it as sent, not yet accepted
+    let sent = &alice.state().messaging.introduced;
+    assert_eq!((sent.len(), sent[0].to.as_str(), sent[0].purpose.as_str(), sent[0].accepted), (1, bob_did.as_str(), "hello from Alice", false));
     until(&bob, "Bob sees the request", |s| s.messaging.requests.iter().any(|q| q.from == alice_did)).await;
-    let id = bob.state().messaging.requests[0].id.clone();
-    assert_eq!(bob.command(Command::AcceptRequest { id }).await, Response::Ok);
+    let request = bob.state().messaging.requests[0].clone();
+    assert_eq!((request.name.as_deref(), request.purpose.as_deref()), (Some("Alice"), Some("hello from Alice")), "what she said, opened");
+    assert_eq!(bob.command(Command::AcceptRequest { id: request.id }).await, Response::Ok);
     assert!(bob.state().messaging.requests.is_empty(), "answered, the request is gone");
+    assert_eq!(bob.state().names.get(&alice_did).map(String::as_str), Some("Alice"), "Bob has her as a contact, by the name she gave");
     let by = next(&mut a_changes, "Alice's grant", |c| match c {
         Change::Granted { by } => Some(by.clone()),
         _ => None,
     })
     .await;
     assert_eq!(by, bob_did);
+    assert!(alice.state().messaging.introduced[0].accepted, "her introduction, accepted");
+    assert_eq!(alice.state().names.get(&bob_did).map(String::as_str), Some("Bob"), "Alice has him as a contact, by the name she gave him");
+    assert_eq!(alice.command(Command::ForgetIntroduction { to: bob_did.clone() }).await, Response::Ok);
+    assert!(alice.state().messaging.introduced.is_empty());
 
     // Alice messages Bob: the direct conversation is made on the way
     let Response::Conversation { conversation } = alice.command(Command::Message { to: bob_did.clone(), text: "found you".into() }).await else {
@@ -181,9 +190,34 @@ async fn introduced_granted_messaged_and_answered_through_mailboxes_found_by_hin
     .await;
     assert_eq!(m.text.as_deref(), Some("hi Alice"));
 
-    let Response::Thread { messages } = alice.command(Command::Thread { conversation }).await else { panic!("no thread") };
+    let thread = |app: &App, conversation: &str| {
+        let (app, conversation) = (app.clone(), conversation.to_string());
+        async move {
+            let Response::Thread { messages } = app.command(Command::Thread { conversation }).await else { panic!("no thread") };
+            messages
+        }
+    };
+    let messages = thread(&alice, &conversation).await;
     let texts: Vec<_> = messages.iter().map(|m| (m.mine, m.text.clone().unwrap_or_default())).collect();
     assert_eq!(texts, vec![(true, "found you".to_string()), (false, "hi Alice".to_string())]);
+
+    // Alice deletes his message on her device; his thread still has it
+    let r = alice.command(Command::DeleteMessage { conversation: conversation.clone(), id: messages[1].id.clone() }).await;
+    assert_eq!(r, Response::Ok);
+    assert_eq!(thread(&alice, &conversation).await.len(), 1);
+    assert_eq!(thread(&bob, &conversation).await.len(), 2);
+    assert!(matches!(alice.command(Command::DeleteMessage { conversation: conversation.clone(), id: messages[1].id.clone() }).await,
+                     Response::Error { .. }), "gone already");
+
+    // and the conversation: no longer listed, until Bob writes in it again
+    assert_eq!(alice.command(Command::DeleteConversation { conversation: conversation.clone() }).await, Response::Ok);
+    assert!(thread(&alice, &conversation).await.is_empty());
+    assert!(!alice.state().messaging.conversations.iter().any(|c| c.group == conversation));
+    assert_eq!(bob.command(Command::Message { to: alice_did.clone(), text: "still there?".into() }).await,
+               Response::Conversation { conversation: conversation.clone() });
+    until(&alice, "the conversation listed again", |s| s.messaging.conversations.iter().any(|c| c.group == conversation)).await;
+    let texts: Vec<_> = thread(&alice, &conversation).await.into_iter().filter_map(|m| m.text).collect();
+    assert_eq!(texts, ["still there?"], "only what came after");
     alice.stop().await;
     bob.stop().await;
     let _ = std::fs::remove_dir_all(&dir);

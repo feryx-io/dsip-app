@@ -646,5 +646,44 @@
         "type": "String"
       }
     }
-  }
+  },
+  "navContacts": "Contacts",
+  "contactsNone": "No contacts yet. Whoever accepts your introduction, and whoever you accept, is added here.",
+  "contactAdd": "Add a contact",
+  "contactAddTitle": "New contact",
+  "contactCall": "Call",
+  "contactMessage": "Message",
+  "contactRename": "Rename",
+  "deleteAction": "Delete",
+  "contactDeleteConfirm": "Delete {name} from your contacts? Your calls and conversations with them stay.",
+  "@contactDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contactMessageTitle": "Message {name}",
+  "@contactMessageTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "introduceName": "What to call them",
+  "introduceNameHint": "Optional. Saved as your contact once they accept",
+  "introducedTitle": "Your introductions",
+  "introducedWaiting": "Waiting for them to accept",
+  "introducedAccepted": "Accepted: you can message them",
+  "introducedForget": "Remove from this list",
+  "messageDeleteConfirm": "Delete this message from this device? The others in the conversation keep theirs.",
+  "conversationDelete": "Delete conversation",
+  "conversationDeleteConfirm": "Delete this conversation's messages from this device? It comes back if a new message arrives.",
+  "groupDeleteConfirm": "Leave this group and delete its messages from this device?",
+  "callBack": "Call back",
+  "callMissed": "Missed",
+  "callsClear": "Clear history",
+  "callsClearConfirm": "Delete your whole call history on this device?",
+  "callForget": "Delete from history"
 }

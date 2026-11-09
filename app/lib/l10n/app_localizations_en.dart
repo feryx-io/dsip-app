@@ -876,6 +876,91 @@ class StringsEn extends Strings {
   String addDeviceNotSent(String reason) {
     return 'The new device could not be reached ($reason). Enter this welcome code on it instead.';
   }
+
+  @override
+  String get navContacts => 'Contacts';
+
+  @override
+  String get contactsNone =>
+      'No contacts yet. Whoever accepts your introduction, and whoever you accept, is added here.';
+
+  @override
+  String get contactAdd => 'Add a contact';
+
+  @override
+  String get contactAddTitle => 'New contact';
+
+  @override
+  String get contactCall => 'Call';
+
+  @override
+  String get contactMessage => 'Message';
+
+  @override
+  String get contactRename => 'Rename';
+
+  @override
+  String get deleteAction => 'Delete';
+
+  @override
+  String contactDeleteConfirm(String name) {
+    return 'Delete $name from your contacts? Your calls and conversations with them stay.';
+  }
+
+  @override
+  String contactMessageTitle(String name) {
+    return 'Message $name';
+  }
+
+  @override
+  String get introduceName => 'What to call them';
+
+  @override
+  String get introduceNameHint =>
+      'Optional. Saved as your contact once they accept';
+
+  @override
+  String get introducedTitle => 'Your introductions';
+
+  @override
+  String get introducedWaiting => 'Waiting for them to accept';
+
+  @override
+  String get introducedAccepted => 'Accepted: you can message them';
+
+  @override
+  String get introducedForget => 'Remove from this list';
+
+  @override
+  String get messageDeleteConfirm =>
+      'Delete this message from this device? The others in the conversation keep theirs.';
+
+  @override
+  String get conversationDelete => 'Delete conversation';
+
+  @override
+  String get conversationDeleteConfirm =>
+      'Delete this conversation\'s messages from this device? It comes back if a new message arrives.';
+
+  @override
+  String get groupDeleteConfirm =>
+      'Leave this group and delete its messages from this device?';
+
+  @override
+  String get callBack => 'Call back';
+
+  @override
+  String get callMissed => 'Missed';
+
+  @override
+  String get callsClear => 'Clear history';
+
+  @override
+  String get callsClearConfirm =>
+      'Delete your whole call history on this device?';
+
+  @override
+  String get callForget => 'Delete from history';
 }
 
 /// The translations for English (`en_XA`).
@@ -1760,4 +1845,89 @@ class StringsEnXa extends StringsEn {
   String addDeviceNotSent(String reason) {
     return '[Ţĥé ñéŵ đéṽíçé çóúĺđ ñóţ ƀé ŕéàçĥéđ ($reason). Éñţéŕ ţĥíš ŵéĺçóɱé çóđé óñ íţ íñšţéàđ. one two three four fi]';
   }
+
+  @override
+  String get navContacts => '[Çóñţàçţš o]';
+
+  @override
+  String get contactsNone =>
+      '[Ñó çóñţàçţš ýéţ. Ŵĥóéṽéŕ àççéþţš ýóúŕ íñţŕóđúçţíóñ, àñđ ŵĥóéṽéŕ ýóú àççéþţ, íš àđđéđ ĥéŕé. one two three four five]';
+
+  @override
+  String get contactAdd => '[Àđđ à çóñţàçţ on]';
+
+  @override
+  String get contactAddTitle => '[Ñéŵ çóñţàçţ on]';
+
+  @override
+  String get contactCall => '[Çàĺĺ ]';
+
+  @override
+  String get contactMessage => '[Ḿéššàĝé o]';
+
+  @override
+  String get contactRename => '[Ŕéñàɱé o]';
+
+  @override
+  String get deleteAction => '[Đéĺéţé o]';
+
+  @override
+  String contactDeleteConfirm(String name) {
+    return '[Đéĺéţé $name ƒŕóɱ ýóúŕ çóñţàçţš? Ýóúŕ çàĺĺš àñđ çóñṽéŕšàţíóñš ŵíţĥ ţĥéɱ šţàý. one two three four f]';
+  }
+
+  @override
+  String contactMessageTitle(String name) {
+    return '[Ḿéššàĝé $name on]';
+  }
+
+  @override
+  String get introduceName => '[Ŵĥàţ ţó çàĺĺ ţĥéɱ one]';
+
+  @override
+  String get introduceNameHint =>
+      '[Óþţíóñàĺ. Šàṽéđ àš ýóúŕ çóñţàçţ óñçé ţĥéý àççéþţ one two thre]';
+
+  @override
+  String get introducedTitle => '[Ýóúŕ íñţŕóđúçţíóñš one ]';
+
+  @override
+  String get introducedWaiting => '[Ŵàíţíñĝ ƒóŕ ţĥéɱ ţó àççéþţ one tw]';
+
+  @override
+  String get introducedAccepted => '[Àççéþţéđ: ýóú çàñ ɱéššàĝé ţĥéɱ one two]';
+
+  @override
+  String get introducedForget => '[Ŕéɱóṽé ƒŕóɱ ţĥíš ĺíšţ one t]';
+
+  @override
+  String get messageDeleteConfirm =>
+      '[Đéĺéţé ţĥíš ɱéššàĝé ƒŕóɱ ţĥíš đéṽíçé? Ţĥé óţĥéŕš íñ ţĥé çóñṽéŕšàţíóñ ķééþ ţĥéíŕš. one two three four fi]';
+
+  @override
+  String get conversationDelete => '[Đéĺéţé çóñṽéŕšàţíóñ one t]';
+
+  @override
+  String get conversationDeleteConfirm =>
+      '[Đéĺéţé ţĥíš çóñṽéŕšàţíóñ\'š ɱéššàĝéš ƒŕóɱ ţĥíš đéṽíçé? Íţ çóɱéš ƀàçķ íƒ à ñéŵ ɱéššàĝé àŕŕíṽéš. one two three four five ]';
+
+  @override
+  String get groupDeleteConfirm =>
+      '[Ĺéàṽé ţĥíš ĝŕóúþ àñđ đéĺéţé íţš ɱéššàĝéš ƒŕóɱ ţĥíš đéṽíçé? one two three f]';
+
+  @override
+  String get callBack => '[Çàĺĺ ƀàçķ o]';
+
+  @override
+  String get callMissed => '[Ḿíššéđ o]';
+
+  @override
+  String get callsClear => '[Çĺéàŕ ĥíšţóŕý one]';
+
+  @override
+  String get callsClearConfirm =>
+      '[Đéĺéţé ýóúŕ ŵĥóĺé çàĺĺ ĥíšţóŕý óñ ţĥíš đéṽíçé? one two thr]';
+
+  @override
+  String get callForget => '[Đéĺéţé ƒŕóɱ ĥíšţóŕý one ]';
 }

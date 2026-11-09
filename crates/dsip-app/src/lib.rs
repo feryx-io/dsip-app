@@ -49,8 +49,8 @@ pub use messaging::MessagingConfig;
 pub use settings::{init_identity, Mailbox, Settings};
 pub use wake::WakeConfig;
 pub use state::{
-    Audio as AudioState, AudioDevice, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, Messaging, PresenceState,
-    PresenceView, Push, Registration, RequestView, State,
+    Audio as AudioState, AudioDevice, CallRecord, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
+    Messaging, PresenceState, PresenceView, Push, Registration, RequestView, State,
 };
 
 /// This build's version: the release's (a tag `vX.Y.Z` is this crate's version, `.github/workflows/release.yml`).
@@ -62,6 +62,19 @@ pub const FOLLOWING_FILE: &str = "following.json";
 /// The names this device's user gave identities, kept in the identity directory: the app's own address book, never
 /// sent anywhere.
 pub const NAMES_FILE: &str = "names.json";
+
+/// The call history ([`State::history`]), kept in the identity directory.
+pub const HISTORY_FILE: &str = "calls.json";
+
+/// Calls kept in the history, the most recent.
+pub const HISTORY_MAX: usize = 200;
+
+/// The introductions sent ([`Messaging::introduced`]), kept in the identity directory.
+pub const INTRODUCED_FILE: &str = "introductions.json";
+
+/// The direct conversations deleted and not listed until a message comes or goes in them again, by group id, kept in
+/// the identity directory.
+pub const HIDDEN_FILE: &str = "hidden.json";
 
 /// The longest name the user may give an identity, in characters.
 pub const NAME_MAX: usize = 64;
@@ -179,6 +192,8 @@ pub(crate) struct Inner {
     names_file: std::sync::Mutex<std::path::PathBuf>,
     /// The identity's folder.
     identity_dir: std::path::PathBuf,
+    /// The direct conversations deleted ([`HIDDEN_FILE`]): not listed until a message comes or goes in one again.
+    pub(crate) hidden: std::sync::Mutex<std::collections::BTreeSet<String>>,
     /// The waking task, when the app has a push gateway.
     wake: std::sync::OnceLock<mpsc::UnboundedSender<wake::Kick>>,
 }
@@ -245,9 +260,14 @@ impl App {
 
         let phone = b.build().await?;
         let relay = cfg.relay.clone();
+        let saved = |file: &str| std::fs::read(identity_dir.join(file)).ok();
         let state = State {
             me,
-            messaging: Messaging::default(),
+            messaging: Messaging {
+                introduced: saved(INTRODUCED_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
+                ..Messaging::default()
+            },
+            history: saved(HISTORY_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
             presence: PresenceState::default(),
             push: None,
             names: std::fs::read(identity_dir.join(NAMES_FILE)).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
@@ -268,6 +288,7 @@ impl App {
                 stopped: tokio::sync::watch::channel(false).0,
                 following_file: std::sync::Mutex::new(identity_dir.join(FOLLOWING_FILE)),
                 names_file: std::sync::Mutex::new(identity_dir.join(NAMES_FILE)),
+                hidden: std::sync::Mutex::new(saved(HIDDEN_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()),
                 identity_dir: identity_dir.clone(),
                 wake: std::sync::OnceLock::new(),
             }),
@@ -368,8 +389,58 @@ impl App {
             Command::Hangup { call } => self.act(call, Pick::Latest, Action::HangUp),
             Command::Mute { call } => self.mute(call, true),
             Command::Unmute { call } => self.mute(call, false),
-            Command::Introduce { to, purpose } => self.ask(|reply| messaging::Req::Introduce { to, purpose, reply }).await,
-            Command::AcceptRequest { id } => self.ask(|reply| messaging::Req::AcceptRequest { id, reply }).await,
+            Command::Introduce { to, purpose, name } => {
+                let name = name.as_deref().map(str::trim).filter(|n| !n.is_empty()).map(String::from);
+                if let Some(e) = name.as_deref().and_then(name_error) {
+                    return Response::error(e);
+                }
+                let r = self.ask(|reply| messaging::Req::Introduce { to: to.clone(), purpose: purpose.clone(), reply }).await;
+                if r == Response::Ok {
+                    let mut introduced = self.state().messaging.introduced;
+                    introduced.retain(|i| i.to != to);
+                    introduced.push(Introduced { to, name, purpose, sent_at: dsip_transport::now_s(), accepted: false });
+                    self.set_introduced(introduced);
+                }
+                r
+            }
+            Command::ForgetIntroduction { to } => {
+                let mut introduced = self.state().messaging.introduced;
+                let before = introduced.len();
+                introduced.retain(|i| i.to != to);
+                if introduced.len() == before {
+                    return Response::error(format!("no introduction to {to}"));
+                }
+                self.set_introduced(introduced);
+                Response::Ok
+            }
+            Command::AcceptRequest { id } => {
+                let from = self.state().messaging.requests.into_iter().find(|r| r.id == id);
+                let r = self.ask(|reply| messaging::Req::AcceptRequest { id, reply }).await;
+                if let (Response::Ok, Some(req)) = (&r, from) {
+                    self.add_contact(&req.from, req.name.as_deref());
+                }
+                r
+            }
+            Command::DeleteMessage { conversation, id } => {
+                self.ask(|reply| messaging::Req::Forget { conversation, id: Some(id), reply }).await
+            }
+            Command::DeleteConversation { conversation } => {
+                self.ask(|reply| messaging::Req::Forget { conversation, id: None, reply }).await
+            }
+            Command::ForgetCall { session } => {
+                let mut history = self.state().history;
+                let before = history.len();
+                history.retain(|c| c.session != session);
+                if history.len() == before {
+                    return Response::error(format!("no call {session} in the history"));
+                }
+                self.set_history(history);
+                Response::Ok
+            }
+            Command::ClearHistory => {
+                self.set_history(vec![]);
+                Response::Ok
+            }
             Command::DeclineRequest { id } => self.ask(|reply| messaging::Req::DeclineRequest { id, reply }).await,
             Command::Message { to, text } => self.ask(|reply| messaging::Req::Message { to, text, reply }).await,
             Command::Thread { conversation } => self.ask(|reply| messaging::Req::Thread { conversation, reply }).await,
@@ -395,13 +466,8 @@ impl App {
             }
             Command::SetName { identity, name } => {
                 let name = name.as_deref().map(str::trim).filter(|n| !n.is_empty());
-                if let Some(n) = name {
-                    if n.chars().count() > NAME_MAX {
-                        return Response::error(format!("a name is at most {NAME_MAX} characters"));
-                    }
-                    if n.chars().any(char::is_control) {
-                        return Response::error("a name has no control characters");
-                    }
+                if let Some(e) = name.and_then(name_error) {
+                    return Response::error(e);
                 }
                 if identity.trim().is_empty() {
                     return Response::error("no identity");
@@ -523,16 +589,63 @@ impl App {
         }
     }
 
-    /// Keep the names given identities, for the next start: written whole, then renamed over the file.
+    /// Keep the names given identities, for the next start.
     fn save_names(&self) {
         let path = self.inner.names_file.lock().unwrap_or_else(|e| e.into_inner());
-        let tmp = path.with_extension("json.tmp");
-        let r = serde_json::to_vec_pretty(&self.state().names).map_err(std::io::Error::other)
-            .and_then(|b| std::fs::write(&tmp, b))
-            .and_then(|()| std::fs::rename(&tmp, &*path));
-        if let Err(e) = r {
-            tracing::warn!("saving {}: {e}", path.display());
+        save_json(&path, &self.state().names);
+    }
+
+    /// Make `did` a contact, named `offered` (else its DID, shortened), unless it has a name already.
+    pub(crate) fn add_contact(&self, did: &str, offered: Option<&str>) {
+        let mut names = self.state().names;
+        if names.contains_key(did) || did.trim().is_empty() {
+            return;
         }
+        let offered = offered.map(str::trim).filter(|n| name_error(n).is_none() && !n.is_empty());
+        names.insert(did.to_string(), offered.map_or_else(|| short_did(did), String::from));
+        self.publish(Change::Names { names });
+        self.save_names();
+    }
+
+    /// `by` accepted our introduction: it is marked accepted, and `by` becomes a contact under the name given when
+    /// introducing it.
+    pub(crate) fn introduction_accepted(&self, by: &str) {
+        let mut introduced = self.state().messaging.introduced;
+        let name = introduced.iter().find(|i| i.to == by).and_then(|i| i.name.clone());
+        let mut changed = false;
+        for i in introduced.iter_mut().filter(|i| i.to == by && !i.accepted) {
+            i.accepted = true;
+            changed = true;
+        }
+        if changed {
+            self.set_introduced(introduced);
+        }
+        self.add_contact(by, name.as_deref());
+    }
+
+    fn set_introduced(&self, introduced: Vec<Introduced>) {
+        save_json(&self.inner.identity_dir.join(INTRODUCED_FILE), &introduced);
+        self.publish(Change::Introduced { introduced });
+    }
+
+    fn set_history(&self, history: Vec<CallRecord>) {
+        save_json(&self.inner.identity_dir.join(HISTORY_FILE), &history);
+        self.publish(Change::History { history });
+    }
+
+    /// Whether the direct conversation `group` was deleted and is not listed.
+    pub(crate) fn hidden(&self, group: &str) -> bool {
+        self.inner.hidden.lock().unwrap_or_else(|e| e.into_inner()).contains(group)
+    }
+
+    /// List the conversation `group` again (`false`), or no longer (`true`); whether that changed anything.
+    pub(crate) fn hide(&self, group: &str, hide: bool) -> bool {
+        let mut hidden = self.inner.hidden.lock().unwrap_or_else(|e| e.into_inner());
+        let changed = if hide { hidden.insert(group.to_string()) } else { hidden.remove(group) };
+        if changed {
+            save_json(&self.inner.identity_dir.join(HIDDEN_FILE), &*hidden);
+        }
+        changed
     }
 
     /// Publish each followed identity whose presence differs from what the phone shows now.
@@ -630,11 +743,13 @@ impl App {
         tokio::spawn(async move {
             let mut poll = tokio::time::interval(Duration::from_millis(250));
             let mut has_audio = false;
+            let mut was_answered = false;
             loop {
                 tokio::select! {
                     changed = call.changed() => {
                         let state = changed.map(view_state).unwrap_or(CallState::Ended { reason: "transport.closed".into() });
                         let answered = matches!(state, CallState::Answered { .. });
+                        was_answered |= answered;
                         let ended = state.ended();
                         let err = call.error();
                         app.update(id, |v| { v.state = state; v.error = err; });
@@ -650,6 +765,7 @@ impl App {
                             if let Some(a) = &app.inner.audio {
                                 a.stop(id);
                             }
+                            app.remember(id, was_answered);
                             app.inner.calls.lock().unwrap_or_else(|e| e.into_inner()).remove(&id);
                             app.forget_ended();
                             return;
@@ -690,6 +806,28 @@ impl App {
         let _ = self.inner.changes.send(change);
     }
 
+    /// Add call `id`, ended, to the history.
+    fn remember(&self, id: u64, answered: bool) {
+        let Some(c) = self.state().calls.get(&id).cloned() else { return };
+        let reason = match &c.state {
+            CallState::Ended { reason } => reason.clone(),
+            _ => return,
+        };
+        let mut history = self.state().history;
+        history.push(CallRecord {
+            session: c.session,
+            peer: c.peer,
+            peer_name: c.peer_name,
+            direction: c.direction,
+            answered,
+            reason,
+            ended_at: dsip_transport::now_s(),
+        });
+        let over = history.len().saturating_sub(HISTORY_MAX);
+        history.drain(..over);
+        self.set_history(history);
+    }
+
     /// Keep the [`ENDED_KEPT`] most recent ended calls.
     fn forget_ended(&self) {
         let mut state = self.inner.state.lock().unwrap_or_else(|e| e.into_inner());
@@ -697,6 +835,39 @@ impl App {
         for id in ended.iter().take(ended.len().saturating_sub(ENDED_KEPT)) {
             state.calls.remove(id);
         }
+    }
+}
+
+/// Why `name` cannot be a name given an identity, if it cannot.
+fn name_error(name: &str) -> Option<String> {
+    if name.chars().count() > NAME_MAX {
+        return Some(format!("a name is at most {NAME_MAX} characters"));
+    }
+    if name.chars().any(char::is_control) {
+        return Some("a name has no control characters".into());
+    }
+    None
+}
+
+/// A DID short enough for a name: its method, and the start and end of its key (the screens' `shortDid`).
+pub(crate) fn short_did(did: &str) -> String {
+    let (method, key) = did.rsplit_once(':').map_or(("", did), |(m, k)| (m, k));
+    let chars: Vec<char> = key.chars().collect();
+    if chars.len() <= 14 {
+        return did.to_string();
+    }
+    let (head, tail): (String, String) = (chars[..8].iter().collect(), chars[chars.len() - 4..].iter().collect());
+    format!("{method}:{head}…{tail}")
+}
+
+/// Write `value` to `path` whole, then rename it over the file, so a crash leaves the old one or the new one.
+fn save_json(path: &std::path::Path, value: &impl serde::Serialize) {
+    let tmp = path.with_extension("json.tmp");
+    let r = serde_json::to_vec_pretty(value).map_err(std::io::Error::other)
+        .and_then(|b| std::fs::write(&tmp, b))
+        .and_then(|()| std::fs::rename(&tmp, path));
+    if let Err(e) = r {
+        tracing::warn!("saving {}: {e}", path.display());
     }
 }
 
@@ -713,5 +884,18 @@ fn view_state(s: dsip_phone::CallState) -> CallState {
         dsip_phone::CallState::Answered { answered_by } => CallState::Answered { answered_by },
         dsip_phone::CallState::Ended { reason } => CallState::Ended { reason },
         _ => CallState::Calling,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::short_did;
+
+    #[test]
+    fn a_contact_named_by_its_did_is_named_short() {
+        assert_eq!(short_did("did:key:z6MkmDofjNWY2jwMsssxw3pkEUgHQqEQEX3ZPAm3eM7ghLKk"), "did:key:z6MkmDof…hLKk");
+        assert_eq!(short_did("did:web:example.com"), "did:web:example.com");
+        // cut on characters, not bytes
+        assert_eq!(short_did("did:key:z6Mkåäöåäöåäöåäöåäö"), "did:key:z6Mkåäöå…öåäö");
     }
 }

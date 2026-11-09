@@ -4,8 +4,8 @@
 //! again.
 
 use dsip_app::{
-    AudioDevice, AudioState, CallState, CallView, Change, ConversationView, Direction, Me, MessageView, PresenceView, RequestView,
-    Mailbox, Response, Settings, State,
+    AudioDevice, AudioState, CallRecord, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
+    PresenceView, RequestView, Mailbox, Response, Settings, State,
 };
 
 fn state() -> State {
@@ -49,7 +49,20 @@ fn state() -> State {
             pending: 1,
         }],
     });
-    s.apply(&Change::Requests { requests: vec![RequestView { id: "01M6EKRTVG3C55DFMQ401G3MB0".into(), from: "did:key:z6MkCarol".into(), name: Some("Carol".into()) }] });
+    s.apply(&Change::Requests { requests: vec![RequestView { id: "01M6EKRTVG3C55DFMQ401G3MB0".into(), from: "did:key:z6MkCarol".into(), name: Some("Carol".into()),
+                                                                 purpose: Some("We met at the conference".into()) }] });
+    s.apply(&Change::Introduced {
+        introduced: vec![Introduced { to: "did:key:z6MkDave".into(), name: Some("Dave".into()), purpose: "Lunch on Friday?".into(),
+                                      sent_at: 1_794_200_000, accepted: false }],
+    });
+    s.apply(&Change::History {
+        history: vec![
+            CallRecord { session: "01M6BTTMQ9QMKY9SYTY8415VZ0".into(), peer: "did:key:z6MkBob".into(), peer_name: None,
+                         direction: Direction::Outgoing, answered: true, reason: "user.hangup".into(), ended_at: 1_794_200_100 },
+            CallRecord { session: "01M6BTTMQ9QMKY9SYTY8415VZ9".into(), peer: "did:key:z6MkCarol".into(), peer_name: Some("Carol".into()),
+                         direction: Direction::Incoming, answered: false, reason: "user.cancel".into(), ended_at: 1_794_200_200 },
+        ],
+    });
     s.apply(&Change::Names { names: [("did:key:z6MkCarol".to_string(), "Carol Jones".to_string())].into() });
     s.apply(&Change::MyPresence { state: Some("busy".into()) });
     s.apply(&Change::Presence {

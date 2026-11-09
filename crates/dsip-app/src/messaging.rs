@@ -74,6 +74,9 @@ pub(crate) enum Req {
     AddMember { conversation: String, identity: String, reply: oneshot::Sender<Response> },
     RemoveMember { conversation: String, identity: String, reply: oneshot::Sender<Response> },
     Leave { conversation: String, reply: oneshot::Sender<Response> },
+    /// Delete message `id` of a conversation on this device, or with no `id`, the conversation (its messages; a group
+    /// is left, a direct one hidden).
+    Forget { conversation: String, id: Option<String>, reply: oneshot::Sender<Response> },
     /// Deposit a grant the phone issued at its grantee's mailbox.
     Deliver { to: String, grant: String },
     /// Register with the mailbox to be woken (A5d), or end the registration (`None`).
@@ -102,6 +105,8 @@ impl Host<SqliteProvider> for AppHost {
                     text: text.as_str().map(String::from),
                     sent_at: sent_at.as_i64().unwrap_or(0),
                 };
+                // a deleted direct conversation is listed again when a message comes in it
+                self.app.hide(&message.conversation, false);
                 self.app.publish(Change::Message { message });
             }
             Output::Event(Event::Ui(Ui::Granted { by, .. })) => {
@@ -113,6 +118,7 @@ impl Host<SqliteProvider> for AppHost {
                         Err(e) => tracing::warn!("holding the grant from {by}: {e}"),
                     }
                 }
+                self.app.introduction_accepted(&by);
                 self.app.publish(Change::Granted { by });
             }
             Output::Event(Event::Ui(Ui::Removed { group, by, left: false, .. })) => {
@@ -144,7 +150,7 @@ fn refresh(app: &App, engine: &Engine<SqliteProvider>) {
     let conversations: Vec<ConversationView> = engine
         .conversations(now)
         .into_iter()
-        .filter(|c| c.kind != "personal")
+        .filter(|c| c.kind != "personal" && !app.hidden(&c.group))
         .map(|c| ConversationView { group: c.group, conversation: c.conversation, kind: c.kind, peer: c.peer, members: c.members, pending: c.pending })
         .collect();
     let requests: Vec<RequestView> = engine
@@ -154,6 +160,7 @@ fn refresh(app: &App, engine: &Engine<SqliteProvider>) {
             id: id.clone(),
             from: p["from"].as_str().unwrap_or("").to_string(),
             name: p["identity"]["display_name"].as_str().map(String::from),
+            purpose: p["purpose"].as_str().map(String::from),
         })
         .collect();
     let (convs_changed, reqs_changed) = {
@@ -365,6 +372,34 @@ async fn request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, req: Re
             refresh(&host.app, mx.engine());
             let _ = reply.send(r.map(|()| Response::Ok).unwrap_or_else(Response::error));
         }
+        Req::Forget { conversation, id: Some(id), reply } => {
+            let r = if mx.engine_mut().forget_message(&conversation, &id) {
+                Response::Ok
+            } else {
+                Response::error(format!("no message {id} in {conversation}"))
+            };
+            let _ = reply.send(r);
+        }
+        Req::Forget { conversation, id: None, reply } => {
+            let now = dsip_transport::now_s() as f64;
+            let kind = mx.engine().conversations(now).into_iter().find(|c| c.group == conversation).map(|c| c.kind);
+            let r = match kind.as_deref() {
+                None => Err(format!("no conversation {conversation}")),
+                Some("group") => match mx.engine_mut().leave(&conversation, now) {
+                    Ok(out) => mx.handle(host, out).await.map_err(|e| e.to_string()),
+                    Err(e) => Err(e.0),
+                },
+                Some(_) => {
+                    host.app.hide(&conversation, true);
+                    Ok(())
+                }
+            };
+            if r.is_ok() {
+                mx.engine_mut().forget_thread(&conversation);
+            }
+            refresh(&host.app, mx.engine());
+            let _ = reply.send(r.map(|()| Response::Ok).unwrap_or_else(Response::error));
+        }
         Req::Deliver { to, grant } => {
             if let Err(e) = deliver(mx, &to, &grant).await {
                 tracing::warn!("the grant to {to} not deposited at its mailbox: {e}");
@@ -528,6 +563,7 @@ async fn message(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &st
         mx.send_frame(host, &sent.send).await.map_err(|e| e.to_string())?;
     }
     let message = MessageView { conversation: group.clone(), id, from: host.me.clone(), mine: true, kind: "text".into(), text: Some(text.into()), sent_at: now as i64 };
+    host.app.hide(&group, false);
     host.app.publish(Change::Message { message });
     refresh(&host.app, mx.engine());
     Ok(Response::Conversation { conversation: group })

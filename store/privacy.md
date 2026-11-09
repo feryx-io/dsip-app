@@ -12,8 +12,8 @@ app sends goes to the services that carry them, which you choose in its settings
   iOS and macOS, the Android Keystore, Windows' Credential Manager, the Secret Service on Linux), or, where there is
   none, in files only your user account can read. They never leave the device, except inside a recovery code you make
   yourself (sealed under your passphrase), or the welcome code you give a device you add (sealed to that device).
-- **Your contacts, conversations and messages**, the names you give people, and the app's settings, in the app's own
-  folder. The names you give people are never sent anywhere; a backup you copy or save as a file yourself holds them,
+- **Your contacts, conversations and messages**, the names you give people, your call history, the introductions you
+  sent, and the app's settings, in the app's own folder. What you delete in the app is deleted from this device only. The names you give people are never sent anywhere; a backup you copy or save as a file yourself holds them,
   sealed under its passphrase.
 - **The microphone** is used during calls only, to send your voice to the person you are talking to.
 - **The camera** (phones) is used only when you choose to scan a pairing code from another of your devices. What it

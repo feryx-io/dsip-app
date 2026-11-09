@@ -7,10 +7,12 @@ import '../client/models.dart';
 import '../controller.dart';
 import '../mobile/calls.dart';
 import '../mobile/platform.dart';
+import 'confirm.dart';
 import 'name_dialog.dart';
 import 'reasons.dart';
 
-/// Calls: place one to an identity, answer or decline one ringing here, hang up, mute; the ones that ended below.
+/// Calls: place one to an identity, answer or decline one ringing here, hang up, mute; the history below, each call in
+/// it to call back, name or delete.
 class CallsScreen extends StatefulWidget {
   const CallsScreen({super.key, required this.controller, required this.state});
   final Controller controller;
@@ -36,11 +38,25 @@ class _CallsScreenState extends State<CallsScreen> {
     if (r['response'] == 'call') _to.clear();
   }
 
+  Future<void> _clear() async {
+    final s = Strings.of(context);
+    if (!await confirm(context, s.callsClearConfirm, s.deleteAction)) return;
+    await widget.controller.run({'command': 'clear_history'});
+  }
+
+  /// When [c] ended, as the locale writes a date and a time.
+  String _when(BuildContext context, CallRecord c) {
+    final l = MaterialLocalizations.of(context);
+    final at = DateTime.fromMillisecondsSinceEpoch(c.endedAt * 1000);
+    final time = l.formatTimeOfDay(TimeOfDay.fromDateTime(at), alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context));
+    return '${l.formatShortDate(at)} $time';
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final live = widget.state.live;
-    final ended = widget.state.calls.where((c) => c.state.ended).toList().reversed.toList();
+    final ended = widget.state.history.reversed.toList();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -63,20 +79,49 @@ class _CallsScreenState extends State<CallsScreen> {
         for (final c in live) _LiveCall(call: c, controller: widget.controller, state: widget.state),
         if (ended.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Text(s.callsRecent, style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              Expanded(child: Text(s.callsRecent, style: Theme.of(context).textTheme.titleMedium)),
+              TextButton(key: const Key('calls-clear'), onPressed: _clear, child: Text(s.callsClear)),
+            ],
+          ),
           for (final c in ended)
             ListTile(
-              leading: Icon(c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
+              key: Key('history-${c.session}'),
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                c.missed ? Icons.call_missed : (c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
+                color: c.missed ? Theme.of(context).colorScheme.error : null,
+                semanticLabel: c.missed ? s.callMissed : null,
+              ),
               title: Text(widget.state.nameOf(c.peer, offered: c.peerName), overflow: TextOverflow.ellipsis),
               subtitle: Tooltip(
-                message: s.callEndedCode(c.state.reason ?? '—'),
-                child: Text(s.callEnded(endedReason(s, c.state.reason))),
+                message: s.callEndedCode(c.reason),
+                child: Text(
+                  '${c.missed ? s.callMissed : s.callEnded(endedReason(s, c.reason))} · ${_when(context, c)}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
               ),
-              trailing: IconButton(
-                key: Key('name-call-${c.id}'),
-                tooltip: s.nameAction,
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => editName(context, widget.controller, widget.state, c.peer),
+              trailing: Wrap(
+                children: [
+                  IconButton(
+                    key: Key('call-back-${c.session}'),
+                    tooltip: s.callBack,
+                    icon: const Icon(Icons.call),
+                    onPressed: () => widget.controller.run({'command': 'call', 'to': c.peer}),
+                  ),
+                  PopupMenuButton<String>(
+                    key: Key('history-menu-${c.session}'),
+                    onSelected: (what) => what == 'name'
+                        ? editName(context, widget.controller, widget.state, c.peer)
+                        : widget.controller.run({'command': 'forget_call', 'session': c.session}),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(key: Key('name-call-${c.session}'), value: 'name', child: Text(s.nameAction)),
+                      PopupMenuItem(value: 'forget', child: Text(s.callForget)),
+                    ],
+                  ),
+                ],
               ),
             ),
         ],

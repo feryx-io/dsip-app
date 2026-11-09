@@ -76,7 +76,17 @@
         {
           "id": "01M6EKRTVG3C55DFMQ401G3MB0",
           "from": "did:key:z6MkCarol",
-          "name": "Carol"
+          "name": "Carol",
+          "purpose": "We met at the conference"
+        }
+      ],
+      "introduced": [
+        {
+          "to": "did:key:z6MkDave",
+          "name": "Dave",
+          "purpose": "Lunch on Friday?",
+          "sent_at": 1794200000,
+          "accepted": false
         }
       ]
     },
@@ -93,7 +103,26 @@
     },
     "names": {
       "did:key:z6MkCarol": "Carol Jones"
-    }
+    },
+    "history": [
+      {
+        "session": "01M6BTTMQ9QMKY9SYTY8415VZ0",
+        "peer": "did:key:z6MkBob",
+        "direction": "outgoing",
+        "answered": true,
+        "reason": "user.hangup",
+        "ended_at": 1794200100
+      },
+      {
+        "session": "01M6BTTMQ9QMKY9SYTY8415VZ9",
+        "peer": "did:key:z6MkCarol",
+        "peer_name": "Carol",
+        "direction": "incoming",
+        "answered": false,
+        "reason": "user.cancel",
+        "ended_at": 1794200200
+      }
+    ]
   },
   "change": {
     "change": "call_changed",
