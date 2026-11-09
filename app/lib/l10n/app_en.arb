@@ -725,5 +725,19 @@
         "type": "String"
       }
     }
-  }
+  },
+  "attachAction": "Attach a file",
+  "attachSending": "Sending {name}…",
+  "@attachSending": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "attachmentFetching": "Downloading…",
+  "attachmentOpen": "Open",
+  "attachmentSave": "Save",
+  "attachmentSaved": "Saved.",
+  "attachmentNotOpened": "Could not open it here. Save it, then open it from where you saved it."
 }

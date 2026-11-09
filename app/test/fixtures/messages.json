@@ -18,6 +18,18 @@
         "mine": false,
         "kind": "audio",
         "sent_at": 1793600060
+      },
+      {
+        "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+        "id": "01M6EKRTVG3C55DFMQ401G3MC4",
+        "from": "did:key:z6MkBob",
+        "mine": false,
+        "kind": "file",
+        "sent_at": 1793600180,
+        "name": "plan.pdf",
+        "content_type": "application/pdf",
+        "size": 48213,
+        "path": "/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC4-plan.pdf"
       }
     ]
   },
@@ -40,6 +52,12 @@
   "granted": {
     "change": "granted",
     "by": "did:key:z6MkBob"
+  },
+  "message_file": {
+    "change": "message_file",
+    "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+    "id": "01M6EKRTVG3C55DFMQ401G3MC4",
+    "path": "/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC4-plan.pdf"
   },
   "removed": {
     "change": "removed",

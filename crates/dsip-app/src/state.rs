@@ -214,6 +214,44 @@ pub struct MessageView {
     pub text: Option<String>,
     /// When it was sent (the sender's clock).
     pub sent_at: i64,
+    /// An `image` or `file`'s name (a file's own, M§8.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// An attachment's media type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+    /// An attachment's size in bytes (sealed: a little more than the file's).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    /// An attachment's file on this device, once fetched and decrypted ([`Change::MessageFile`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+impl MessageView {
+    /// The message content object `o` in conversation `group`, as this identity (`me`) sees it; an attachment's file
+    /// looked for in `media`.
+    pub(crate) fn of(group: &str, o: &serde_json::Value, me: &str, media: &std::path::Path) -> MessageView {
+        let from = o["sender"].as_str().unwrap_or("").to_string();
+        let has_blob = o.get("blob").is_some_and(|b| b.is_object());
+        let path = has_blob
+            .then(|| media.join(dsip_messaging_device::blob::file_name(o)))
+            .filter(|p| p.is_file())
+            .map(|p| p.to_string_lossy().into_owned());
+        MessageView {
+            conversation: group.to_string(),
+            id: o["id"].as_str().unwrap_or("").to_string(),
+            mine: from == me,
+            from,
+            kind: o["kind"].as_str().unwrap_or("").to_string(),
+            text: o["text"].as_str().map(String::from),
+            sent_at: o["sent_at"].as_i64().unwrap_or(0),
+            name: o["name"].as_str().map(String::from),
+            content_type: o["blob"]["content_type"].as_str().map(String::from),
+            size: o["blob"]["size"].as_u64(),
+            path,
+        }
+    }
 }
 
 /// An introduction waiting for an answer (M§14.1).
@@ -372,6 +410,15 @@ pub enum Change {
         /// The message.
         message: MessageView,
     },
+    /// A message's attachment was fetched and decrypted: its file on this device.
+    MessageFile {
+        /// The conversation's group id.
+        conversation: String,
+        /// The message's id.
+        id: String,
+        /// The file.
+        path: String,
+    },
     /// The introductions waiting for an answer changed.
     Requests {
         /// All of them, as they are now.
@@ -457,7 +504,7 @@ impl State {
             Change::Names { names } => self.names = names.clone(),
             Change::History { history } => self.history = history.clone(),
             Change::Introduced { introduced } => self.messaging.introduced = introduced.clone(),
-            Change::Message { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
+            Change::Message { .. } | Change::MessageFile { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }
 }

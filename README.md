@@ -17,10 +17,14 @@ sit on:
   client does.
 - **Presence:** it publishes the state you pick and follows other identities' presence. Accepting an introduction
   grants calls, messages and presence in one grant. The app that asked holds that grant and follows the identity that
-  granted it, through whichever relay that identity's hint names. Presence is private unless granted. Records are
+  granted it, through whichever relay that identity's hint names. Accepting works both ways: the accepting app
+  introduces itself back, and the app that asked first accepts that by itself, so each side follows the other. Presence is private unless granted. Records are
   sealed (P§12): only the identities you granted read them, never a relay. `revoke` withdraws a grant, and the
   others you granted get new keys at their mailboxes. The identities you follow are kept (`following.json` in the
   identity directory) and followed again when the app starts.
+- **Files:** a file or picture is sealed with a fresh key, uploaded to your mailbox and sent as an `image` or `file`
+  (M§8.2, M§8.4). The receiving app fetches it, checks it and decrypts it into its media folder, to open or save.
+  `dsip-app send-file <to> <path>` does the same from the CLI.
 - **Contacts and history:** the names you give identities are the app's address book (`names.json` in the identity
   directory, never sent). Whoever accepts your introduction, and whoever you accept, is added to it. Ended calls are
   kept (`calls.json`, the latest 200), and so are the introductions you sent (`introductions.json`). A call, a

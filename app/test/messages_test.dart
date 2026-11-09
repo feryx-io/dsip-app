@@ -45,7 +45,9 @@ void main() {
 
   test('a message and a thread are read whole', () {
     final t = [for (final x in (m['thread'] as Map)['messages'] as List) MessageView.fromJson(x as Map<String, dynamic>)];
-    expect(t.map((x) => x.mine), [true, false]);
+    expect(t.map((x) => x.mine), [true, false, false]);
+    expect((t[2].kind, t[2].name, t[2].contentType, t[2].size, t[2].attachment), ('file', 'plan.pdf', 'application/pdf', 48213, true));
+    expect(t[0].attachment, isFalse);
     expect(t[1].text, isNull);
     expect(t[1].kind, 'audio');
     expect(shortDid('did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK'), 'did:key:z6MkhaXg…2doK');

@@ -244,6 +244,11 @@ class Controller extends ChangeNotifier {
           final m = MessageView.fromJson(u.change!['message'] as Map<String, dynamic>);
           final thread = threads[m.conversation];
           if (thread != null && !thread.any((t) => t.id == m.id)) thread.add(m);
+        case 'message_file':
+          final c = u.change!;
+          final thread = threads[c['conversation'] as String];
+          final i = thread?.indexWhere((t) => t.id == c['id']) ?? -1;
+          if (i >= 0) thread![i] = thread[i].withPath(c['path'] as String);
         case 'granted' || 'removed':
           notice = u.change;
       }

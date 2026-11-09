@@ -201,6 +201,33 @@ async fn introduced_granted_messaged_and_answered_through_mailboxes_found_by_hin
     let texts: Vec<_> = messages.iter().map(|m| (m.mine, m.text.clone().unwrap_or_default())).collect();
     assert_eq!(texts, vec![(true, "found you".to_string()), (false, "hi Alice".to_string())]);
 
+    // a file: sealed, uploaded to Alice's mailbox, sent; Bob's app fetches it, decrypts it and says where it is
+    let file = dir.join("plan.pdf");
+    let body: Vec<u8> = (0..50_000u32).map(|i| (i % 251) as u8).collect();
+    std::fs::write(&file, &body).unwrap();
+    let r = alice.command(Command::SendFile { to: bob_did.clone(), path: file.to_string_lossy().into(), name: None }).await;
+    assert_eq!(r, Response::Conversation { conversation: conversation.clone() });
+    let m = next(&mut b_changes, "Bob gets the file", |c| match c {
+        Change::Message { message } if !message.mine && message.kind == "file" => Some(message.clone()),
+        _ => None,
+    })
+    .await;
+    assert_eq!((m.name.as_deref(), m.content_type.as_deref()), (Some("plan.pdf"), Some("application/pdf")));
+    let path = next(&mut b_changes, "Bob's copy", |c| match c {
+        Change::MessageFile { id, path, .. } if *id == m.id => Some(path.clone()),
+        _ => None,
+    })
+    .await;
+    assert!(path.ends_with("-plan.pdf"), "{path}");
+    assert_eq!(std::fs::read(&path).unwrap(), body, "the same bytes, decrypted");
+    let shown = thread(&bob, &conversation).await.into_iter().find(|x| x.id == m.id).unwrap();
+    assert_eq!(shown.path.as_deref(), Some(path.as_str()), "the thread knows where it is");
+    let mine = thread(&alice, &conversation).await.into_iter().find(|x| x.id == m.id).unwrap();
+    assert!(mine.mine && mine.path.is_some(), "the sender keeps a copy too");
+    alice.command(Command::DeleteMessage { conversation: conversation.clone(), id: m.id.clone() }).await;
+    bob.command(Command::DeleteMessage { conversation: conversation.clone(), id: m.id.clone() }).await;
+    let messages = thread(&alice, &conversation).await;
+
     // Alice deletes his message on her device; his thread still has it
     let r = alice.command(Command::DeleteMessage { conversation: conversation.clone(), id: messages[1].id.clone() }).await;
     assert_eq!(r, Response::Ok);

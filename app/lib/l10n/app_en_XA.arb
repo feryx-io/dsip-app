@@ -284,5 +284,12 @@
   "alertGranted": "[{name} àççéþţéđ ýóú one ]",
   "alertGrantedBody": "[Ýóú çàñ ɱéššàĝé ţĥéɱ ñóŵ. one t]",
   "alertMissed": "[Ḿíššéđ çàĺĺ ƒŕóɱ {name} one t]",
-  "alertIncoming": "[{name} íš çàĺĺíñĝ one]"
+  "alertIncoming": "[{name} íš çàĺĺíñĝ one]",
+  "attachAction": "[Àţţàçĥ à ƒíĺé on]",
+  "attachSending": "[Šéñđíñĝ {name}… on]",
+  "attachmentFetching": "[Đóŵñĺóàđíñĝ… on]",
+  "attachmentOpen": "[Óþéñ ]",
+  "attachmentSave": "[Šàṽé ]",
+  "attachmentSaved": "[Šàṽéđ. ]",
+  "attachmentNotOpened": "[Çóúĺđ ñóţ óþéñ íţ ĥéŕé. Šàṽé íţ, ţĥéñ óþéñ íţ ƒŕóɱ ŵĥéŕé ýóú šàṽéđ íţ. one two three fo]"
 }

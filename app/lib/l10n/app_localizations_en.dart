@@ -1007,6 +1007,30 @@ class StringsEn extends Strings {
   String alertIncoming(String name) {
     return '$name is calling';
   }
+
+  @override
+  String get attachAction => 'Attach a file';
+
+  @override
+  String attachSending(String name) {
+    return 'Sending $name…';
+  }
+
+  @override
+  String get attachmentFetching => 'Downloading…';
+
+  @override
+  String get attachmentOpen => 'Open';
+
+  @override
+  String get attachmentSave => 'Save';
+
+  @override
+  String get attachmentSaved => 'Saved.';
+
+  @override
+  String get attachmentNotOpened =>
+      'Could not open it here. Save it, then open it from where you saved it.';
 }
 
 /// The translations for English (`en_XA`).
@@ -2023,4 +2047,28 @@ class StringsEnXa extends StringsEn {
   String alertIncoming(String name) {
     return '[$name íš çàĺĺíñĝ one]';
   }
+
+  @override
+  String get attachAction => '[Àţţàçĥ à ƒíĺé on]';
+
+  @override
+  String attachSending(String name) {
+    return '[Šéñđíñĝ $name… on]';
+  }
+
+  @override
+  String get attachmentFetching => '[Đóŵñĺóàđíñĝ… on]';
+
+  @override
+  String get attachmentOpen => '[Óþéñ ]';
+
+  @override
+  String get attachmentSave => '[Šàṽé ]';
+
+  @override
+  String get attachmentSaved => '[Šàṽéđ. ]';
+
+  @override
+  String get attachmentNotOpened =>
+      '[Çóúĺđ ñóţ óþéñ íţ ĥéŕé. Šàṽé íţ, ţĥéñ óþéñ íţ ƒŕóɱ ŵĥéŕé ýóú šàṽéđ íţ. one two three fo]';
 }
