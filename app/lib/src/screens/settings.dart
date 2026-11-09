@@ -609,6 +609,14 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
   bool _busy = false;
   String? _failed;
 
+  /// The join code as scanned, in its QR form with where the new device listens (the handoff); the field holds the
+  /// code alone.
+  String? _scanned;
+
+  /// Where the welcome code was sent, or why it was not.
+  String? _sentTo;
+  String? _notSent;
+
   @override
   void dispose() {
     _join.dispose();
@@ -623,8 +631,20 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
     });
     try {
       final dir = widget.controller.settings?['identity'] as String? ?? '';
-      final codes = await widget.controller.client.pairingWelcome(dir, _join.text.trim());
+      final client = widget.controller.client;
+      final join = _join.text.trim();
+      final codes = await client.pairingWelcome(dir, join);
       if (mounted) setState(() => _welcome = codes);
+      // scanned with where the new device listens: sent there, and shown in case it does not arrive
+      final scanned = _scanned;
+      if (scanned != null && scanned.split('/').first.trim() == join) {
+        try {
+          final to = await client.pairingSend(scanned, codes.$1);
+          if (mounted) setState(() => _sentTo = to);
+        } catch (e) {
+          if (mounted) setState(() => _notSent = '$e');
+        }
+      }
     } catch (e) {
       if (mounted) setState(() => _failed = Strings.of(context).webFailed('$e'));
     } finally {
@@ -654,8 +674,21 @@ class _AddDeviceDialogState extends State<AddDeviceDialog> {
                   decoration: InputDecoration(labelText: s.addDeviceJoin),
                   validator: (v) => (v ?? '').trim().isEmpty ? s.addDeviceJoinNeeded : null,
                 ),
-              if (welcome == null) ScanButton(prefix: 'DSIPJ1-', into: _join, onScanned: () => setState(() {}))
+              if (welcome == null)
+                ScanButton(
+                  prefix: 'DSIPJ1-',
+                  into: _join,
+                  onScanned: () => setState(() {
+                    // the QR form: the code, then where the new device listens
+                    final text = _join.text.trim();
+                    _scanned = text.contains('/') ? text : null;
+                    _join.text = text.split('/').first;
+                  }),
+                )
+              else if (_sentTo != null)
+                Text(s.addDeviceSent(welcome.$2), key: const Key('welcome-sent'))
               else ...[
+                if (_notSent != null) ...[Text(s.addDeviceNotSent(_notSent!), key: const Key('welcome-not-sent')), const SizedBox(height: 8)],
                 Text(s.addDeviceWelcome(welcome.$2)),
                 const SizedBox(height: 8),
                 Center(child: CodeQr(welcome.$1, key: const Key('welcome-qr'), size: 260)),

@@ -25,6 +25,21 @@ abstract class Client {
   /// The new device's last step: joined with the [welcome] code, in [dir]; the identity's DID.
   Future<String> pairingFinish(String dir, String welcome);
 
+  /// The new device in [dir] listens on the local network for its welcome code (the handoff): the join code [code] in
+  /// its QR form, with where it listens; null when it cannot (the QR is then the code alone).
+  Future<String?> pairingListen(String dir, String code);
+
+  /// A welcome code the handoff received within [wait], checked for this device and not joined yet; null when none
+  /// came.
+  Future<WelcomeReceived?> pairingReceive(Duration wait);
+
+  /// Stop the handoff.
+  Future<void> pairingStop();
+
+  /// Send [welcome] to the new device at the addresses its join code's QR form ([join]) carries: the address that took
+  /// it, or null when [join] carries none (it was typed). Throws when none took it.
+  Future<String?> pairingSend(String join, String welcome);
+
   /// The document the identity in [dir] would serve as [did] (a `did:web`), naming [relay] and the mailbox: `{did, url,
   /// document}` (A6d). Nothing changes yet.
   Future<Map<String, dynamic>> webPrepare(String dir, String did, String relay, {String? mailboxDid, String? mailboxUri});
@@ -58,6 +73,16 @@ abstract class Client {
 
   /// Install the release fetched once this process has gone, and start the app again: the caller quits right after.
   Future<void> installUpdate();
+}
+
+/// A welcome code the new device received over the local network: the code, and the identity it is from.
+class WelcomeReceived {
+  const WelcomeReceived({required this.welcome, required this.identity, required this.name});
+  factory WelcomeReceived.fromJson(Map<String, dynamic> j) =>
+      WelcomeReceived(welcome: j['welcome'] as String, identity: j['identity'] as String, name: j['name'] as String);
+  final String welcome;
+  final String identity;
+  final String name;
 }
 
 /// A backup of an identity: its DID, the recovery code, and the text of a file holding it.

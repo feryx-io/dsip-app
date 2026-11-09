@@ -51,6 +51,25 @@ Future<String> pairingStart({required String dir}) =>
 Future<String> pairingWelcome({required String dir, required String join}) =>
     RustLib.instance.api.crateApiAppPairingWelcome(dir: dir, join: join);
 
+/// The new device in `dir` listens on the local network for its welcome code: the join code `code` in its QR form,
+/// with where it listens, or None when it cannot listen or has no address but the loopback's (the QR is then the code
+/// alone).
+Future<String?> pairingListen({required String dir, required String code}) =>
+    RustLib.instance.api.crateApiAppPairingListen(dir: dir, code: code);
+
+/// A welcome code the handoff received within `wait_ms`, checked for this device and not joined yet:
+/// `{"welcome", "identity", "name"}` JSON. None when none came, or the handoff is stopped.
+Future<String?> pairingReceive({required int waitMs}) =>
+    RustLib.instance.api.crateApiAppPairingReceive(waitMs: waitMs);
+
+/// Stop the handoff: it listens no more.
+Future<void> pairingStop() => RustLib.instance.api.crateApiAppPairingStop();
+
+/// Send the `welcome` code to the new device at the addresses its join code's QR form (`join`) carries: the address
+/// that took it, or None when `join` carries none (it was typed).
+Future<String?> pairingSend({required String join, required String welcome}) =>
+    RustLib.instance.api.crateApiAppPairingSend(join: join, welcome: welcome);
+
 /// The new device's last step: joined with the `welcome` code, in `dir`; the identity's DID.
 Future<String> pairingFinish({required String dir, required String welcome}) =>
     RustLib.instance.api.crateApiAppPairingFinish(dir: dir, welcome: welcome);

@@ -39,12 +39,14 @@ How pairing works:
 | # | New device | Has the identity | Check |
 |---|---|---|---|
 | 1.1 | phone | desktop | The phone scans the desktop's welcome QR off its screen. This is the case CI cannot reach: the welcome code is the large one, about 1,100 characters. |
-| 1.2 | desktop | phone | The phone scans the desktop's join QR. The welcome code has to reach the desktop as text: note how you moved it (a message, a cloud note) and whether that was a problem. |
+| 1.2 | desktop | phone | On the same Wi-Fi, the phone scans the desktop's join QR, and the welcome code reaches the desktop by itself: the phone says "Sent", and the desktop says "Received from" with the identity's name. Allow the firewall's prompt on Windows and macOS, and note whether it showed. Repeat with the phone on mobile data instead: the phone says it could not reach the device, and shows the welcome code to type or paste. |
 | 1.3 | phone | phone | Android scans iPhone and iPhone scans Android, in both directions. |
 | 1.4 | phone | phone | 1.1 again with the showing device in dark mode, at low brightness, and from about 30 cm and 60 cm away. |
 
 For each:
 
+- [ ] When both devices are on one network, the welcome code goes across by itself, whichever device is new. On an
+  iPhone, the first time asks to use the local network; refused, the code is shown to scan or type instead.
 - [ ] The first **Scan** asks for the camera. If you refuse, the app says the camera is not available and you can still
   paste the code.
 - [ ] The scanner takes only the right code. Show it some other QR code first (any URL): it keeps scanning and does

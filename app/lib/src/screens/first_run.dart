@@ -35,11 +35,19 @@ class _FirstRunState extends State<FirstRun> {
 
   /// The join code and check code, once this device has started joining (A6).
   (String, String)? _join;
+
+  /// The join code's QR form, with where this device listens for its welcome code (the handoff); null when it does not.
+  String? _joinQr;
+
+  /// The identity a welcome code came from over the local network: its name and DID.
+  (String, String)? _received;
+  bool _listening = false;
   bool _busy = false;
   String? _failed;
 
   @override
   void dispose() {
+    _stopListening();
     for (final c in [_name, _folder, _relay, _mailbox, _mailboxDid, _hints, _code, _passphrase, _welcome]) {
       c.dispose();
     }
@@ -48,11 +56,34 @@ class _FirstRunState extends State<FirstRun> {
 
   Future<void> _startJoin() async {
     try {
-      final codes = await widget.controller.client.pairingStart(widget.controller.store.defaultIdentity);
-      if (mounted) setState(() => _join = codes);
+      final client = widget.controller.client;
+      final dir = widget.controller.store.defaultIdentity;
+      final codes = await client.pairingStart(dir);
+      if (!mounted) return;
+      setState(() => _join = codes);
+      // and listen for the welcome code: a phone that scans the QR sends it back by itself
+      final qr = await client.pairingListen(dir, codes.$1);
+      if (!mounted || qr == null) return;
+      setState(() => _joinQr = qr);
+      _listening = true;
+      while (mounted && _listening) {
+        final got = await client.pairingReceive(const Duration(seconds: 1));
+        if (got == null || !mounted || !_listening) continue;
+        setState(() {
+          _welcome.text = got.welcome;
+          _received = (got.name, got.identity);
+        });
+        _stopListening();
+      }
     } catch (e) {
       if (mounted) setState(() => _failed = Strings.of(context).firstRunFailed('$e'));
     }
+  }
+
+  void _stopListening() {
+    if (!_listening) return;
+    _listening = false;
+    widget.controller.client.pairingStop();
   }
 
   String? _text(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
@@ -170,7 +201,11 @@ class _FirstRunState extends State<FirstRun> {
                         child: SelectableText(code, key: const Key('join-code'), style: const TextStyle(fontFamily: 'monospace')),
                       ),
                       const SizedBox(height: 8),
-                      Center(child: CodeQr(code, key: const Key('join-qr'))),
+                      Center(child: CodeQr(_joinQr ?? code, key: const Key('join-qr'))),
+                      if (_joinQr != null && _received == null) ...[
+                        const SizedBox(height: 4),
+                        Text(s.firstRunJoinNearby, key: const Key('join-nearby')),
+                      ],
                       const SizedBox(height: 4),
                       Text(s.firstRunCheckCode(check), key: const Key('check-code')),
                     ] else
@@ -184,6 +219,11 @@ class _FirstRunState extends State<FirstRun> {
                       decoration: InputDecoration(labelText: s.firstRunWelcome, helperText: s.firstRunWelcomeHint),
                       validator: (v) => (v ?? '').trim().isEmpty ? s.firstRunWelcomeNeeded : null,
                     ),
+                    // from the network: whose it is, before anything joins
+                    if (_received case (final name, final identity)) ...[
+                      const SizedBox(height: 4),
+                      Text(s.firstRunWelcomeReceived(name, identity), key: const Key('welcome-received')),
+                    ],
                     ScanButton(prefix: 'DSIPW', into: _welcome),
                   ] else if (_origin == Origin.folder)
                     TextFormField(

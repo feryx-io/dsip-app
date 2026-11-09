@@ -66,7 +66,11 @@ Another device of the same identity, without the identity key (A6): on the new d
 --identity ~/.dsip/alice <join code>` prints a welcome code (the same check code beside it). Typed back into the new
 device, it joins: its own key, the identity's delegation of it, and the identity's key agreement key, so it opens what
 is sealed to the identity and signs nothing as it. The app does the same: "Join another device" at the first run, and
-Settings, Your devices, Add a device.
+Settings, Your devices, Add a device. The codes are QR codes there too. While the new device shows its join code, it
+listens on the local network, and the join QR carries where (`DSIPJ1-…/192.168.1.20:40123`). A phone that scans it
+sends the welcome code back by itself, so a desktop, which has no camera, needs nothing typed. The new device checks
+the code, then says which identity it is from before anything joins. `join` listens too, and prints that form; `welcome`
+given it sends the code there.
 
 With a mailbox, the same app messages:
 

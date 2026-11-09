@@ -857,6 +857,25 @@ class StringsEn extends Strings {
   String firstRunOpenFailed(String reason) {
     return 'That file could not be read as a backup: $reason';
   }
+
+  @override
+  String get firstRunJoinNearby =>
+      'A phone with your identity can scan this QR code instead. On the same network, the welcome code then comes back here by itself.';
+
+  @override
+  String firstRunWelcomeReceived(String name, String identity) {
+    return 'Received from $name ($identity). Start only if this is your identity.';
+  }
+
+  @override
+  String addDeviceSent(String check) {
+    return 'Sent to the new device. Check that it shows the same check code: $check.';
+  }
+
+  @override
+  String addDeviceNotSent(String reason) {
+    return 'The new device could not be reached ($reason). Enter this welcome code on it instead.';
+  }
 }
 
 /// The translations for English (`en_XA`).
@@ -1721,5 +1740,24 @@ class StringsEnXa extends StringsEn {
   @override
   String firstRunOpenFailed(String reason) {
     return '[Ţĥàţ ƒíĺé çóúĺđ ñóţ ƀé ŕéàđ àš à ƀàçķúþ: $reason one two thr]';
+  }
+
+  @override
+  String get firstRunJoinNearby =>
+      '[À þĥóñé ŵíţĥ ýóúŕ íđéñţíţý çàñ šçàñ ţĥíš ǪŔ çóđé íñšţéàđ. Óñ ţĥé šàɱé ñéţŵóŕķ, ţĥé ŵéĺçóɱé çóđé ţĥéñ çóɱéš ƀàçķ ĥéŕé ƀý íţšéĺƒ. one two three four five six seve]';
+
+  @override
+  String firstRunWelcomeReceived(String name, String identity) {
+    return '[Ŕéçéíṽéđ ƒŕóɱ $name ($identity). Šţàŕţ óñĺý íƒ ţĥíš íš ýóúŕ íđéñţíţý. one two three fo]';
+  }
+
+  @override
+  String addDeviceSent(String check) {
+    return '[Šéñţ ţó ţĥé ñéŵ đéṽíçé. Çĥéçķ ţĥàţ íţ šĥóŵš ţĥé šàɱé çĥéçķ çóđé: $check. one two three fou]';
+  }
+
+  @override
+  String addDeviceNotSent(String reason) {
+    return '[Ţĥé ñéŵ đéṽíçé çóúĺđ ñóţ ƀé ŕéàçĥéđ ($reason). Éñţéŕ ţĥíš ŵéĺçóɱé çóđé óñ íţ íñšţéàđ. one two three four fi]';
   }
 }

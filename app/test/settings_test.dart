@@ -354,4 +354,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(client.welcomed, ['DSIPJ1-SCANNED']);
   });
+
+  /// Scan [join] from the add-device dialog, then make the welcome code.
+  Future<void> scanAndWelcome(WidgetTester tester, String join) async {
+    scanAvailable = () => true;
+    scanCode = (_, prefix) async => join;
+    addTearDown(() {
+      scanAvailable = () => false;
+      scanCode = (_, _) async => null;
+    });
+    await open(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('add-device')), 300, scrollable: find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first);
+    await tester.ensureVisible(find.byKey(const Key('add-device')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-device')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('scan-DSIPJ1-')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Make the welcome code'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a join code scanned with where the new device listens: the welcome code is sent there (A6)', (tester) async {
+    client.sendTo = '192.168.1.20:40123';
+    await scanAndWelcome(tester, 'DSIPJ1-SCANNED/192.168.1.20:40123');
+    expect(find.text('DSIPJ1-SCANNED'), findsNothing, reason: 'the field is gone once the welcome code is made');
+    expect(client.welcomed, ['DSIPJ1-SCANNED'], reason: 'the code alone in the field');
+    expect(client.sent, [('DSIPJ1-SCANNED/192.168.1.20:40123', 'DSIPW2-q1bKTClKzSvJLM6sUrJSSkzJyy9KTcxRqsoDAA')]);
+    expect(find.byKey(const Key('welcome-sent')), findsOneWidget);
+    expect(find.textContaining('QX7K-2DSA'), findsOneWidget, reason: 'the check code to compare');
+    expect(find.byKey(const Key('welcome-qr')), findsNothing, reason: 'nothing to scan: it was sent');
+  });
+
+  testWidgets('a welcome code that could not be sent is shown to scan or type instead (A6)', (tester) async {
+    client.sendFails = Exception('no route');
+    await scanAndWelcome(tester, 'DSIPJ1-SCANNED/192.168.1.20:40123');
+    expect(find.byKey(const Key('welcome-not-sent')), findsOneWidget);
+    expect(find.textContaining('no route'), findsOneWidget);
+    expect(find.byKey(const Key('welcome-qr')), findsOneWidget);
+  });
+
+  testWidgets('a join code typed carries nowhere to send to: nothing is sent (A6)', (tester) async {
+    await scanAndWelcome(tester, 'DSIPJ1-SCANNED');
+    expect(client.sent, isEmpty);
+    expect(find.byKey(const Key('welcome-qr')), findsOneWidget);
+  });
 }

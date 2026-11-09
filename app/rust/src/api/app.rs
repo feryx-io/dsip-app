@@ -66,6 +66,51 @@ pub fn pairing_welcome(dir: String, join: String) -> anyhow::Result<String> {
     Ok(serde_json::json!({"code": code, "check": check}).to_string())
 }
 
+/// The new device's handoff while it shows its join code (`dsip_app::pairing::Handoff`): one at a time, the last
+/// started; stopped by [`pairing_stop`].
+static HANDOFF: std::sync::Mutex<Option<std::sync::Arc<dsip_app::pairing::Handoff>>> = std::sync::Mutex::new(None);
+
+/// The new device in `dir` listens on the local network for its welcome code: the join code `code` in its QR form,
+/// with where it listens, or None when it cannot listen or has no address but the loopback's (the QR is then the code
+/// alone).
+pub fn pairing_listen(dir: String, code: String) -> Option<String> {
+    let handoff = match dsip_app::pairing::Handoff::listen(std::path::Path::new(&dir)) {
+        Ok(h) if !h.addresses().is_empty() => h,
+        Ok(_) => return None,
+        Err(e) => {
+            tracing::info!("not listening for the welcome code: {e}");
+            return None;
+        }
+    };
+    let qr = handoff.qr(&code);
+    *HANDOFF.lock().unwrap_or_else(|e| e.into_inner()) = Some(std::sync::Arc::new(handoff));
+    Some(qr)
+}
+
+/// A welcome code the handoff received within `wait_ms`, checked for this device and not joined yet:
+/// `{"welcome", "identity", "name"}` JSON. None when none came, or the handoff is stopped.
+pub fn pairing_receive(wait_ms: u32) -> anyhow::Result<Option<String>> {
+    dsip_app::keys::use_system_store();
+    let Some(handoff) = HANDOFF.lock().unwrap_or_else(|e| e.into_inner()).clone() else {
+        std::thread::sleep(std::time::Duration::from_millis(wait_ms.into()));
+        return Ok(None);
+    };
+    Ok(handoff.receive(std::time::Duration::from_millis(wait_ms.into()))?.map(|r| {
+        serde_json::json!({"welcome": r.welcome, "identity": r.identity, "name": r.name}).to_string()
+    }))
+}
+
+/// Stop the handoff: it listens no more.
+pub fn pairing_stop() {
+    *HANDOFF.lock().unwrap_or_else(|e| e.into_inner()) = None;
+}
+
+/// Send the `welcome` code to the new device at the addresses its join code's QR form (`join`) carries: the address
+/// that took it, or None when `join` carries none (it was typed).
+pub fn pairing_send(join: String, welcome: String) -> anyhow::Result<Option<String>> {
+    Ok(dsip_app::pairing::send(&join, &welcome)?.map(|a| a.to_string()))
+}
+
 /// The new device's last step: joined with the `welcome` code, in `dir`; the identity's DID.
 pub fn pairing_finish(dir: String, welcome: String) -> anyhow::Result<String> {
     dsip_app::keys::use_system_store();
