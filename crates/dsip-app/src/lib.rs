@@ -109,6 +109,9 @@ pub struct Config {
     pub audio: Option<HostKind>,
     /// STUN servers for the calls' media.
     pub stun: Vec<String>,
+    /// Where calls get TURN credentials, for when no direct path opens between the two sides (a phone on a mobile
+    /// network): the relay's `/turn`. `None`: STUN only.
+    pub turn: Option<dsip_transport::turn::TurnClient>,
     /// Messages through the identity's mailbox; `None`: calls only.
     pub messaging: Option<MessagingConfig>,
     /// The hints tier (§8.1): a `did:key` callee bound to another relay is called through it. Without messaging, the
@@ -129,7 +132,21 @@ pub struct Config {
 impl Config {
     /// `identity` bound to `relay`, with the platform's audio devices and no STUN.
     pub fn new(identity: dsip_phone::Identity, relay: &str) -> Config {
-        Config { identity, relay: relay.into(), tls: None, dialer: None, audio: Some(HostKind::System), stun: vec![], messaging: None, hints: None, peer_dialer: None, seal_presence: true, audio_devices: (None, None), wake: None }
+        Config {
+            identity,
+            relay: relay.into(),
+            tls: None,
+            dialer: None,
+            audio: Some(HostKind::System),
+            stun: vec![],
+            turn: None,
+            messaging: None,
+            hints: None,
+            peer_dialer: None,
+            seal_presence: true,
+            audio_devices: (None, None),
+            wake: None,
+        }
     }
 }
 
@@ -215,6 +232,9 @@ impl App {
         }
         if let Some(h) = &cfg.hints {
             b = b.hints(h.clone());
+        }
+        if let Some(t) = cfg.turn {
+            b = b.turn(t);
         }
         if let Some(p) = cfg.peer_dialer {
             b = b.configure(move |c| c.peer_dialer = Some(p));
