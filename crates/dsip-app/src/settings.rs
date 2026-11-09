@@ -71,11 +71,13 @@ impl Settings {
         };
         cfg.audio_devices = (self.audio_input.clone(), self.audio_output.clone());
         cfg.stun = self.stun.clone();
+        let pem = match &self.ca {
+            Some(p) => Some(std::fs::read(p).map_err(|e| bad(format!("{}: {e}", p.display())))?),
+            None => None,
+        };
+        // the relay's own TURN credentials: a relay with none answers 404, and calls go on STUN only
+        cfg.turn = dsip_transport::turn::TurnClient::for_relay(&self.relay, pem.as_deref())?;
         if !self.hints_nodes.is_empty() {
-            let pem = match &self.ca {
-                Some(p) => Some(std::fs::read(p).map_err(|e| bad(format!("{}: {e}", p.display())))?),
-                None => None,
-            };
             cfg.hints = Some(dsip_transport::hints::HintsClient::new(self.hints_nodes.clone(), pem.as_deref())?);
         }
         if let Some(g) = &self.push_gateway {
