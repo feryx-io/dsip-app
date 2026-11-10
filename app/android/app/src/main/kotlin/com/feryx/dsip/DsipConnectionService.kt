@@ -1,4 +1,4 @@
-package com.thevoiceguy.dsip
+package com.feryx.dsip
 
 import android.net.Uri
 import android.os.Build

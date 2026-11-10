@@ -11,7 +11,7 @@ version=$1 label=$2 bundle=$3 out=$4
 here=$(cd "$(dirname "$0")" && pwd)
 app=$(cd "$here/.." && pwd)
 repo=$(cd "$app/.." && pwd)
-id=com.thevoiceguy.dsip
+id=com.feryx.dsip
 mkdir -p "$out"
 work=$(mktemp -d)
 
@@ -29,7 +29,7 @@ Package: dsip
 Version: $version
 Architecture: amd64
 Maintainer: DSIP <noreply@github.com>
-Homepage: https://github.com/thevoiceguy/dsip-app
+Homepage: https://github.com/feryx-io/dsip-app
 Section: net
 Priority: optional
 Installed-Size: $(du -sk "$root/opt" | cut -f1)

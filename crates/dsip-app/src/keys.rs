@@ -24,7 +24,10 @@ use serde::{Deserialize, Serialize};
 use crate::Error;
 
 /// The store's service name for this app's items.
-pub const SERVICE: &str = "com.thevoiceguy.dsip";
+pub const SERVICE: &str = "com.feryx.dsip";
+
+/// The name items were kept under before the app's id was `com.feryx.dsip`: an item found only there is moved.
+const OLD_SERVICE: &str = "com.thevoiceguy.dsip";
 
 /// The files that hold the keys of an identity not (yet) in a store.
 const KEY_FILES: [&str; 2] = ["controller.key", "device.key"];
@@ -108,12 +111,34 @@ fn system_store() -> keyring_core::Result<Arc<keyring_core::CredentialStore>> {
 
 /// The item for the install whose device is `device`.
 fn entry(device: &str) -> keyring_core::Result<keyring_core::Entry> {
+    entry_in(SERVICE, device)
+}
+
+fn entry_in(service: &str, device: &str) -> keyring_core::Result<keyring_core::Entry> {
     // iOS: readable once the phone has been unlocked since it started (a push may wake it locked), this device only.
     if cfg!(target_os = "ios") {
         let mods: std::collections::HashMap<&str, &str> = [("access-policy", "after-first-unlock-this-device-only")].into();
-        return keyring_core::Entry::new_with_modifiers(SERVICE, device, &mods);
+        return keyring_core::Entry::new_with_modifiers(service, device, &mods);
     }
-    keyring_core::Entry::new(SERVICE, device)
+    keyring_core::Entry::new(service, device)
+}
+
+/// The secret of `device`'s item; one kept under the old name ([`OLD_SERVICE`]) is moved to [`SERVICE`] first:
+/// written, read back, then the old one deleted.
+fn secret_of(device: &str) -> keyring_core::Result<Vec<u8>> {
+    match entry(device)?.get_secret() {
+        Err(keyring_core::Error::NoEntry) => {}
+        found => return found,
+    }
+    let old = entry_in(OLD_SERVICE, device)?;
+    let secret = old.get_secret()?;
+    let new = entry(device)?;
+    new.set_secret(&secret)?;
+    if new.get_secret()? == secret {
+        let _ = old.delete_credential();
+        tracing::info!("keys: {device} moved from {OLD_SERVICE} to {SERVICE}");
+    }
+    Ok(secret)
 }
 
 fn store_error(e: keyring_core::Error) -> Error {
@@ -146,7 +171,7 @@ pub fn load_identity(dir: &Path) -> Result<dsip_phone::Identity, Error> {
     }
     let meta: IdentityMeta = serde_json::from_str(&read(dir, "identity.json")?).map_err(|e| Error::Keys(format!("identity.json: {e}")))?;
     let delegation = Envelope::from_frame(&read(dir, "delegation.json")?).map_err(|e| Error::Keys(format!("delegation.json: {e:?}")))?;
-    let secret = entry(&meta.device).and_then(|e| e.get_secret()).map_err(|e| match e {
+    let secret = secret_of(&meta.device).map_err(|e| match e {
         keyring_core::Error::NoEntry => Error::Keys(format!("the keys of {} are not in this device's store", meta.device)),
         e => store_error(e),
     })?;
@@ -316,6 +341,15 @@ mod tests {
         assert!(!dir.join(KEY_AGREEMENT_FILE).exists(), "the key agreement key moved too");
         assert_eq!(loaded.key_agreement.map(|k| (k.secret, k.delegation.frame())), Some((ka.secret, ka.delegation.frame())));
         assert!(secure_identity(&dir).unwrap(), "moved already");
+
+        // an item kept under the app's old id: found there, moved to the new name, the old one gone
+        let device = made.device.did();
+        let secret = entry(&device).unwrap().get_secret().unwrap();
+        entry(&device).unwrap().delete_credential().unwrap();
+        entry_in(OLD_SERVICE, &device).unwrap().set_secret(&secret).unwrap();
+        assert_eq!(load_identity(&dir).unwrap().device.did(), device);
+        assert_eq!(entry(&device).unwrap().get_secret().unwrap(), secret);
+        assert!(matches!(entry_in(OLD_SERVICE, &device).unwrap().get_secret(), Err(keyring_core::Error::NoEntry)));
 
         forget_keys(&made.device.did()).unwrap();
         assert!(matches!(load_identity(&dir), Err(Error::Keys(m)) if m.contains("not in this device's store")));

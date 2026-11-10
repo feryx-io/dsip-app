@@ -120,7 +120,7 @@ void main() {
         tab: 'Presence',
         release: const UpdateInfo(
           version: '0.2.0',
-          notes: 'https://github.com/thevoiceguy/dsip-app/releases/tag/v0.2.0',
+          notes: 'https://github.com/feryx-io/dsip-app/releases/tag/v0.2.0',
           canInstall: true,
         ),
       );

@@ -1,6 +1,6 @@
 # CLAUDE.md — dsip-app
 
-The DSIP client app over [dsip-rs](https://github.com/thevoiceguy/dsip-rs). Plan: dsip-rs `docs/dsip-app-plan.md`
+The DSIP client app over [dsip-rs](https://github.com/feryx-io/dsip-rs). Plan: dsip-rs `docs/dsip-app-plan.md`
 (stages A1–A7). The model is Anvil's `anvil-app` (one state, one change stream, commands, a control socket and CLI).
 
 ## Rules

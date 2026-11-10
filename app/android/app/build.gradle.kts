@@ -13,7 +13,7 @@ fun requiredValue(name: String): String =
     buildValue(name) ?: throw GradleException("$name is needed with DSIP_FCM_APP_ID")
 
 android {
-    namespace = "com.thevoiceguy.dsip"
+    namespace = "com.feryx.dsip"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -26,7 +26,7 @@ android {
 
     defaultConfig {
         // The desktop's id too (macOS bundle, Linux application id).
-        applicationId = "com.thevoiceguy.dsip"
+        applicationId = "com.feryx.dsip"
         // Android 8.0: the system's call screen for an app's own calls (a self-managed ConnectionService, A5b).
         minSdk = 26
         targetSdk = flutter.targetSdkVersion

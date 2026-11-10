@@ -1,7 +1,7 @@
 ; The Windows installer (Inno Setup 6; Anvil's app/packaging/windows.iss is the model): installs for this user, without
 ; administrator rights, in %LOCALAPPDATA%\Programs\DSIP, with a Start menu entry and an uninstaller.
 ;
-; The uninstaller keeps the app's folder (%APPDATA%\com.thevoiceguy.dsip\DSIP: its settings, and the identity's keys)
+; The uninstaller keeps the app's folder (%APPDATA%\com.feryx.dsip\DSIP: its settings, and the identity's keys)
 ; unless the user says to delete it: a did:key identity cannot be rotated (DSIP §7.5), so its keys gone is the
 ; identity gone. Uninstalled silently, it keeps them.
 ;
@@ -17,7 +17,7 @@ AppName=DSIP
 AppVerName=DSIP {#Version}
 AppVersion={#Version}
 AppPublisher=DSIP
-AppPublisherURL=https://github.com/thevoiceguy/dsip-app
+AppPublisherURL=https://github.com/feryx-io/dsip-app
 DefaultDirName={localappdata}\Programs\DSIP
 DefaultGroupName=DSIP
 DisableProgramGroupPage=yes
@@ -57,7 +57,7 @@ Filename: "{app}\dsip.exe"; Flags: nowait; Check: Relaunch
 // (windows/runner/Runner.rc).
 function DataDir: String;
 begin
-  Result := ExpandConstant('{userappdata}\com.thevoiceguy.dsip\DSIP');
+  Result := ExpandConstant('{userappdata}\com.feryx.dsip\DSIP');
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -70,7 +70,7 @@ begin
       mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES then
   begin
     DelTree(DataDir, True, True, True);
-    RemoveDir(ExpandConstant('{userappdata}\com.thevoiceguy.dsip'));
+    RemoveDir(ExpandConstant('{userappdata}\com.feryx.dsip'));
   end;
 end;
 

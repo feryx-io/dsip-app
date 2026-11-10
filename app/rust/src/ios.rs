@@ -121,7 +121,7 @@ mod tests {
         let dir_c = c(dir.to_str().unwrap());
         dsip_init(dir_c.as_ptr(), c("did:web:push.example").as_ptr());
 
-        let (apns, topic) = (c("apns"), c("com.thevoiceguy.dsip.voip"));
+        let (apns, topic) = (c("apns"), c("com.feryx.dsip.voip"));
         let set = |token: &str, environment: &str| {
             answer(dsip_set_push(apns.as_ptr(), topic.as_ptr(), c(token).as_ptr(), c(environment).as_ptr()))
         };
@@ -129,16 +129,16 @@ mod tests {
         let saved = crate::system::load_push(&dir).expect("kept");
         assert_eq!(
             (saved.provider.as_str(), saved.app.as_str(), saved.token.as_str(), saved.environment.as_deref()),
-            ("apns", "com.thevoiceguy.dsip.voip", "8f2c00a91b", Some("sandbox"))
+            ("apns", "com.feryx.dsip.voip", "8f2c00a91b", Some("sandbox"))
         );
         assert_eq!(set("8f2c00a91b", ""), None);
         assert_eq!(crate::system::load_push(&dir).unwrap().environment, None, "empty is production");
 
         // the alert token, apart, kept beside PushKit's
-        let bundle = c("com.thevoiceguy.dsip");
+        let bundle = c("com.feryx.dsip");
         assert_eq!(answer(dsip_set_message_push(apns.as_ptr(), bundle.as_ptr(), c("c0de").as_ptr(), c("").as_ptr())), None);
         let saved = crate::system::load_push(&dir).unwrap();
-        assert_eq!((saved.token.as_str(), saved.message_app.as_deref(), saved.message_token.as_deref()), ("8f2c00a91b", Some("com.thevoiceguy.dsip"), Some("c0de")));
+        assert_eq!((saved.token.as_str(), saved.message_app.as_deref(), saved.message_token.as_deref()), ("8f2c00a91b", Some("com.feryx.dsip"), Some("c0de")));
         assert_eq!(set("", ""), None, "PushKit's token gone: messages still wake");
         assert!(crate::system::load_push(&dir).unwrap().message_token.is_some());
         assert_eq!(answer(dsip_set_message_push(apns.as_ptr(), bundle.as_ptr(), c("").as_ptr(), c("").as_ptr())), None);

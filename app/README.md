@@ -51,7 +51,7 @@ flutter_rust_bridge_codegen generate   # 2.13.0
 
 ## On a phone
 
-The same app on Android (8.0 and later) and iOS, with the same id as the desktop's, `com.thevoiceguy.dsip` (A5a, as
+The same app on Android (8.0 and later) and iOS, with the same id as the desktop's, `com.feryx.dsip` (A5a, as
 Anvil's U4a). Cargokit cross-builds the Rust core for each Android ABI and for iOS devices and simulators.
 `MainActivity` loads the core and hands it the JVM and the application context, which cpal's Android audio needs and a
 Flutter app does not set up (`rust/src/android.rs`); `rust/build.rs` links the NDK's C++ ABI for oboe. Before the app

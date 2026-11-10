@@ -2,9 +2,9 @@
 
 The official DSIP client, for Windows, macOS, Linux, Android and iOS. DSIP (Decentralized Session Initiation
 Protocol) is an identity-first protocol for calls and messages: the spec and its conformance suite are in
-[DSIP](https://github.com/thevoiceguy/DSIP), the Rust stack and its services in
-[dsip-rs](https://github.com/thevoiceguy/dsip-rs). This repository is the app over that stack, following dsip-rs's
-[app plan](https://github.com/thevoiceguy/dsip-rs/blob/main/docs/dsip-app-plan.md).
+[DSIP](https://github.com/feryx-io/DSIP), the Rust stack and its services in
+[dsip-rs](https://github.com/feryx-io/dsip-rs). This repository is the app over that stack, following dsip-rs's
+[app plan](https://github.com/feryx-io/dsip-rs/blob/main/docs/dsip-app-plan.md).
 
 **Status: stage A2, the running client.** There is no UI yet. The `dsip-app` crate is the client the screens will
 sit on:
@@ -137,7 +137,7 @@ keys live in `wake.json` beside the identity, readable by its owner alone.
 ## How it is built
 
 - **One state, one stream of changes.** [`App`](crates/dsip-app/src/lib.rs) owns the identity and a
-  [`dsip_phone::Phone`](https://github.com/thevoiceguy/dsip-rs/tree/main/crates/dsip-phone). It keeps the `State` a
+  [`dsip_phone::Phone`](https://github.com/feryx-io/dsip-rs/tree/main/crates/dsip-phone). It keeps the `State` a
   screen shows, and publishes each change to it as one `Change`. Commands go in; screens only read. The CLI drives
   the running app through the control socket (one JSON command per line), so the CLI and the app can't behave
   differently, and CI tests the client without a UI. The model is [Anvil](https://github.com/thevoiceguy/anvil)'s
