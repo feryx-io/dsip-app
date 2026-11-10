@@ -221,8 +221,11 @@ class CallRecord {
   /// Unix seconds.
   final int endedAt;
 
-  /// A call that came in and was not answered.
-  bool get missed => direction == Direction.incoming && !answered;
+  /// A call that came in and was not answered: not declined here, nor answered on another device.
+  bool get missed =>
+      direction == Direction.incoming &&
+      !answered &&
+      !const {'user.declined', 'session.answered-elsewhere', 'session.already-answered'}.contains(reason);
 
   factory CallRecord.fromJson(Map<String, dynamic> j) => CallRecord(
     session: j['session'] as String,

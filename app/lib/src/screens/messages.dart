@@ -31,6 +31,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   @override
+  void dispose() {
+    c.visibleConversation = null;
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     _takeRequested();
@@ -105,6 +111,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final m = widget.state.messaging;
     if (m.mailbox == null) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(s.messagingOff)));
     final open = m.conversations.where((x) => x.group == _open).firstOrNull;
+    // no alert for a message in the conversation being read
+    c.visibleConversation = open?.group;
     final list = ListView(
             children: [
               if (!m.connected)

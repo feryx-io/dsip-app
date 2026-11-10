@@ -272,5 +272,17 @@
   "callMissed": "[Ḿíššéđ o]",
   "callsClear": "[Çĺéàŕ ĥíšţóŕý one]",
   "callsClearConfirm": "[Đéĺéţé ýóúŕ ŵĥóĺé çàĺĺ ĥíšţóŕý óñ ţĥíš đéṽíçé? one two thr]",
-  "callForget": "[Đéĺéţé ƒŕóɱ ĥíšţóŕý one ]"
+  "callForget": "[Đéĺéţé ƒŕóɱ ĥíšţóŕý one ]",
+  "settingsAlerts": "[Àĺéŕţš o]",
+  "alertsEnabled": "[Šĥóŵ àĺéŕţš on]",
+  "alertsEnabledHint": "[Íñ ţĥé àþþ, àñđ ƒŕóɱ ţĥé šýšţéɱ ŵĥíĺé ţĥé àþþ íš íñ ţĥé ƀàçķĝŕóúñđ one two three fo]",
+  "alertsMessages": "[Ñéŵ ɱéššàĝéš on]",
+  "alertsRequests": "[Ŕéǫúéšţš ţó ɱéššàĝé ýóú, àñđ àñšŵéŕš ţó ýóúŕš one two thr]",
+  "alertsCalls": "[Ḿíššéđ çàĺĺš, àñđ çàĺĺš ŕíñĝíñĝ ŵĥíĺé ţĥé àþþ íš íñ ţĥé ƀàçķĝŕóúñđ one two three fou]",
+  "alertOpen": "[Óþéñ ]",
+  "alertRequest": "[{name} àšķš ţó ɱéššàĝé ýóú one t]",
+  "alertGranted": "[{name} àççéþţéđ ýóú one ]",
+  "alertGrantedBody": "[Ýóú çàñ ɱéššàĝé ţĥéɱ ñóŵ. one t]",
+  "alertMissed": "[Ḿíššéđ çàĺĺ ƒŕóɱ {name} one t]",
+  "alertIncoming": "[{name} íš çàĺĺíñĝ one]"
 }

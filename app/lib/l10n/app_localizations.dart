@@ -1733,6 +1733,78 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Delete from history'**
   String get callForget;
+
+  /// No description provided for @settingsAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts'**
+  String get settingsAlerts;
+
+  /// No description provided for @alertsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Show alerts'**
+  String get alertsEnabled;
+
+  /// No description provided for @alertsEnabledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In the app, and from the system while the app is in the background'**
+  String get alertsEnabledHint;
+
+  /// No description provided for @alertsMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'New messages'**
+  String get alertsMessages;
+
+  /// No description provided for @alertsRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests to message you, and answers to yours'**
+  String get alertsRequests;
+
+  /// No description provided for @alertsCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed calls, and calls ringing while the app is in the background'**
+  String get alertsCalls;
+
+  /// No description provided for @alertOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get alertOpen;
+
+  /// No description provided for @alertRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asks to message you'**
+  String alertRequest(String name);
+
+  /// No description provided for @alertGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} accepted you'**
+  String alertGranted(String name);
+
+  /// No description provided for @alertGrantedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You can message them now.'**
+  String get alertGrantedBody;
+
+  /// No description provided for @alertMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed call from {name}'**
+  String alertMissed(String name);
+
+  /// No description provided for @alertIncoming.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is calling'**
+  String alertIncoming(String name);
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

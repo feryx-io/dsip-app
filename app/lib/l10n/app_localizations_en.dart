@@ -961,6 +961,52 @@ class StringsEn extends Strings {
 
   @override
   String get callForget => 'Delete from history';
+
+  @override
+  String get settingsAlerts => 'Alerts';
+
+  @override
+  String get alertsEnabled => 'Show alerts';
+
+  @override
+  String get alertsEnabledHint =>
+      'In the app, and from the system while the app is in the background';
+
+  @override
+  String get alertsMessages => 'New messages';
+
+  @override
+  String get alertsRequests => 'Requests to message you, and answers to yours';
+
+  @override
+  String get alertsCalls =>
+      'Missed calls, and calls ringing while the app is in the background';
+
+  @override
+  String get alertOpen => 'Open';
+
+  @override
+  String alertRequest(String name) {
+    return '$name asks to message you';
+  }
+
+  @override
+  String alertGranted(String name) {
+    return '$name accepted you';
+  }
+
+  @override
+  String get alertGrantedBody => 'You can message them now.';
+
+  @override
+  String alertMissed(String name) {
+    return 'Missed call from $name';
+  }
+
+  @override
+  String alertIncoming(String name) {
+    return '$name is calling';
+  }
 }
 
 /// The translations for English (`en_XA`).
@@ -1930,4 +1976,51 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get callForget => '[Đéĺéţé ƒŕóɱ ĥíšţóŕý one ]';
+
+  @override
+  String get settingsAlerts => '[Àĺéŕţš o]';
+
+  @override
+  String get alertsEnabled => '[Šĥóŵ àĺéŕţš on]';
+
+  @override
+  String get alertsEnabledHint =>
+      '[Íñ ţĥé àþþ, àñđ ƒŕóɱ ţĥé šýšţéɱ ŵĥíĺé ţĥé àþþ íš íñ ţĥé ƀàçķĝŕóúñđ one two three fo]';
+
+  @override
+  String get alertsMessages => '[Ñéŵ ɱéššàĝéš on]';
+
+  @override
+  String get alertsRequests =>
+      '[Ŕéǫúéšţš ţó ɱéššàĝé ýóú, àñđ àñšŵéŕš ţó ýóúŕš one two thr]';
+
+  @override
+  String get alertsCalls =>
+      '[Ḿíššéđ çàĺĺš, àñđ çàĺĺš ŕíñĝíñĝ ŵĥíĺé ţĥé àþþ íš íñ ţĥé ƀàçķĝŕóúñđ one two three fou]';
+
+  @override
+  String get alertOpen => '[Óþéñ ]';
+
+  @override
+  String alertRequest(String name) {
+    return '[$name àšķš ţó ɱéššàĝé ýóú one t]';
+  }
+
+  @override
+  String alertGranted(String name) {
+    return '[$name àççéþţéđ ýóú one ]';
+  }
+
+  @override
+  String get alertGrantedBody => '[Ýóú çàñ ɱéššàĝé ţĥéɱ ñóŵ. one t]';
+
+  @override
+  String alertMissed(String name) {
+    return '[Ḿíššéđ çàĺĺ ƒŕóɱ $name one t]';
+  }
+
+  @override
+  String alertIncoming(String name) {
+    return '[$name íš çàĺĺíñĝ one]';
+  }
 }

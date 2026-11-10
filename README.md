@@ -26,6 +26,10 @@ sit on:
   kept (`calls.json`, the latest 200), and so are the introductions you sent (`introductions.json`). A call, a
   contact, a message or a conversation is deleted on this device only; a deleted message is not shown again when its
   copy comes back from the archive.
+- **Alerts:** the app tells you of a new message, a request to message you (or an answer to yours), and a missed
+  call. It shows them inside the app while the app is in front, and through the system's notifications while it is
+  not. On a desktop, a call ringing while the window is behind others is shown too. Alerts are on by default and can
+  be turned off, or turned off by kind, in Settings (`alerts.json`).
 - **Control:** a local control channel that the `dsip-app` CLI drives: a Unix socket on Linux and macOS, a named pipe
   on Windows (`\\.\pipe\dsip-app-<user>`), each open to its user alone.
 
