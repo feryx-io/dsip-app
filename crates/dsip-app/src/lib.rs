@@ -750,9 +750,20 @@ impl App {
                         let state = changed.map(view_state).unwrap_or(CallState::Ended { reason: "transport.closed".into() });
                         let answered = matches!(state, CallState::Answered { .. });
                         was_answered |= answered;
+                        let ringing_there = direction == Direction::Outgoing && state == CallState::Ringing;
                         let ended = state.ended();
                         let err = call.error();
                         app.update(id, |v| { v.state = state; v.error = err; });
+                        // the caller hears it ring (§12.4: the callee's `ringing` progress), until the answer or the end
+                        if let Some(a) = &app.inner.audio {
+                            if ringing_there && !a.ringing_back(id) {
+                                if let Err(e) = a.ringback(id) {
+                                    tracing::warn!("call {id}: no ringback: {e}");
+                                }
+                            } else if !ringing_there {
+                                a.stop_ringback(id);
+                            }
+                        }
                         if answered && !has_audio {
                             if let Some(a) = &app.inner.audio {
                                 match a.start(id, muted.clone()) {
