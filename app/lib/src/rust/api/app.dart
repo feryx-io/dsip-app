@@ -95,6 +95,12 @@ Future<String> webPrepare({
 Future<String> webCheck({required String plan, String? ca}) =>
     RustLib.instance.api.crateApiAppWebCheck(plan: plan, ca: ca);
 
+/// The servers `domain` lists at its `/.well-known/dsip` (`dsip_app::servers`), as the settings a new device runs
+/// with: one relay and one mailbox picked at random from its pools, every hints node and STUN server, and the domain
+/// (JSON `Settings`, its identity left empty for the first run to fill). `ca`: a PEM file to trust besides the web's.
+Future<String> discoverServers({required String domain, String? ca}) =>
+    RustLib.instance.api.crateApiAppDiscoverServers(domain: domain, ca: ca);
+
 /// Make the identity in `dir` the `did:web` of `plan` (once [`web_check`] finds nothing differs); its new DID. The app
 /// is stopped first, and started again after.
 Future<String> webMove({required String dir, required String plan}) =>

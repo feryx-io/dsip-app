@@ -31,6 +31,22 @@
   "firstRunCodeNeeded": "Enter the recovery code.",
   "backupPassphrase": "Passphrase",
   "backupPassphraseNeeded": "Enter the passphrase.",
+  "firstRunServer": "Server",
+  "firstRunServerHint": "Where your relay and mailbox are found, such as feryx.io. You can change them later in Settings.",
+  "firstRunServerNeeded": "Enter a server, such as feryx.io.",
+  "firstRunByHand": "Enter the relay and mailbox yourself",
+  "firstRunByServer": "Use a server instead",
+  "firstRunServersFailed": "Could not get the servers from {server}: {reason}",
+  "@firstRunServersFailed": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "firstRunRelay": "Relay",
   "firstRunRelayHint": "wss://relay.example.com:8443/dsip",
   "firstRunRelayNeeded": "Enter a relay address starting with wss://.",

@@ -240,6 +240,42 @@ abstract class Strings {
   /// **'Enter the passphrase.'**
   String get backupPassphraseNeeded;
 
+  /// No description provided for @firstRunServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get firstRunServer;
+
+  /// No description provided for @firstRunServerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Where your relay and mailbox are found, such as feryx.io. You can change them later in Settings.'**
+  String get firstRunServerHint;
+
+  /// No description provided for @firstRunServerNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a server, such as feryx.io.'**
+  String get firstRunServerNeeded;
+
+  /// No description provided for @firstRunByHand.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the relay and mailbox yourself'**
+  String get firstRunByHand;
+
+  /// No description provided for @firstRunByServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a server instead'**
+  String get firstRunByServer;
+
+  /// No description provided for @firstRunServersFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get the servers from {server}: {reason}'**
+  String firstRunServersFailed(String server, String reason);
+
   /// No description provided for @firstRunRelay.
   ///
   /// In en, this message translates to:

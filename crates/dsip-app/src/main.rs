@@ -113,8 +113,12 @@ enum Cmd {
         #[arg(long)]
         identity: PathBuf,
         /// The relay (`wss://host:8443/dsip`).
+        #[arg(long, required_unless_present = "server")]
+        relay: Option<String>,
+        /// A domain listing its servers at `/.well-known/dsip` (`feryx.io`): the relay, mailbox, hints nodes and STUN
+        /// servers not given here are taken from it, the relay and mailbox picked from its pools by this identity.
         #[arg(long)]
-        relay: String,
+        server: Option<String>,
         /// A PEM certificate to trust for the relay, besides the platform's roots (a self-signed relay).
         #[arg(long)]
         ca: Option<PathBuf>,
@@ -444,12 +448,27 @@ async fn main() -> Result<ExitCode> {
             println!("{did}");
             return Ok(ExitCode::SUCCESS);
         }
-        Cmd::Run { identity, relay, ca, audio, input, output, stun, mailbox, mailbox_did, hints_nodes, messaging_state, fetch_did_web, push_gateway } => {
+        Cmd::Run {
+            identity,
+            relay,
+            server,
+            ca,
+            audio,
+            input,
+            output,
+            stun,
+            mailbox,
+            mailbox_did,
+            hints_nodes,
+            messaging_state,
+            fetch_did_web,
+            push_gateway,
+        } => {
             // an identity made before its keys were kept in the store: moved in now
             dsip_app::keys::ready_identity(&identity);
-            let settings = Settings {
+            let mut settings = Settings {
                 identity,
-                relay,
+                relay: relay.unwrap_or_default(),
                 ca,
                 audio: Some(audio),
                 audio_input: input,
@@ -460,7 +479,29 @@ async fn main() -> Result<ExitCode> {
                 messaging_state,
                 fetch_did_web,
                 push_gateway,
+                server: None,
             };
+            if let Some(domain) = server {
+                let pem = match &settings.ca {
+                    Some(p) => Some(std::fs::read(p).with_context(|| p.display().to_string())?),
+                    None => None,
+                };
+                let list = dsip_app::servers::fetch(&domain, pem.as_deref()).await?;
+                let did = dsip_app::keys::load_identity(&settings.identity)?.meta.identity;
+                let found = list.settings(settings.identity.clone(), &domain, dsip_app::servers::pick_for(&did));
+                if settings.relay.is_empty() {
+                    settings.relay = found.relay;
+                }
+                settings.mailbox = settings.mailbox.or(found.mailbox);
+                if settings.hints_nodes.is_empty() {
+                    settings.hints_nodes = found.hints_nodes;
+                }
+                if settings.stun.is_empty() {
+                    settings.stun = found.stun;
+                }
+                settings.server = found.server;
+                tracing::info!("servers from {domain}: relay {}", settings.relay);
+            }
             let cfg = settings.config()?;
             let app = App::start(cfg).await?;
             let s = app.state();

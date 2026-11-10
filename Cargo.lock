@@ -1672,6 +1672,7 @@ dependencies = [
  "if-addrs",
  "keyring-core",
  "miniz_oxide",
+ "reqwest",
  "rustls",
  "serde",
  "serde_json",
