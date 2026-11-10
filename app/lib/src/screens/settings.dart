@@ -8,6 +8,7 @@ import '../alerts.dart';
 import '../client/models.dart';
 import '../controller.dart';
 import 'backup_file.dart';
+import 'first_run.dart' show hintsCheck;
 import 'update.dart';
 import 'scan.dart';
 
@@ -255,7 +256,13 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
               s.firstRunMailboxDid,
               check: (v) => _text(_mailbox) != null && (v ?? '').trim().isEmpty ? s.firstRunMailboxDidNeeded : null,
             ),
-            field('hints', _hints, s.firstRunHints, hint: s.firstRunHintsHint),
+            field(
+              'hints',
+              _hints,
+              s.firstRunHints,
+              hint: s.firstRunHintsHint,
+              check: (v) => hintsCheck(s, v, mailbox: _text(_mailbox)),
+            ),
             field('stun', _stun, s.settingsStun, hint: s.settingsStunHint),
             Align(
               alignment: Alignment.centerLeft,

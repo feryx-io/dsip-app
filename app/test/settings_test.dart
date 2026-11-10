@@ -109,7 +109,7 @@ void main() {
     expect(find.text('/home/alice/.local/share/dsip/identity'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('settings-relay')), 'wss://relay.other.example:8443/dsip');
-    await tester.enterText(find.byKey(const Key('settings-hints')), '');
+    await tester.enterText(find.byKey(const Key('settings-stun')), '');
     await tester.tap(find.byKey(const Key('settings-save')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Calls in progress end'), findsOneWidget, reason: 'the fixture has a call up');
@@ -120,7 +120,7 @@ void main() {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
     }
 
-    final want = {...saved, 'relay': 'wss://relay.other.example:8443/dsip'}..remove('hints_nodes');
+    final want = {...saved, 'relay': 'wss://relay.other.example:8443/dsip'}..remove('stun');
     expect(client.stops, 1);
     expect(client.started, want);
     expect(await tester.runAsync(() => SettingsStore(dir).load()), want, reason: 'kept for the next start');
@@ -129,14 +129,16 @@ void main() {
     expect(find.text('Sound'), findsOneWidget, reason: 'back on the settings screen');
   });
 
-  testWidgets('a relay that is not wss, or a mailbox without its DID, is not saved', (tester) async {
+  testWidgets('a relay that is not wss, or a mailbox without its DID or a hints node, is not saved', (tester) async {
     await open(tester);
     await tester.enterText(find.byKey(const Key('settings-relay')), 'relay.example.com');
     await tester.enterText(find.byKey(const Key('settings-mailbox-did')), '');
+    await tester.enterText(find.byKey(const Key('settings-hints')), '');
     await tester.tap(find.byKey(const Key('settings-save')));
     await tester.pumpAndSettle();
     expect(find.text('Enter a relay address starting with wss://.'), findsOneWidget);
     expect(find.text('A mailbox needs its DID too.'), findsOneWidget);
+    expect(find.textContaining('Messages need a hints node too'), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
     expect(client.stops, 0);
   });

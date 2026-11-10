@@ -329,6 +329,7 @@ class _FirstRunState extends State<FirstRun> {
                       key: const Key('hints'),
                       controller: _hints,
                       decoration: InputDecoration(labelText: s.firstRunHints, hintText: s.firstRunHintsHint),
+                      validator: (v) => hintsCheck(s, v, mailbox: _text(_mailbox)),
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -345,4 +346,12 @@ class _FirstRunState extends State<FirstRun> {
       ),
     );
   }
+}
+
+/// Whether `v` will do as the hints node: an http(s) address, and present whenever there is a mailbox, since a contact
+/// finds a did:key identity's mailbox only through its hint (core §8.3), and with none the messages go nowhere.
+String? hintsCheck(Strings s, String? v, {required String? mailbox}) {
+  final h = (v ?? '').trim();
+  if (h.isEmpty) return mailbox == null ? null : s.firstRunHintsNeeded;
+  return h.startsWith('https://') || h.startsWith('http://') ? null : s.firstRunHintsBad;
 }

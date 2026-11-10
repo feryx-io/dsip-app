@@ -321,8 +321,20 @@ abstract class Strings {
   /// No description provided for @firstRunHints.
   ///
   /// In en, this message translates to:
-  /// **'Hints node (optional)'**
+  /// **'Hints node'**
   String get firstRunHints;
+
+  /// No description provided for @firstRunHintsNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages need a hints node too: without one, nobody can find your mailbox.'**
+  String get firstRunHintsNeeded;
+
+  /// No description provided for @firstRunHintsBad.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a hints node address starting with https:// or http://.'**
+  String get firstRunHintsBad;
 
   /// No description provided for @firstRunHintsHint.
   ///
