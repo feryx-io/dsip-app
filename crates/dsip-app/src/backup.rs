@@ -18,7 +18,10 @@
 //! identities followed ([`crate::NAMES_FILE`], [`crate::FOLLOWING_FILE`]) as they were when it was made, as JSON,
 //! sealed with XChaCha20-Poly1305 under SHA-256("dsip backup contacts v1" ‖ the code's key), so one Argon2id opens
 //! both; `DSIPC1` and the code's salt are its associated data, binding it to that code. 1 byte of version, 24 of
-//! nonce, the sealed JSON. Restored from the file, they come back; from the code alone, only the identity does. Restoring makes that install the one holding the identity key, as the first device does
+//! nonce, the sealed JSON. Restored from the file, they come back; from the code alone, only the identity does. The
+//! same JSON holds the servers the device used ([`Connection`]: relay, mailbox, hints nodes, STUN), so an install
+//! restored from the file starts with them, nothing typed ([`connection_in`]); a file made before they were kept has
+//! none, and is read as before. Restoring makes that install the one holding the identity key, as the first device does
 //! (decision 5 (a)); adding a device that holds only its own key is A6c.
 //!
 //! Spec: none (infrastructure). §7.3–§7.4 name the keys and the delegation a restored install signs.
@@ -138,13 +141,47 @@ fn open_keyed(code: &str, passphrase: &str) -> Result<([u8; 32], CodeKey), Error
     Ok((seed, CodeKey { key, salt: aad[1..].try_into().expect("the salt") }))
 }
 
-/// The names given identities, and the identities followed: what the file keeps beside the code.
+/// The names given identities, and the identities followed, and the servers used: what the file keeps beside the code.
 #[derive(Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 struct Contacts {
     #[serde(default)]
     names: std::collections::BTreeMap<String, String>,
     #[serde(default)]
     following: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    servers: Option<Connection>,
+}
+
+/// The servers a device used, kept in a backup file so a restored install starts with them: the part of its
+/// [`Settings`](crate::Settings) that says where it connects, not what is the device's own (identity folder, sound).
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Connection {
+    /// The relay.
+    pub relay: String,
+    /// The mailbox, if it had one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mailbox: Option<crate::Mailbox>,
+    /// The hints nodes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hints_nodes: Vec<String>,
+    /// The STUN servers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stun: Vec<String>,
+    /// The domain they were found at, if they were ([`crate::servers`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server: Option<String>,
+}
+
+impl From<&crate::Settings> for Connection {
+    fn from(s: &crate::Settings) -> Connection {
+        Connection {
+            relay: s.relay.clone(),
+            mailbox: s.mailbox.clone(),
+            hints_nodes: s.hints_nodes.clone(),
+            stun: s.stun.clone(),
+            server: s.server.clone(),
+        }
+    }
 }
 
 impl Contacts {
@@ -154,6 +191,7 @@ impl Contacts {
         Contacts {
             names: json(crate::NAMES_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
             following: json(crate::FOLLOWING_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
+            servers: None,
         }
     }
 
@@ -228,13 +266,13 @@ fn contacts_in(text: &str) -> Option<&str> {
     text.lines().find(|l| normal(l).starts_with(prefix))
 }
 
-/// A backup of the identity in `dir`, its key sealed under `passphrase`.
-pub fn export_identity(dir: &Path, passphrase: &str) -> Result<Backup, Error> {
+/// A backup of the identity in `dir`, its key sealed under `passphrase`; the file keeps `servers` too, when given.
+pub fn export_identity(dir: &Path, passphrase: &str, servers: Option<&Connection>) -> Result<Backup, Error> {
     let id = crate::keys::load_identity(dir)?;
     // only a device holding the identity key backs it up; one that joined holds none (A6, pairing)
     let (code, key) = seal_keyed(&id.identity_key()?.seed(), passphrase)?;
     let identity = id.meta.identity.clone();
-    let contacts = Contacts::read(dir);
+    let contacts = Contacts { servers: servers.filter(|c| !c.relay.is_empty()).cloned(), ..Contacts::read(dir) };
     let mut file = format!(
         "DSIP identity backup\n\
          Identity: {identity}\n\
@@ -246,12 +284,14 @@ pub fn export_identity(dir: &Path, passphrase: &str) -> Result<Backup, Error> {
     );
     if let Some(line) = seal_contacts(&contacts, &key)? {
         file.push_str(&format!(
-            "\nThe names you gave {} identities, and the {} you follow, as they are today, sealed under the same passphrase.\n\
+            "\nThe names you gave {} identities, and the {} you follow, as they are today{}, sealed under the same \
+             passphrase.\n\
              Restoring from this file brings them back; the code alone does not.\n\
              \n\
              {line}\n",
             contacts.names.len(),
-            contacts.following.len()
+            contacts.following.len(),
+            if contacts.servers.is_some() { ", and the servers this device uses" } else { "" },
         ));
     }
     Ok(Backup { identity, code, file })
@@ -293,6 +333,14 @@ pub fn restore_identity(dir: &Path, code: &str, passphrase: &str, display_name: 
     Ok(did)
 }
 
+/// The servers kept in a backup file's `text`, opened with `passphrase`: none from a code alone, from a file made
+/// before they were kept, or from a line that does not open (the identity is restored without them, as the contacts).
+pub fn connection_in(text: &str, passphrase: &str) -> Result<Option<Connection>, Error> {
+    let Some(line) = contacts_in(text) else { return Ok(None) };
+    let (_, key) = open_keyed(code_in(text), passphrase)?;
+    Ok(open_contacts(line, &key).ok().and_then(|c| c.servers))
+}
+
 fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
@@ -313,7 +361,7 @@ mod tests {
         let _one = crate::keys::STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let (a, b) = (temp("a"), temp("b"));
         let did = crate::init_identity(&a, "Ann").unwrap();
-        let backup = export_identity(&a, "correct horse battery").unwrap();
+        let backup = export_identity(&a, "correct horse battery", None).unwrap();
         assert_eq!(backup.identity, did);
         assert!(backup.code.starts_with("DSIP1-") && backup.file.contains(&backup.code) && backup.file.contains(&did));
         assert_eq!(backup.code.len(), PREFIX.len() + 146 + 29, "91 bytes: 146 base32 characters, in groups of five");
@@ -342,7 +390,7 @@ mod tests {
         let names = r#"{"did:web:priya.example": "Priya Patel", "did:key:z6MkBob": "Bob"}"#;
         std::fs::write(a.join(crate::NAMES_FILE), names).unwrap();
         std::fs::write(a.join(crate::FOLLOWING_FILE), r#"["did:web:priya.example"]"#).unwrap();
-        let backup = export_identity(&a, "correct horse battery").unwrap();
+        let backup = export_identity(&a, "correct horse battery", None).unwrap();
         let line = contacts_in(&backup.file).expect("a contacts line");
         assert!(line.starts_with(CONTACTS_PREFIX) && !backup.code.contains("DSIPC1"), "in the file, not the code");
         assert!(!backup.file.contains("Priya"), "sealed");
@@ -368,8 +416,38 @@ mod tests {
         // nothing to keep: no line
         let e = temp("ce");
         crate::init_identity(&e, "Eve").unwrap();
-        assert!(contacts_in(&export_identity(&e, "correct horse battery").unwrap().file).is_none());
+        assert!(contacts_in(&export_identity(&e, "correct horse battery", None).unwrap().file).is_none());
         for x in [a, b, c, d, e] {
+            std::fs::remove_dir_all(x).unwrap();
+        }
+    }
+
+    #[test]
+    fn the_servers_come_back_from_the_file() {
+        let _one = crate::keys::STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let (a, b) = (temp("sa"), temp("sb"));
+        crate::init_identity(&a, "Ann").unwrap();
+        let servers = Connection {
+            relay: "wss://relay.example.com:8443/dsip".into(),
+            mailbox: Some(crate::Mailbox { uri: "wss://mailbox.example.com:9443/dsip".into(), did: "did:key:z6MkMb".into() }),
+            hints_nodes: vec!["http://hints.example.com:8090".into()],
+            stun: vec!["stun:stun.example.com:3478".into()],
+            server: None,
+        };
+        // no names, no following: the line is there for the servers alone
+        let backup = export_identity(&a, "correct horse battery", Some(&servers)).unwrap();
+        assert!(backup.file.contains("the servers this device uses") && !backup.file.contains("relay.example.com"), "sealed");
+        assert_eq!(connection_in(&backup.file, "correct horse battery").unwrap(), Some(servers.clone()));
+        assert!(connection_in(&backup.file, "another passphrase").is_err());
+        assert_eq!(connection_in(&backup.code, "correct horse battery").unwrap(), None, "the code alone holds none");
+        restore_identity(&b, &backup.file, "correct horse battery", "Ann").unwrap();
+        assert_eq!(Contacts::read(&b), Contacts::default(), "only names and following are written to the folder");
+
+        // a file made before servers were kept (names only): none, and no error
+        std::fs::write(a.join(crate::NAMES_FILE), r#"{"did:key:z6MkBob": "Bob"}"#).unwrap();
+        let old = export_identity(&a, "correct horse battery", None).unwrap();
+        assert_eq!(connection_in(&old.file, "correct horse battery").unwrap(), None);
+        for x in [a, b] {
             std::fs::remove_dir_all(x).unwrap();
         }
     }
@@ -378,7 +456,7 @@ mod tests {
     fn a_contacts_line_opens_only_beside_its_own_code() {
         let (_, mine) = seal_keyed(&[1u8; 32], "a long passphrase").unwrap();
         let (_, other) = seal_keyed(&[1u8; 32], "a long passphrase").unwrap();
-        let c = Contacts { names: [("did:key:z6MkBob".into(), "Bob".into())].into(), following: vec![] };
+        let c = Contacts { names: [("did:key:z6MkBob".into(), "Bob".into())].into(), ..Contacts::default() };
         let line = seal_contacts(&c, &mine).unwrap().unwrap();
         assert_eq!(open_contacts(&line, &mine).unwrap(), c);
         // same passphrase, another code (another salt): refused
@@ -390,8 +468,12 @@ mod tests {
         let dir = temp("keep");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join(crate::NAMES_FILE), r#"{"did:key:z6MkBob": "Robert"}"#).unwrap();
-        Contacts { names: [("did:key:z6MkBob".into(), "Bob".into())].into(), following: vec!["did:key:z6MkBob".into()] }
-            .write(&dir)
+        Contacts {
+            names: [("did:key:z6MkBob".into(), "Bob".into())].into(),
+            following: vec!["did:key:z6MkBob".into()],
+            servers: None,
+        }
+        .write(&dir)
             .unwrap();
         let read = Contacts::read(&dir);
         assert_eq!(read.names.get("did:key:z6MkBob").map(String::as_str), Some("Robert"));

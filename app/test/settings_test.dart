@@ -176,6 +176,7 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(client.exported, [(saved['identity'] as String, 'a long passphrase')]);
+    expect(client.exportedSettings, [saved], reason: 'the file keeps the servers too');
     expect(find.text('Your recovery code'), findsOneWidget);
     expect(find.text('DSIP1-AAAAA-BBBBB'), findsOneWidget);
     await tester.tap(find.text('Done'));

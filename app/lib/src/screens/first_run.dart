@@ -103,8 +103,25 @@ class _FirstRunState extends State<FirstRun> {
       _failed = null;
     });
     final identity = _origin == Origin.folder ? _text(_folder)! : widget.controller.store.defaultIdentity;
+    // a backup file keeps the servers it was made with: those, rather than any named here
+    Map<String, dynamic>? kept;
+    if (_origin == Origin.restore) {
+      try {
+        kept = await widget.controller.client.backupServers(_code.text.trim(), _passphrase.text);
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _failed = s.firstRunFailed('$e');
+            _busy = false;
+          });
+        }
+        return;
+      }
+    }
     final Map<String, dynamic> settings;
-    if (_byHand) {
+    if (kept != null) {
+      settings = {...kept, 'identity': identity};
+    } else if (_byHand) {
       settings = settingsFor(
         identity: identity,
         relay: _text(_relay)!,
@@ -207,6 +224,7 @@ class _FirstRunState extends State<FirstRun> {
                         onPressed: _busy ? null : _openFile,
                       ),
                     ),
+                    Text(s.firstRunRestoreServers, style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height: 12),
                     TextFormField(
                       key: const Key('passphrase'),

@@ -36,8 +36,13 @@ class FakeClient implements Client {
   /// What [restoreIdentity] was given: dir, code, passphrase, name.
   final restored = <(String, String, String, String)>[];
 
-  /// What [exportIdentity] was given: dir, passphrase.
+  /// What [exportIdentity] was given: dir, passphrase; and the settings it was given to keep.
   final exported = <(String, String)>[];
+  final exportedSettings = <Map<String, dynamic>?>[];
+
+  /// What [backupServers] answers for a backup's text; it throws for any other passphrase than [backupPassphrase].
+  Map<String, dynamic>? backupServersKept;
+  String backupPassphrase = 'a long passphrase';
 
   /// What [exportIdentity] answers: a code, and a file holding only it.
   IdentityBackup backup = const IdentityBackup(
@@ -47,9 +52,16 @@ class FakeClient implements Client {
   );
 
   @override
-  Future<IdentityBackup> exportIdentity(String dir, String passphrase) async {
+  Future<IdentityBackup> exportIdentity(String dir, String passphrase, {Map<String, dynamic>? settings}) async {
     exported.add((dir, passphrase));
+    exportedSettings.add(settings);
     return backup;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> backupServers(String text, String passphrase) async {
+    if (passphrase != backupPassphrase) throw StateError('the passphrase does not open this code');
+    return backupServersKept;
   }
 
   @override

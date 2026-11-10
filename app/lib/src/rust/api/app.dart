@@ -19,12 +19,25 @@ Future<String> initIdentity({
 );
 
 /// Back up the identity in `dir`: its key sealed under `passphrase`, as `{"identity", "code", "file"}` JSON (the DID,
-/// the recovery code, a backup file's text).
+/// the recovery code, a backup file's text). The file keeps the servers in `settings` (the app's settings, as JSON)
+/// too, when given.
 Future<String> exportIdentity({
   required String dir,
   required String passphrase,
+  String? settings,
 }) => RustLib.instance.api.crateApiAppExportIdentity(
   dir: dir,
+  passphrase: passphrase,
+  settings: settings,
+);
+
+/// The servers a backup file's `text` keeps, opened with `passphrase`, as settings JSON without an identity folder
+/// (relay, mailbox, hints_nodes, stun, server); none from a code alone or a file made before they were kept.
+Future<String?> backupServers({
+  required String text,
+  required String passphrase,
+}) => RustLib.instance.api.crateApiAppBackupServers(
+  text: text,
   passphrase: passphrase,
 );
 

@@ -38,11 +38,22 @@ pub fn init_identity(dir: String, display_name: String) -> anyhow::Result<String
 }
 
 /// Back up the identity in `dir`: its key sealed under `passphrase`, as `{"identity", "code", "file"}` JSON (the DID,
-/// the recovery code, a backup file's text).
-pub fn export_identity(dir: String, passphrase: String) -> anyhow::Result<String> {
+/// the recovery code, a backup file's text). The file keeps the servers in `settings` (the app's settings, as JSON)
+/// too, when given.
+pub fn export_identity(dir: String, passphrase: String, settings: Option<String>) -> anyhow::Result<String> {
     dsip_app::keys::use_system_store();
-    let b = dsip_app::backup::export_identity(std::path::Path::new(&dir), &passphrase)?;
+    let servers = match settings {
+        Some(json) => Some(dsip_app::backup::Connection::from(&serde_json::from_str::<dsip_app::Settings>(&json)?)),
+        None => None,
+    };
+    let b = dsip_app::backup::export_identity(std::path::Path::new(&dir), &passphrase, servers.as_ref())?;
     Ok(serde_json::json!({"identity": b.identity, "code": b.code, "file": b.file}).to_string())
+}
+
+/// The servers a backup file's `text` keeps, opened with `passphrase`, as settings JSON without an identity folder
+/// (relay, mailbox, hints_nodes, stun, server); none from a code alone or a file made before they were kept.
+pub fn backup_servers(text: String, passphrase: String) -> anyhow::Result<Option<String>> {
+    Ok(dsip_app::backup::connection_in(&text, &passphrase)?.map(|c| serde_json::to_string(&c)).transpose()?)
 }
 
 /// Make the identity in `code` (a recovery code, or a backup file's text) this install's, in `dir`; its DID.

@@ -189,6 +189,51 @@ void main() {
     expect(client.restored, [(identity, file.trim(), 'a long passphrase', 'Ann')]);
   });
 
+  testWidgets('a backup file that keeps its servers starts with them: none typed, none looked up', (tester) async {
+    const file = 'DSIP identity backup\n\nDSIP1-AAAAA-BBBBB\n\nDSIPC1-CCCCC-DDDDD\n';
+    final kept = {
+      'relay': 'wss://relay.example.com:8443/dsip',
+      'mailbox': {'uri': 'wss://mailbox.example.com:9443/dsip', 'did': 'did:key:z6MkMailbox'},
+      'hints_nodes': ['http://hints.example.com:8090'],
+    };
+    client.backupServersKept = kept;
+    openBackupFile = () async => file;
+    addTearDown(() => openBackupFile = () async => null);
+    await open(tester);
+    await tester.tap(find.text('Restore from a backup'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('also brings back the servers'), findsOneWidget);
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('open-file')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('name')), 'Ann');
+
+    // the wrong passphrase: said, and nothing restored
+    await tester.enterText(find.byKey(const Key('passphrase')), 'not the passphrase');
+    await tester.ensureVisible(find.text('Start'));
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+    expect(find.textContaining('does not open'), findsOneWidget);
+    expect(client.restored, isEmpty);
+
+    await tester.enterText(find.byKey(const Key('passphrase')), 'a long passphrase');
+    await tester.ensureVisible(find.text('Start'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    final identity = SettingsStore(dir).defaultIdentity;
+    expect(client.restored, [(identity, file.trim(), 'a long passphrase', 'Ann')]);
+    expect(client.started, {...kept, 'identity': identity});
+    expect(client.discovered, isEmpty, reason: 'the server field (feryx.io) is not asked');
+  });
+
   testWidgets('a file that is not a backup says so, and nothing is restored', (tester) async {
     openBackupFile = () async => throw const FormatException('too large to be a backup');
     addTearDown(() => openBackupFile = () async => null);

@@ -434,7 +434,7 @@ async fn main() -> Result<ExitCode> {
             return Ok(ExitCode::SUCCESS);
         }
         Cmd::Export { identity, out } => {
-            let backup = dsip_app::backup::export_identity(&identity, &passphrase()?).context("backing up the identity")?;
+            let backup = dsip_app::backup::export_identity(&identity, &passphrase()?, None).context("backing up the identity")?;
             if let Some(out) = out {
                 std::fs::write(&out, &backup.file).with_context(|| out.display().to_string())?;
             }

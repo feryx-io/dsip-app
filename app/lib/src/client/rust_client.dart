@@ -12,9 +12,17 @@ class RustClient implements Client {
       bridge.initIdentity(dir: dir, displayName: displayName);
 
   @override
-  Future<IdentityBackup> exportIdentity(String dir, String passphrase) async => IdentityBackup.fromJson(
-    jsonDecode(await bridge.exportIdentity(dir: dir, passphrase: passphrase)) as Map<String, dynamic>,
-  );
+  Future<IdentityBackup> exportIdentity(String dir, String passphrase, {Map<String, dynamic>? settings}) async {
+    final kept = settings == null ? null : jsonEncode(settings);
+    final json = await bridge.exportIdentity(dir: dir, passphrase: passphrase, settings: kept);
+    return IdentityBackup.fromJson(jsonDecode(json) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> backupServers(String text, String passphrase) async {
+    final json = await bridge.backupServers(text: text, passphrase: passphrase);
+    return json == null ? null : jsonDecode(json) as Map<String, dynamic>;
+  }
 
   @override
   Future<String> restoreIdentity(String dir, String code, String passphrase, String displayName) =>
