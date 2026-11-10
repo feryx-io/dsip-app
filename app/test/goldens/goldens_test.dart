@@ -105,6 +105,8 @@ void main() {
       );
     });
 
+    testWidgets('contacts, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'contacts', tab: 'Contacts'));
+
     testWidgets('presence, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'presence', tab: 'Presence'));
 
     testWidgets('me, $theme${prefix.isEmpty ? '' : ', phone'}', (tester) => shot(tester, 'me', tab: 'Me'));

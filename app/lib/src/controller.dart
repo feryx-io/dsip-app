@@ -9,6 +9,16 @@ import 'mobile/calls.dart';
 import 'mobile/platform.dart';
 import 'settings.dart';
 
+/// The home screen's tabs, in order.
+abstract final class Tabs {
+  static const calls = 0;
+  static const messages = 1;
+  static const contacts = 2;
+  static const presence = 3;
+  static const me = 4;
+  static const settings = 5;
+}
+
 /// The app as the screens see it: first run until there are settings, then the running app's state, one update at a
 /// time. Every action is a `dsip-app` command; nothing here decides what the protocol does.
 class Controller extends ChangeNotifier {
@@ -71,8 +81,23 @@ class Controller extends ChangeNotifier {
   /// The settings the app runs with (`dsip-app`'s `Settings` as JSON), as saved.
   Map<String, dynamic>? settings;
 
-  /// The home screen's tab: kept here, so that the app starting again (new settings) comes back to it.
-  int tab = 0;
+  /// The home screen's tab ([Tabs]): kept here, so that the app starting again (new settings) comes back to it.
+  int tab = Tabs.calls;
+
+  /// A conversation another screen asked the messages screen to open (its group id), until it does.
+  String? openRequested;
+
+  /// Go to the tab [tab].
+  void showTab(int tab) {
+    this.tab = tab;
+    notifyListeners();
+  }
+
+  /// Go to the messages, with the conversation [group] open.
+  void showConversation(String group) {
+    openRequested = group;
+    showTab(Tabs.messages);
+  }
 
   /// The latest command that failed, for the screen to show once.
   String? error;
@@ -219,6 +244,23 @@ class Controller extends ChangeNotifier {
     if (r['response'] != 'thread') return;
     threads[group] = [for (final m in r['messages'] as List) MessageView.fromJson(m as Map<String, dynamic>)];
     notifyListeners();
+  }
+
+  /// Delete the message [id] of the conversation [group] on this device.
+  Future<void> deleteMessage(String group, String id) async {
+    final r = await run({'command': 'delete_message', 'conversation': group, 'id': id});
+    if (r['response'] != 'ok') return;
+    threads[group]?.removeWhere((m) => m.id == id);
+    notifyListeners();
+  }
+
+  /// Delete the conversation [group]'s messages on this device (a group is left too); whether it was.
+  Future<bool> deleteConversation(String group) async {
+    final r = await run({'command': 'delete_conversation', 'conversation': group});
+    if (r['response'] != 'ok') return false;
+    threads.remove(group);
+    notifyListeners();
+    return true;
   }
 
   /// Whether a call is placed, ringing or up: no update restarts the app then.

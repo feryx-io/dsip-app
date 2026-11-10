@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import 'confirm.dart';
 import 'form_dialog.dart';
 import 'name_dialog.dart';
 
-/// Messages: the requests to answer, the conversations, and the one open; first contact (introduce yourself), a new
-/// message to someone who accepted you, a new group.
+/// Messages: the requests to answer, the introductions sent, the conversations, and the one open; first contact
+/// (introduce yourself), a new message to someone who accepted you, a new group. A message, or a conversation, is
+/// deleted on this device from its long press (a right click on a desktop).
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key, required this.controller, required this.state});
   final Controller controller;
@@ -27,14 +30,47 @@ class _MessagesScreenState extends State<MessagesScreen> {
     await c.openThread(group);
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _takeRequested();
+  }
+
+  @override
+  void didUpdateWidget(MessagesScreen old) {
+    super.didUpdateWidget(old);
+    _takeRequested();
+  }
+
+  /// Open the conversation another screen asked for.
+  void _takeRequested() {
+    final group = c.openRequested;
+    if (group == null) return;
+    c.openRequested = null;
+    _open = group;
+    WidgetsBinding.instance.addPostFrameCallback((_) => c.openThread(group));
+  }
+
+  Future<void> _deleteConversation(ConversationView x) async {
+    final s = Strings.of(context);
+    final question = x.kind == 'group' ? s.groupDeleteConfirm : s.conversationDeleteConfirm;
+    if (!await confirm(context, question, s.deleteAction)) return;
+    if (await c.deleteConversation(x.group) && mounted && _open == x.group) setState(() => _open = null);
+  }
+
   Future<void> _introduce() async {
     final s = Strings.of(context);
     final v = await showDialog<List<String>>(
       context: context,
-      builder: (_) => FormDialog(title: s.introduceTitle, fields: [s.introduceTo, s.introducePurpose], hints: [null, s.introducePurposeHint]),
+      builder: (_) => FormDialog(
+        title: s.introduceTitle,
+        fields: [s.introduceTo, s.introducePurpose, s.introduceName],
+        hints: [null, s.introducePurposeHint, s.introduceNameHint],
+        optionalFields: const {2},
+      ),
     );
     if (v == null) return;
-    final response = await c.run({'command': 'introduce', 'to': v[0], 'purpose': v[1]});
+    final response = await c.run({'command': 'introduce', 'to': v[0], 'purpose': v[1], if (v[2].isNotEmpty) 'name': v[2]});
     if (response['response'] == 'ok' && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.introduceSent)));
     }
@@ -90,12 +126,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 for (final r in m.requests)
                   ListTile(
                     key: Key('request-${r.id}'),
+                    isThreeLine: r.purpose != null,
                     title: Text(switch ((widget.state.names[r.from], r.name)) {
                       (final String mine, _) => mine,
                       (null, final String offered) => s.requestFrom(offered),
                       _ => shortDid(r.from),
                     }),
-                    subtitle: Text(shortDid(r.from)),
+                    // what they say, whole, and who they are, whole: the identity is what the user decides on
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (r.purpose != null) Text(r.purpose!, key: Key('request-purpose-${r.id}')),
+                        SelectableText(r.from, style: Theme.of(context).textTheme.bodySmall),
+                      ],
+                    ),
                     trailing: Wrap(
                       spacing: 4,
                       children: [
@@ -123,7 +167,33 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   title: Text(_title(s, x, widget.state)),
                   subtitle: x.pending > 0 ? Text(s.conversationPending(x.pending)) : null,
                   onTap: () => _select(x.group),
+                  onLongPress: () => _deleteConversation(x),
+                  trailing: PopupMenuButton<String>(
+                    key: Key('conversation-menu-${x.group}'),
+                    onSelected: (_) => _deleteConversation(x),
+                    itemBuilder: (_) => [PopupMenuItem(value: 'delete', child: Text(s.conversationDelete))],
+                  ),
                 ),
+              if (m.introduced.isNotEmpty) ...[
+                _Heading(s.introducedTitle),
+                for (final i in m.introduced.reversed)
+                  ListTile(
+                    key: Key('introduced-${i.to}'),
+                    leading: Icon(i.accepted ? Icons.check_circle_outline : Icons.hourglass_empty),
+                    title: Text(widget.state.names[i.to] ?? i.name ?? shortDid(i.to), overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                      '${i.accepted ? s.introducedAccepted : s.introducedWaiting} · ${i.purpose}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: IconButton(
+                      key: Key('introduced-forget-${i.to}'),
+                      tooltip: s.introducedForget,
+                      icon: const Icon(Icons.close),
+                      onPressed: () => c.run({'command': 'forget_introduction', 'to': i.to}),
+                    ),
+                  ),
+              ],
             ],
           );
     final narrow = MediaQuery.sizeOf(context).width < 600;
@@ -134,6 +204,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       state: widget.state,
       onLeft: () => setState(() => _open = null),
       onBack: narrow ? () => setState(() => _open = null) : null,
+      onDelete: () => _deleteConversation(open),
     );
     // A phone: the list, or the conversation open over it with a way back. Wider: both, side by side.
     if (narrow) return open == null ? list : thread(open);
@@ -175,6 +246,7 @@ class _Thread extends StatefulWidget {
     required this.state,
     required this.onLeft,
     this.onBack,
+    required this.onDelete,
   });
   final Controller controller;
   final ConversationView conversation;
@@ -183,6 +255,9 @@ class _Thread extends StatefulWidget {
 
   /// Back to the list, on a phone (the list is not beside the conversation there).
   final VoidCallback? onBack;
+
+  /// Delete the conversation (leaving a group).
+  final VoidCallback onDelete;
 
   @override
   State<_Thread> createState() => _ThreadState();
@@ -245,14 +320,24 @@ class _ThreadState extends State<_Thread> {
           leading: widget.onBack == null ? null : BackButton(key: const Key('thread-back'), onPressed: widget.onBack),
           title: Text(_title(s, x, widget.state)),
           trailing: x.kind != 'group'
-              ? (_peer(x, me) == null
-                    ? null
-                    : IconButton(
+              ? Wrap(
+                  spacing: 4,
+                  children: [
+                    if (_peer(x, me) != null)
+                      IconButton(
                         key: const Key('name-thread'),
                         tooltip: s.nameAction,
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: () => editName(context, widget.controller, widget.state, _peer(x, me)!),
-                      ))
+                      ),
+                    IconButton(
+                      key: const Key('delete-thread'),
+                      tooltip: s.conversationDelete,
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: widget.onDelete,
+                    ),
+                  ],
+                )
               : Wrap(
                   spacing: 4,
                   children: [
@@ -268,6 +353,12 @@ class _ThreadState extends State<_Thread> {
                       onSelected: (m) => widget.controller.run({'command': 'remove_member', 'conversation': group, 'identity': m}),
                     ),
                     IconButton(tooltip: s.threadLeave, icon: const Icon(Icons.logout), onPressed: _leave),
+                    IconButton(
+                      key: const Key('delete-thread'),
+                      tooltip: s.conversationDelete,
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: widget.onDelete,
+                    ),
                   ],
                 ),
         ),
@@ -279,7 +370,18 @@ class _ThreadState extends State<_Thread> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     for (final m in messages)
-                      _Bubble(message: m, group: x.kind == 'group', from: widget.state.nameOf(m.from)),
+                      _Bubble(
+                        key: Key('message-${m.id}'),
+                        message: m,
+                        group: x.kind == 'group',
+                        from: widget.state.nameOf(m.from),
+                        onDelete: () async {
+                          final s = Strings.of(context);
+                          if (await confirm(context, s.messageDeleteConfirm, s.deleteAction)) {
+                            await widget.controller.deleteMessage(group, m.id);
+                          }
+                        },
+                      ),
                   ],
                 ),
         ),
@@ -306,9 +408,12 @@ class _ThreadState extends State<_Thread> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.group, required this.from});
+  const _Bubble({super.key, required this.message, required this.group, required this.from, required this.onDelete});
   final MessageView message;
   final bool group;
+
+  /// Delete it on this device: from its long press, or a right click.
+  final VoidCallback onDelete;
 
   /// What to call its sender.
   final String from;
@@ -323,10 +428,15 @@ class _Bubble extends StatelessWidget {
       // one node per bubble, its bounds the bubble's: a screen reader reads each message on its own
       child: Semantics(
         container: true,
+        customSemanticsActions: {CustomSemanticsAction(label: s.deleteAction): onDelete},
+        child: GestureDetector(
+        onLongPress: onDelete,
+        onSecondaryTap: onDelete,
         child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        constraints: const BoxConstraints(maxWidth: 480),
+        // a bubble is a tap target too (its long press deletes it): at least 48 high
+        constraints: const BoxConstraints(maxWidth: 480, minHeight: 48),
         decoration: BoxDecoration(
           color: message.mine ? scheme.primaryContainer : scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
@@ -339,6 +449,7 @@ class _Bubble extends StatelessWidget {
             Text(message.text ?? s.threadNotText(message.kind), style: TextStyle(color: onBubble)),
           ],
         ),
+      ),
       ),
       ),
     );

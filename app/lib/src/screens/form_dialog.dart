@@ -14,6 +14,7 @@ class FormDialog extends StatefulWidget {
     this.lines = 1,
     this.initial = const [],
     this.optional = false,
+    this.optionalFields = const {},
   });
   final String title;
   final List<String> fields;
@@ -26,6 +27,9 @@ class FormDialog extends StatefulWidget {
 
   /// Whether a field may be left empty.
   final bool optional;
+
+  /// The fields (by index) that may be left empty when the others may not.
+  final Set<int> optionalFields;
 
   @override
   State<FormDialog> createState() => _FormDialogState();
@@ -74,7 +78,7 @@ class _FormDialogState extends State<FormDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: Text(s.cancel)),
         FilledButton(
           // the fields as they are when pressed, not as they were drawn
-          onPressed: widget.optional || values.every((v) => v.isNotEmpty)
+          onPressed: widget.optional || [for (var i = 0; i < values.length; i++) if (!widget.optionalFields.contains(i)) values[i]].every((v) => v.isNotEmpty)
               ? () => Navigator.pop(context, [for (final c in _controllers) c.text.trim()])
               : null,
           child: Text(widget.action ?? widget.title),

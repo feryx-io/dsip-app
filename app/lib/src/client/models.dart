@@ -131,21 +131,61 @@ class ConversationView {
 }
 
 class RequestView {
-  const RequestView({required this.id, required this.from, this.name});
+  const RequestView({required this.id, required this.from, this.name, this.purpose});
   final String id;
   final String from;
+
+  /// The name it gives (a claim, not verified).
   final String? name;
 
-  factory RequestView.fromJson(Map<String, dynamic> j) =>
-      RequestView(id: j['id'] as String, from: j['from'] as String, name: j['name'] as String?);
+  /// What it says: why it asks.
+  final String? purpose;
+
+  factory RequestView.fromJson(Map<String, dynamic> j) => RequestView(
+    id: j['id'] as String,
+    from: j['from'] as String,
+    name: j['name'] as String?,
+    purpose: j['purpose'] as String?,
+  );
+}
+
+/// An introduction this identity sent.
+class Introduced {
+  const Introduced({required this.to, this.name, required this.purpose, required this.sentAt, required this.accepted});
+  final String to;
+
+  /// What the user calls them: their contact's name once they accept.
+  final String? name;
+  final String purpose;
+
+  /// Unix seconds.
+  final int sentAt;
+  final bool accepted;
+
+  factory Introduced.fromJson(Map<String, dynamic> j) => Introduced(
+    to: j['to'] as String,
+    name: j['name'] as String?,
+    purpose: j['purpose'] as String,
+    sentAt: j['sent_at'] as int,
+    accepted: j['accepted'] as bool,
+  );
 }
 
 class Messaging {
-  const Messaging({this.mailbox, required this.connected, required this.conversations, required this.requests});
+  const Messaging({
+    this.mailbox,
+    required this.connected,
+    required this.conversations,
+    required this.requests,
+    this.introduced = const [],
+  });
   final String? mailbox;
   final bool connected;
   final List<ConversationView> conversations;
   final List<RequestView> requests;
+
+  /// The introductions sent, oldest first.
+  final List<Introduced> introduced;
 
   factory Messaging.fromJson(Map<String, dynamic> j) => Messaging(
     mailbox: j['mailbox'] as String?,
@@ -154,6 +194,44 @@ class Messaging {
       for (final c in j['conversations'] as List? ?? const []) ConversationView.fromJson(c as Map<String, dynamic>),
     ],
     requests: [for (final r in j['requests'] as List? ?? const []) RequestView.fromJson(r as Map<String, dynamic>)],
+    introduced: [for (final i in j['introduced'] as List? ?? const []) Introduced.fromJson(i as Map<String, dynamic>)],
+  );
+}
+
+/// A call that ended, as the call history keeps it.
+class CallRecord {
+  const CallRecord({
+    required this.session,
+    required this.peer,
+    this.peerName,
+    required this.direction,
+    required this.answered,
+    required this.reason,
+    required this.endedAt,
+  });
+
+  /// The call's session id: what `forget_call` names.
+  final String session;
+  final String peer;
+  final String? peerName;
+  final Direction direction;
+  final bool answered;
+  final String reason;
+
+  /// Unix seconds.
+  final int endedAt;
+
+  /// A call that came in and was not answered.
+  bool get missed => direction == Direction.incoming && !answered;
+
+  factory CallRecord.fromJson(Map<String, dynamic> j) => CallRecord(
+    session: j['session'] as String,
+    peer: j['peer'] as String,
+    peerName: j['peer_name'] as String?,
+    direction: Direction.values.byName(j['direction'] as String),
+    answered: j['answered'] as bool,
+    reason: j['reason'] as String,
+    endedAt: j['ended_at'] as int,
   );
 }
 
@@ -195,6 +273,7 @@ class AppState {
     required this.messaging,
     required this.presence,
     this.names = const {},
+    this.history = const [],
   });
   final Me me;
   final String relay;
@@ -207,6 +286,9 @@ class AppState {
 
   /// The names this device's user gave identities, by identity (`set_name`): the app's own address book.
   final Map<String, String> names;
+
+  /// The calls that ended, oldest first, kept across restarts.
+  final List<CallRecord> history;
 
   /// What to call [did]: the name the user gave it, else the name it [offered] (a caller's own, unchecked), else the
   /// identity, shortened.
@@ -226,6 +308,7 @@ class AppState {
     messaging: Messaging.fromJson(j['messaging'] as Map<String, dynamic>),
     presence: PresenceState.fromJson(j['presence'] as Map<String, dynamic>? ?? const {}),
     names: (j['names'] as Map<String, dynamic>? ?? const {}).cast<String, String>(),
+    history: [for (final c in j['history'] as List? ?? const []) CallRecord.fromJson(c as Map<String, dynamic>)],
   );
 }
 

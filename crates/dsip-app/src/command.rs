@@ -53,8 +53,17 @@ pub enum Command {
         to: String,
         /// Why: shown to it, sealed to it on the wire.
         purpose: String,
+        /// What to call it here: its contact's name once it accepts ([`Command::SetName`]); never sent.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
     },
-    /// Grant a request's sender permission to message (M§14.1).
+    /// Delete an introduction from the list of those sent (it is not withdrawn: they may still accept it).
+    ForgetIntroduction {
+        /// To whom it went.
+        to: String,
+    },
+    /// Grant a request's sender permission to message (M§14.1). The sender becomes a contact: named as it names
+    /// itself, unless it has a name here already.
     AcceptRequest {
         /// The request's id ([`RequestView::id`](crate::RequestView)).
         id: String,
@@ -176,6 +185,26 @@ pub enum Command {
         /// The push's data.
         data: serde_json::Value,
     },
+    /// Delete one message of a conversation, on this device only (the others keep theirs).
+    DeleteMessage {
+        /// The conversation's group id.
+        conversation: String,
+        /// The message's id ([`MessageView::id`](crate::MessageView)).
+        id: String,
+    },
+    /// Delete a conversation's messages on this device. A direct conversation is no longer listed until a message
+    /// comes or goes in it again; a group conversation is left too ([`Command::Leave`]).
+    DeleteConversation {
+        /// The group id.
+        conversation: String,
+    },
+    /// Delete one call from the call history.
+    ForgetCall {
+        /// The call's session id ([`CallRecord::session`](crate::CallRecord)).
+        session: String,
+    },
+    /// Delete the whole call history.
+    ClearHistory,
     /// A conversation's messages, oldest first.
     Thread {
         /// Its group id.

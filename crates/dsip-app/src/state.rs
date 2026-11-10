@@ -30,6 +30,30 @@ pub struct State {
     /// The names this device's user gave identities (`SetName`), by identity: shown before a caller's own name.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,
+    /// The calls that ended, oldest first, kept across restarts ([`crate::HISTORY_FILE`]); at most
+    /// [`crate::HISTORY_MAX`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub history: Vec<CallRecord>,
+}
+
+/// A call that ended, as the call history keeps it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CallRecord {
+    /// The call's DSIP session id: what `forget_call` names.
+    pub session: String,
+    /// The other side.
+    pub peer: String,
+    /// The caller's display name, for an incoming call (a claim, not verified).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub peer_name: Option<String>,
+    /// Placed here, or coming in.
+    pub direction: Direction,
+    /// Whether it was answered.
+    pub answered: bool,
+    /// Why it ended (§15 reason token).
+    pub reason: String,
+    /// When it ended, unix seconds.
+    pub ended_at: i64,
 }
 
 /// Waking this device while it sleeps (app plan A5d; the Wake Profile): enrolled at the publisher's push gateway with
@@ -132,6 +156,26 @@ pub struct Messaging {
     pub conversations: Vec<ConversationView>,
     /// Introductions waiting for an answer (M§14.1).
     pub requests: Vec<RequestView>,
+    /// The introductions this identity sent, oldest first, one per identity, kept across restarts
+    /// ([`crate::INTRODUCED_FILE`]).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub introduced: Vec<Introduced>,
+}
+
+/// An introduction this identity sent (M§14.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Introduced {
+    /// To whom.
+    pub to: String,
+    /// The name the user gave them when introducing, kept as the contact's once they accept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// What it said.
+    pub purpose: String,
+    /// When it was sent, unix seconds.
+    pub sent_at: i64,
+    /// They granted permission to message ([`Change::Granted`]).
+    pub accepted: bool,
 }
 
 /// A conversation.
@@ -182,6 +226,9 @@ pub struct RequestView {
     /// The name it gives (a claim, not verified).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// What it says: why it asks (opened with this identity's key when it came sealed).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purpose: Option<String>,
 }
 
 /// The identity and this device.
@@ -369,6 +416,16 @@ pub enum Change {
         /// Where it stands.
         push: Option<Push>,
     },
+    /// The call history changed: a call ended, or some were deleted.
+    History {
+        /// All of it, as it is now.
+        history: Vec<CallRecord>,
+    },
+    /// The introductions sent changed: one sent, accepted or deleted.
+    Introduced {
+        /// All of them, as they are now.
+        introduced: Vec<Introduced>,
+    },
     /// The app stopped: its phone unbound.
     Stopped,
 }
@@ -398,6 +455,8 @@ impl State {
             Change::Audio { audio } => self.audio = audio.clone(),
             Change::Push { push } => self.push = push.clone(),
             Change::Names { names } => self.names = names.clone(),
+            Change::History { history } => self.history = history.clone(),
+            Change::Introduced { introduced } => self.messaging.introduced = introduced.clone(),
             Change::Message { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }

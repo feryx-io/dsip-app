@@ -120,6 +120,45 @@ async fn a_declined_call_ends_at_the_caller() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn ended_calls_are_kept_in_the_history_across_restarts_until_deleted() {
+    let net = Network::new();
+    let (alice_id, bob) = (net.identity("Alice"), app(&net, "Bob").await);
+    let dir = alice_id.dir.clone();
+    let start = |identity| {
+        let mut cfg = Config::new(identity, "wss://relay.invalid/dsip");
+        cfg.dialer = Some(net.dialer());
+        cfg.audio = Some(HostKind::Tone);
+        App::start(cfg)
+    };
+    let alice = start(alice_id).await.unwrap();
+    let bob_did = bob.state().me.identity;
+    for _ in 0..2 {
+        let id = call_of(alice.command(Command::Call { to: bob_did.clone() }).await);
+        until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == CallState::Ringing)).await;
+        call_of(bob.command(Command::Decline { call: None }).await);
+        until(&alice, "declined at Alice", |s| s.calls[&id].state.ended()).await;
+    }
+    until(&alice, "two calls in Alice's history", |s| s.history.len() == 2).await;
+    until(&bob, "two calls in Bob's history", |s| s.history.len() == 2).await;
+    let h = alice.state().history;
+    assert!(h.iter().all(|c| c.peer == bob_did && c.direction == Direction::Outgoing && !c.answered && c.reason.starts_with("user.")), "{h:?}");
+    assert!(bob.state().history.iter().all(|c| c.direction == Direction::Incoming && c.peer_name.as_deref() == Some("Alice")));
+    assert_ne!(h[0].session, h[1].session);
+
+    // one deleted; the other is there after a restart; then none
+    assert_eq!(alice.command(Command::ForgetCall { session: h[0].session.clone() }).await, Response::Ok);
+    assert!(matches!(alice.command(Command::ForgetCall { session: h[0].session.clone() }).await, Response::Error { .. }));
+    alice.stop().await;
+    let alice = start(dsip_phone::Identity::load(&dir).unwrap()).await.unwrap();
+    assert_eq!(alice.state().history, h[1..]);
+    assert_eq!(alice.command(Command::ClearHistory).await, Response::Ok);
+    assert!(alice.state().history.is_empty());
+    alice.stop().await;
+    let alice = start(dsip_phone::Identity::load(&dir).unwrap()).await.unwrap();
+    assert!(alice.state().history.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn the_control_channel_drives_the_same_app() {
     let net = Network::new();
     let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);

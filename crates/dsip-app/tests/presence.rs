@@ -97,7 +97,7 @@ async fn accepting_an_introduction_shares_presence_with_the_one_who_asked() {
     hints_published(&hints, &[&alice, &bob]).await;
 
     let mut a_changes = alice.subscribe();
-    assert_eq!(alice.command(Command::Introduce { to: bob_did.clone(), purpose: "hello".into() }).await, Response::Ok);
+    assert_eq!(alice.command(Command::Introduce { to: bob_did.clone(), purpose: "hello".into(), name: None }).await, Response::Ok);
     until(&bob, "Bob sees the request", |s| !s.messaging.requests.is_empty()).await;
     let id = bob.state().messaging.requests[0].id.clone();
     assert_eq!(bob.command(Command::AcceptRequest { id }).await, Response::Ok);
@@ -136,7 +136,7 @@ async fn accepting_an_introduction_shares_presence_with_the_one_who_asked() {
 async fn granted(from: &App, to: &App) {
     let to_did = to.state().me.identity;
     let mut changes = from.subscribe();
-    assert_eq!(from.command(Command::Introduce { to: to_did.clone(), purpose: "hello".into() }).await, Response::Ok);
+    assert_eq!(from.command(Command::Introduce { to: to_did.clone(), purpose: "hello".into(), name: None }).await, Response::Ok);
     let me = from.state().me.identity;
     until(to, "the request", |s| s.messaging.requests.iter().any(|r| r.from == me)).await;
     let id = to.state().messaging.requests.iter().find(|r| r.from == me).unwrap().id.clone();
