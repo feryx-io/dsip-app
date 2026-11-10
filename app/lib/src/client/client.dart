@@ -50,6 +50,11 @@ abstract class Client {
   /// Make the identity in [dir] the `did:web` of [plan]; its new DID. Only while the app is stopped.
   Future<String> webMove(String dir, Map<String, dynamic> plan);
 
+  /// The settings for a new device from the servers [domain] lists at its `/.well-known/dsip`: one relay and one
+  /// mailbox from its pools, its hints nodes and STUN servers, and `server`; `identity` empty, for the caller to fill.
+  /// Throws, saying why, when the domain lists none or a list this app cannot use.
+  Future<Map<String, dynamic>> discoverServers(String domain);
+
   /// Start the app from [settings] (`dsip-app`'s `Settings` as JSON).
   Future<void> start(Map<String, dynamic> settings);
 

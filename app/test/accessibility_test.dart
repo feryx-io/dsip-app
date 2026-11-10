@@ -140,16 +140,25 @@ void main() {
 
   testWidgets('the first run is done from the keyboard: Tab reaches each field and Start', (tester) async {
     await open(tester, const Size(1100, 760), Brightness.light, null, null);
-    final reached = <String>{};
-    for (var i = 0; i < 20; i++) {
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
-      final focused = FocusManager.instance.primaryFocus?.context;
-      final key = focused?.findAncestorWidgetOfExactType<TextFormField>()?.key ?? focused?.widget.key;
-      if (key is ValueKey<String>) reached.add(key.value);
-      if (focused?.findAncestorWidgetOfExactType<FilledButton>() != null) reached.add('start');
+    Future<Set<String>> tabThrough() async {
+      final reached = <String>{};
+      for (var i = 0; i < 20; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focused = FocusManager.instance.primaryFocus?.context;
+        final key = focused?.findAncestorWidgetOfExactType<TextFormField>()?.key ??
+            focused?.findAncestorWidgetOfExactType<TextButton>()?.key ??
+            focused?.widget.key;
+        if (key is ValueKey<String>) reached.add(key.value);
+        if (focused?.findAncestorWidgetOfExactType<FilledButton>() != null) reached.add('start');
+      }
+      return reached;
     }
-    expect(reached, containsAll(['name', 'relay', 'mailbox', 'mailbox-did', 'hints', 'start']));
+
+    expect(await tabThrough(), containsAll(['name', 'server', 'by-hand', 'start']));
+    await tester.tap(find.byKey(const Key('by-hand')));
+    await tester.pumpAndSettle();
+    expect(await tabThrough(), containsAll(['name', 'relay', 'mailbox', 'mailbox-did', 'hints', 'start']));
   });
 
   testWidgets('the calls from the keyboard, from any tab: answer, mute, hang up, decline', (tester) async {

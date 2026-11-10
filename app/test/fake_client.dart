@@ -107,6 +107,20 @@ class FakeClient implements Client {
     return sendTo;
   }
 
+  /// What [discoverServers] answers for each domain; a domain not here lists none.
+  Map<String, Map<String, dynamic>> servers = {};
+
+  /// The domains [discoverServers] was asked for.
+  final discovered = <String>[];
+
+  @override
+  Future<Map<String, dynamic>> discoverServers(String domain) async {
+    discovered.add(domain);
+    final found = servers[domain];
+    if (found == null) throw StateError('$domain lists no DSIP servers');
+    return {'identity': '', ...found, 'server': domain};
+  }
+
   /// What [webCheck] answers.
   List<String> webDiffers = const [];
 

@@ -31,6 +31,55 @@ void main() {
     await tester.pump();
   }
 
+  /// The relay and mailbox typed in rather than found at a server.
+  Future<void> byHand(WidgetTester tester) async {
+    await tester.ensureVisible(find.byKey(const Key('by-hand')));
+    await tester.tap(find.byKey(const Key('by-hand')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('the first run finds its servers at feryx.io, or at the server the user names', (tester) async {
+    client.servers['feryx.io'] = {
+      'relay': 'wss://relay1.feryx.io/dsip',
+      'mailbox': {'uri': 'wss://mailbox1.feryx.io/dsip', 'did': 'did:web:mailbox1.feryx.io'},
+      'hints_nodes': ['https://hints.feryx.io'],
+      'stun': ['stun:turn.feryx.io:3478'],
+    };
+    await open(tester);
+    expect(find.byKey(const Key('relay')), findsNothing, reason: 'no addresses to type');
+    expect(tester.widget<TextFormField>(find.byKey(const Key('server'))).controller!.text, 'feryx.io');
+    await tester.enterText(find.byKey(const Key('name')), 'Alice');
+
+    // a server listing none: said, and nothing started
+    await tester.enterText(find.byKey(const Key('server')), 'example.org');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Could not get the servers from example.org'), findsOneWidget);
+    expect(client.started, isNull);
+    expect(client.identities, isEmpty);
+
+    await tester.enterText(find.byKey(const Key('server')), ' feryx.io ');
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Start'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+    final identity = SettingsStore(dir).defaultIdentity;
+    expect(client.discovered, ['example.org', 'feryx.io']);
+    expect(client.identities, [(identity, 'Alice')]);
+    expect(client.started, {
+      'identity': identity,
+      'relay': 'wss://relay1.feryx.io/dsip',
+      'mailbox': {'uri': 'wss://mailbox1.feryx.io/dsip', 'did': 'did:web:mailbox1.feryx.io'},
+      'hints_nodes': ['https://hints.feryx.io'],
+      'stun': ['stun:turn.feryx.io:3478'],
+      'server': 'feryx.io',
+    });
+  });
+
   testWidgets('the first run makes an identity, saves the settings and starts the app', (tester) async {
     await open(tester);
     expect(find.text('Welcome to DSIP'), findsOneWidget);
@@ -40,6 +89,7 @@ void main() {
     expect(client.started, isNull);
 
     await tester.enterText(find.byKey(const Key('name')), 'Alice');
+    await byHand(tester);
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
     await tester.enterText(find.byKey(const Key('mailbox')), 'wss://mailbox.example.com:9443/dsip');
     await tester.tap(find.text('Start'));
@@ -72,6 +122,7 @@ void main() {
     await tester.tap(find.text('Use an identity folder'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('folder')), '/home/alice/.dsip/alice');
+    await byHand(tester);
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
     await tester.runAsync(() async {
       await tester.tap(find.text('Start'));
@@ -85,6 +136,7 @@ void main() {
     await open(tester);
     await tester.tap(find.text('Restore from a backup'));
     await tester.pumpAndSettle();
+    await byHand(tester);
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
     await tester.ensureVisible(find.text('Start'));
     await tester.tap(find.text('Start'));
@@ -119,6 +171,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('passphrase')), 'a long passphrase');
     await tester.enterText(find.byKey(const Key('name')), 'Ann');
+    await byHand(tester);
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
     await tester.ensureVisible(find.text('Start'));
     await tester.runAsync(() async {
@@ -156,6 +209,7 @@ void main() {
     expect(find.text('Check code: QX7K-2DSA'), findsOneWidget);
     expect(find.byKey(const Key('join-qr')), findsOneWidget, reason: 'the join code as a QR code too');
     expect(find.byKey(const Key('scan-DSIPW')), findsNothing, reason: 'no camera to scan with on a desktop');
+    await byHand(tester);
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
     await tester.ensureVisible(find.text('Start'));
     await tester.tap(find.text('Start'));
@@ -187,6 +241,7 @@ void main() {
     expect(find.textContaining('Received from Ann (did:key:z6MkAnn)'), findsOneWidget);
     expect(client.handoffStopped, isTrue, reason: 'one welcome code, then no more listening');
     expect(client.finished, isEmpty, reason: 'nothing joins until Start');
+    await byHand(tester);
     await tester.enterText(find.byKey(const Key('relay')), 'wss://relay.example.com:8443/dsip');
     await tester.ensureVisible(find.text('Start'));
     await tester.runAsync(() async {

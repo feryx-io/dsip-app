@@ -29,6 +29,7 @@ pub mod control;
 pub mod keys;
 pub mod messaging;
 pub mod pairing;
+pub mod servers;
 mod settings;
 mod state;
 #[cfg(windows)]

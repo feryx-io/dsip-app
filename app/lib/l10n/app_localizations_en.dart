@@ -91,6 +91,27 @@ class StringsEn extends Strings {
   String get backupPassphraseNeeded => 'Enter the passphrase.';
 
   @override
+  String get firstRunServer => 'Server';
+
+  @override
+  String get firstRunServerHint =>
+      'Where your relay and mailbox are found, such as feryx.io. You can change them later in Settings.';
+
+  @override
+  String get firstRunServerNeeded => 'Enter a server, such as feryx.io.';
+
+  @override
+  String get firstRunByHand => 'Enter the relay and mailbox yourself';
+
+  @override
+  String get firstRunByServer => 'Use a server instead';
+
+  @override
+  String firstRunServersFailed(String server, String reason) {
+    return 'Could not get the servers from $server: $reason';
+  }
+
+  @override
   String get firstRunRelay => 'Relay';
 
   @override
@@ -1117,6 +1138,29 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get backupPassphraseNeeded => '[Éñţéŕ ţĥé þàššþĥŕàšé. one t]';
+
+  @override
+  String get firstRunServer => '[Šéŕṽéŕ o]';
+
+  @override
+  String get firstRunServerHint =>
+      '[Ŵĥéŕé ýóúŕ ŕéĺàý àñđ ɱàíĺƀóẋ àŕé ƒóúñđ, šúçĥ àš ƒéŕýẋ.íó. Ýóú çàñ çĥàñĝé ţĥéɱ ĺàţéŕ íñ Šéţţíñĝš. one two three four five ]';
+
+  @override
+  String get firstRunServerNeeded =>
+      '[Éñţéŕ à šéŕṽéŕ, šúçĥ àš ƒéŕýẋ.íó. one two]';
+
+  @override
+  String get firstRunByHand =>
+      '[Éñţéŕ ţĥé ŕéĺàý àñđ ɱàíĺƀóẋ ýóúŕšéĺƒ one two t]';
+
+  @override
+  String get firstRunByServer => '[Úšé à šéŕṽéŕ íñšţéàđ one ]';
+
+  @override
+  String firstRunServersFailed(String server, String reason) {
+    return '[Çóúĺđ ñóţ ĝéţ ţĥé šéŕṽéŕš ƒŕóɱ $server: $reason one two thr]';
+  }
 
   @override
   String get firstRunRelay => '[Ŕéĺàý ]';

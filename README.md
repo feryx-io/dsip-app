@@ -101,6 +101,22 @@ dsip-app revoke did:key:z6Mk…carol                   # withdraw what you grant
 dsip-app audio --input <id> --output <id>            # ids from `state`'s audio.devices; `audio` alone looks again
 ```
 
+Or let a domain say where its servers are: `dsip-app run --identity ~/.dsip/alice --server feryx.io` reads
+`https://feryx.io/.well-known/dsip`, and takes from it what the flags do not give: one relay and one mailbox from its
+pools (picked by the identity, so the same on every start), and its hints nodes and STUN servers. The file:
+
+```json
+{"version": 1,
+ "relays": ["wss://relay1.feryx.io/dsip", "wss://relay2.feryx.io/dsip"],
+ "mailboxes": [{"uri": "wss://mailbox1.feryx.io/dsip", "did": "did:web:mailbox1.feryx.io"}],
+ "hints_nodes": ["https://hints.feryx.io"],
+ "stun": ["stun:turn.feryx.io:3478"]}
+```
+
+The app's first run does the same with one Server field (`feryx.io` unless changed), picking at random and keeping
+what it picked; "Enter the relay and mailbox yourself" there takes addresses instead. An operator adds a relay or
+mailbox to the lists, and new devices start using it, with no app release.
+
 On Bob's side, `dsip-app answer` takes the call that rings. `--audio tone` uses a test tone instead of the
 microphone (headless machines); `--audio none` signals calls with no sound. `--ca relay.pem` trusts a relay's
 self-signed certificate. `--input` and `--output` pick the microphone and speaker at the start (the system's default

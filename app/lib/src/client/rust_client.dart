@@ -63,6 +63,10 @@ class RustClient implements Client {
   Future<String> webMove(String dir, Map<String, dynamic> plan) => bridge.webMove(dir: dir, plan: jsonEncode(plan));
 
   @override
+  Future<Map<String, dynamic>> discoverServers(String domain) async =>
+      jsonDecode(await bridge.discoverServers(domain: domain)) as Map<String, dynamic>;
+
+  @override
   Future<void> start(Map<String, dynamic> settings) => bridge.start(settings: jsonEncode(settings));
 
   @override

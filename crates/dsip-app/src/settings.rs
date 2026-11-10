@@ -45,6 +45,9 @@ pub struct Settings {
     /// sets it; without it, never woken.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub push_gateway: Option<String>,
+    /// The domain these servers were found at ([`crate::servers`]): `feryx.io`. None: typed in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server: Option<String>,
 }
 
 /// A mailbox: where it is and who it is.

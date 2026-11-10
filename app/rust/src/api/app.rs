@@ -133,6 +133,23 @@ pub async fn web_check(plan: String, ca: Option<String>) -> anyhow::Result<Strin
     Ok(serde_json::to_string(&differs)?)
 }
 
+/// The servers `domain` lists at its `/.well-known/dsip` (`dsip_app::servers`), as the settings a new device runs
+/// with: one relay and one mailbox picked at random from its pools, every hints node and STUN server, and the domain
+/// (JSON `Settings`, its identity left empty for the first run to fill). `ca`: a PEM file to trust besides the web's.
+pub async fn discover_servers(domain: String, ca: Option<String>) -> anyhow::Result<String> {
+    let found = runtime()
+        .spawn(async move {
+            let pem = match &ca {
+                Some(p) => Some(std::fs::read(p)?),
+                None => None,
+            };
+            let list = dsip_app::servers::fetch(&domain, pem.as_deref()).await?;
+            anyhow::Ok(list.settings(Default::default(), &domain, dsip_app::servers::random_pick()))
+        })
+        .await??;
+    Ok(serde_json::to_string(&found)?)
+}
+
 /// Make the identity in `dir` the `did:web` of `plan` (once [`web_check`] finds nothing differs); its new DID. The app
 /// is stopped first, and started again after.
 pub fn web_move(dir: String, plan: String) -> anyhow::Result<String> {
