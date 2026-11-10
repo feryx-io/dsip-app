@@ -8,7 +8,7 @@
 PRODUCT_NAME = DSIP
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.thevoiceguy.dsip
+PRODUCT_BUNDLE_IDENTIFIER = com.feryx.dsip
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.thevoiceguy.dsip. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.feryx.dsip. All rights reserved.

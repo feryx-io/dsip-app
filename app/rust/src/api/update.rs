@@ -13,7 +13,7 @@ use anvil_update::{App, Available, Install, Updater};
 pub const DSIP: App = App { name: "DSIP", windows_dir: "DSIP", mac_bundle: "DSIP.app", deb_prefix: "/opt/dsip" };
 
 /// Where the latest release's manifest is.
-pub const FEED: &str = "https://github.com/thevoiceguy/dsip-app/releases/latest/download/";
+pub const FEED: &str = "https://github.com/feryx-io/dsip-app/releases/latest/download/";
 
 /// The public key releases are signed with (Ed25519, raw): the same as `app/packaging/update-key.pub.pem`, which the
 /// release workflow checks each signature against (a test holds them together). Its private half is the

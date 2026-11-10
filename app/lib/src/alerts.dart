@@ -99,7 +99,7 @@ class SystemAlerter implements Alerter {
               linux: LinuxInitializationSettings(defaultActionName: 'Open'),
               windows: WindowsInitializationSettings(
                 appName: 'DSIP',
-                appUserModelId: 'com.thevoiceguy.dsip',
+                appUserModelId: 'com.feryx.dsip',
                 guid: '5b0c7d2e-4c1f-4f63-9a43-7d5d2f1e8a61',
               ),
             ),

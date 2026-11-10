@@ -522,26 +522,26 @@ mod tests {
 
         // kept before APNs' environment was: read as production
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(push_path(&dir), r#"{"provider":"apns","app":"com.thevoiceguy.dsip.voip","token":"ab12"}"#).unwrap();
+        std::fs::write(push_path(&dir), r#"{"provider":"apns","app":"com.feryx.dsip.voip","token":"ab12"}"#).unwrap();
         assert!(matches!(load_push(&dir).unwrap().command(), Command::Push { environment: None, .. }));
         std::fs::remove_dir_all(dir.parent().unwrap()).unwrap();
     }
 
     #[test]
     fn an_iphones_two_tokens_are_kept_together_as_they_come() {
-        let voip = |saved, token| with_token(saved, Tokens::Calls, "apns", "com.thevoiceguy.dsip.voip", token, Some("sandbox"));
-        let alert = |saved, token| with_token(saved, Tokens::Messages, "apns", "com.thevoiceguy.dsip", token, Some("sandbox"));
+        let voip = |saved, token| with_token(saved, Tokens::Calls, "apns", "com.feryx.dsip.voip", token, Some("sandbox"));
+        let alert = |saved, token| with_token(saved, Tokens::Messages, "apns", "com.feryx.dsip", token, Some("sandbox"));
 
         // the alert token may come first: messages alone
         let t = alert(None, "alert-1").unwrap();
         let Command::Push { token, message_app, message_token, .. } = t.command() else { panic!() };
-        assert_eq!((token, message_app.as_deref(), message_token.as_deref()), (None, Some("com.thevoiceguy.dsip"), Some("alert-1")));
+        assert_eq!((token, message_app.as_deref(), message_token.as_deref()), (None, Some("com.feryx.dsip"), Some("alert-1")));
 
         // then PushKit's: both, in one command
         let t = voip(Some(t), "voip-1").unwrap();
         let Command::Push { app, token, environment, message_token, .. } = t.command() else { panic!() };
         assert_eq!((app.as_deref(), token.as_deref(), environment.as_deref(), message_token.as_deref()),
-                   (Some("com.thevoiceguy.dsip.voip"), Some("voip-1"), Some("sandbox"), Some("alert-1")));
+                   (Some("com.feryx.dsip.voip"), Some("voip-1"), Some("sandbox"), Some("alert-1")));
 
         // a token gone leaves the other; both gone, nothing
         let t = alert(Some(t), "").unwrap();

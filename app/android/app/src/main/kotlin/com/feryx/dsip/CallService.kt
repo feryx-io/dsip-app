@@ -1,4 +1,4 @@
-package com.thevoiceguy.dsip
+package com.feryx.dsip
 
 import android.Manifest
 import android.app.Notification
@@ -33,8 +33,8 @@ class CallService : Service() {
         private const val NOTIFICATION = 7
         private const val RINGING = "calls_ringing"
         private const val ONGOING = "calls_ongoing"
-        const val ANSWER = "com.thevoiceguy.dsip.ANSWER"
-        const val END = "com.thevoiceguy.dsip.END"
+        const val ANSWER = "com.feryx.dsip.ANSWER"
+        const val END = "com.feryx.dsip.END"
         const val EXTRA_CALL = "call"
 
         var appContext: Context? = null

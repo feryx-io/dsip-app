@@ -61,4 +61,4 @@ from signed releases.
 
 - Support: `<support URL>`
 - Privacy policy: `<privacy policy URL>` (the text of `privacy.md`)
-- Source: https://github.com/thevoiceguy/dsip-app
+- Source: https://github.com/feryx-io/dsip-app

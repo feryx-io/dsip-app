@@ -11,7 +11,7 @@ use jni::JNIEnv;
 /// the app. `dir` is the app's folder (where Dart keeps `settings.json`); `gateway` the build's push gateway, empty
 /// without one.
 #[no_mangle]
-pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_init(
+pub extern "system" fn Java_com_feryx_dsip_DsipNative_init(
     mut env: JNIEnv,
     _class: JClass,
     context: JObject,
@@ -52,14 +52,14 @@ fn outcome(env: &mut JNIEnv, result: anyhow::Result<()>) -> jstring {
 
 /// `DsipNative.wake()`: a push came; start the app from its settings, unless it runs.
 #[no_mangle]
-pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_wake(mut env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_feryx_dsip_DsipNative_wake(mut env: JNIEnv, _class: JClass) -> jstring {
     let result = crate::api::app::runtime().block_on(crate::system::wake());
     outcome(&mut env, result)
 }
 
 /// `DsipNative.setPush(provider, app, token)`: where this install is woken; an empty token is nowhere.
 #[no_mangle]
-pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_setPush(
+pub extern "system" fn Java_com_feryx_dsip_DsipNative_setPush(
     mut env: JNIEnv,
     _class: JClass,
     provider: JString,
@@ -74,7 +74,7 @@ pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_setPush(
 /// `DsipNative.nextCallEvent(timeoutMs)`: the next event for the system's call screen as JSON, or `null` when none
 /// came in time.
 #[no_mangle]
-pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_nextCallEvent(env: JNIEnv, _class: JClass, timeout_ms: jlong) -> jstring {
+pub extern "system" fn Java_com_feryx_dsip_DsipNative_nextCallEvent(env: JNIEnv, _class: JClass, timeout_ms: jlong) -> jstring {
     let within = std::time::Duration::from_millis(timeout_ms.max(0) as u64);
     match crate::system::next_event(within) {
         Some(json) => env.new_string(json).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut()),
@@ -84,7 +84,7 @@ pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_nextCallEvent(env: J
 
 /// `DsipNative.act(json)`: what the user did at the system's call screen.
 #[no_mangle]
-pub extern "system" fn Java_com_thevoiceguy_dsip_DsipNative_act(mut env: JNIEnv, _class: JClass, json: JString) -> jstring {
+pub extern "system" fn Java_com_feryx_dsip_DsipNative_act(mut env: JNIEnv, _class: JClass, json: JString) -> jstring {
     let json = text(&mut env, &json);
     let result = crate::api::app::runtime().block_on(crate::system::act(&json));
     outcome(&mut env, result)

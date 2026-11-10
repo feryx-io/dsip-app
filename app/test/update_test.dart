@@ -12,7 +12,7 @@ import 'fake_client.dart';
 
 const release = UpdateInfo(
   version: '0.2.0',
-  notes: 'https://github.com/thevoiceguy/dsip-app/releases/tag/v0.2.0',
+  notes: 'https://github.com/feryx-io/dsip-app/releases/tag/v0.2.0',
   canInstall: true,
 );
 
@@ -120,10 +120,10 @@ void main() {
   testWidgets('a copy that cannot update itself is given the file; later puts the banner off', (tester) async {
     client.release = const UpdateInfo(
       version: '0.2.0',
-      notes: 'https://github.com/thevoiceguy/dsip-app/releases/tag/v0.2.0',
+      notes: 'https://github.com/feryx-io/dsip-app/releases/tag/v0.2.0',
       canInstall: false,
       reason: 'installed from the .deb: install the new one with apt',
-      download: 'https://github.com/thevoiceguy/dsip-app/releases/download/v0.2.0/dsip_v0.2.0_amd64.deb',
+      download: 'https://github.com/feryx-io/dsip-app/releases/download/v0.2.0/dsip_v0.2.0_amd64.deb',
     );
     await open(tester);
     await controller.checkForUpdate();

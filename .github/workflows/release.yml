@@ -150,7 +150,7 @@ jobs:
         run: |
           sudo apt-get install -y ./dist/dsip_*_amd64.deb
           test -x /opt/dsip/dsip && command -v dsip
-          test -f /usr/share/applications/com.thevoiceguy.dsip.desktop
+          test -f /usr/share/applications/com.feryx.dsip.desktop
           ! ldd /opt/dsip/dsip /opt/dsip/lib/*.so | grep "not found"
           set +e; xvfb-run -a timeout 10 dsip; code=$?; set -e
           [ "$code" = 124 ] || { echo "::error::dsip exited with $code"; exit 1; }
@@ -225,7 +225,7 @@ jobs:
           $p = Start-Process "$dir\dsip.exe" -PassThru
           Start-Sleep -Seconds 10
           if ($p.HasExited) { throw "dsip.exe exited with $($p.ExitCode)" }
-          $data = "$env:APPDATA\com.thevoiceguy.dsip\DSIP"
+          $data = "$env:APPDATA\com.feryx.dsip\DSIP"
           if (-not (Test-Path $data)) { throw "the app made no folder where the uninstaller looks ($data)" }
           Set-Content "$data\marker" 'an identity'
           $p | Stop-Process -Force

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -13,9 +15,18 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
   final mobile = NativeMobile.supported ? NativeMobile() : null;
+  final dir = await getApplicationSupportDirectory();
+  // a desktop installed under the app's old id keeps its identity and settings
+  if (mobile == null) {
+    try {
+      await moveOldFolder(dir);
+    } on FileSystemException catch (e) {
+      debugPrint('the old folder was not moved: $e');
+    }
+  }
   final controller = Controller(
     RustClient(),
-    SettingsStore(await getApplicationSupportDirectory()),
+    SettingsStore(dir),
     // A phone's store updates its app.
     checkUpdates: mobile == null,
     mobile: mobile,

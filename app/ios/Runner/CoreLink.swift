@@ -6,7 +6,7 @@ import Foundation
 /// `system.rs`.
 enum CoreLink {
   /// The Rust calls block: one at a time, never on the main thread.
-  private static let worker = DispatchQueue(label: "com.thevoiceguy.dsip.core")
+  private static let worker = DispatchQueue(label: "com.feryx.dsip.core")
 
   private static var following = false
 
