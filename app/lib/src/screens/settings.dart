@@ -332,7 +332,11 @@ class _BackupDialogState extends State<BackupDialog> {
     });
     try {
       final dir = widget.controller.settings?['identity'] as String? ?? '';
-      final backup = await widget.controller.client.exportIdentity(dir, _passphrase.text);
+      final backup = await widget.controller.client.exportIdentity(
+        dir,
+        _passphrase.text,
+        settings: widget.controller.settings,
+      );
       if (mounted) {
         setState(() {
           _code = backup.code;

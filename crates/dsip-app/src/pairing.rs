@@ -423,7 +423,7 @@ mod tests {
         assert_eq!(b.key_agreement.as_ref().map(|k| k.secret), a.key_agreement.as_ref().map(|k| k.secret), "the same key agreement key");
         assert!(!second.join(PENDING).exists(), "the one-time key is gone");
         // what needs the identity key, the new device cannot do
-        assert!(crate::backup::export_identity(&second, "a long passphrase").is_err());
+        assert!(crate::backup::export_identity(&second, "a long passphrase", None).is_err());
 
         // a welcome code for another device does not open here; a mistyped join code is said so
         let (other_join, _) = start(&base.join("third")).unwrap();

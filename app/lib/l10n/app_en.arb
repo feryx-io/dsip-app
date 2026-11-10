@@ -623,6 +623,7 @@
     }
   },
   "firstRunOpenFile": "Open a backup file",
+  "firstRunRestoreServers": "A backup file also brings back the servers it was made with. The server below is used only when it has none.",
   "@firstRunOpenFile": {
     "description": "Opens a backup file saved earlier, putting its text in the recovery code field."
   },

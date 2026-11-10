@@ -249,6 +249,7 @@
   "backupSaved": "[Šàṽéđ. ]",
   "backupSaveFailed": "[Ţĥé ƒíĺé ŵàš ñóţ šàṽéđ: {reason} one two]",
   "firstRunOpenFile": "[Óþéñ à ƀàçķúþ ƒíĺé one ]",
+  "firstRunRestoreServers": "[À ƀàçķúþ ƒíĺé àĺšó ƀŕíñĝš ƀàçķ ţĥé šéŕṽéŕš íţ ŵàš ɱàđé ŵíţĥ. Ţĥé šéŕṽéŕ ƀéĺóŵ íš úšéđ óñĺý ŵĥéñ íţ ĥàš ñóñé. one two three four five six]",
   "firstRunOpenFailed": "[Ţĥàţ ƒíĺé çóúĺđ ñóţ ƀé ŕéàđ àš à ƀàçķúþ: {reason} one two thr]",
   "firstRunJoinNearby": "[À þĥóñé ŵíţĥ ýóúŕ íđéñţíţý çàñ šçàñ ţĥíš ǪŔ çóđé íñšţéàđ. Óñ ţĥé šàɱé ñéţŵóŕķ, ţĥé ŵéĺçóɱé çóđé ţĥéñ çóɱéš ƀàçķ ĥéŕé ƀý íţšéĺƒ. one two three four five six seve]",
   "firstRunWelcomeReceived": "[Ŕéçéíṽéđ ƒŕóɱ {name} ({identity}). Šţàŕţ óñĺý íƒ ţĥíš íš ýóúŕ íđéñţíţý. one two three fo]",

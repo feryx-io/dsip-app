@@ -9,8 +9,13 @@ abstract class Client {
   /// Make an identity in [dir]; its DID.
   Future<String> initIdentity(String dir, String displayName);
 
-  /// Back up the identity in [dir]: its key sealed under [passphrase], as a recovery code (A6b).
-  Future<IdentityBackup> exportIdentity(String dir, String passphrase);
+  /// Back up the identity in [dir]: its key sealed under [passphrase], as a recovery code (A6b). The file keeps the
+  /// servers in [settings] too, so an install restored from it starts with them.
+  Future<IdentityBackup> exportIdentity(String dir, String passphrase, {Map<String, dynamic>? settings});
+
+  /// The servers a backup file's [text] keeps (relay, mailbox, hints_nodes, stun), opened with [passphrase]; null from
+  /// a code alone, or from a file made before backups kept them. Throws when the passphrase does not open it.
+  Future<Map<String, dynamic>?> backupServers(String text, String passphrase);
 
   /// Make the identity in [code] (a recovery code, or a backup file's text) this install's, in [dir]; its DID.
   Future<String> restoreIdentity(String dir, String code, String passphrase, String displayName);

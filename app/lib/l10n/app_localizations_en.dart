@@ -875,6 +875,10 @@ class StringsEn extends Strings {
   String get firstRunOpenFile => 'Open a backup file';
 
   @override
+  String get firstRunRestoreServers =>
+      'A backup file also brings back the servers it was made with. The server below is used only when it has none.';
+
+  @override
   String firstRunOpenFailed(String reason) {
     return 'That file could not be read as a backup: $reason';
   }
@@ -1935,6 +1939,10 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get firstRunOpenFile => '[Óþéñ à ƀàçķúþ ƒíĺé one ]';
+
+  @override
+  String get firstRunRestoreServers =>
+      '[À ƀàçķúþ ƒíĺé àĺšó ƀŕíñĝš ƀàçķ ţĥé šéŕṽéŕš íţ ŵàš ɱàđé ŵíţĥ. Ţĥé šéŕṽéŕ ƀéĺóŵ íš úšéđ óñĺý ŵĥéñ íţ ĥàš ñóñé. one two three four five six]';
 
   @override
   String firstRunOpenFailed(String reason) {

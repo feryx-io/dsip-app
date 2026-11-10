@@ -1590,6 +1590,12 @@ abstract class Strings {
   /// **'Open a backup file'**
   String get firstRunOpenFile;
 
+  /// No description provided for @firstRunRestoreServers.
+  ///
+  /// In en, this message translates to:
+  /// **'A backup file also brings back the servers it was made with. The server below is used only when it has none.'**
+  String get firstRunRestoreServers;
+
   /// No description provided for @firstRunOpenFailed.
   ///
   /// In en, this message translates to:
