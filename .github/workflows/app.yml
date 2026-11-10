@@ -145,9 +145,33 @@ jobs:
         with:
           workspaces: ". -> app/build"
       - run: flutter pub get
-      # Phones (arm64, older arm) and the emulator (x86_64); 32-bit x86 is only old emulators. Signed with the debug
-      # key until there is an upload key (A7).
+      # Signed with the app's one key (repository secrets), so each APK installs over the last and keeps its data;
+      # where the secrets are not given (a fork's pull request), the debug key.
+      - name: The signing key
+        env:
+          KEYSTORE: ${{ secrets.DSIP_ANDROID_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.DSIP_ANDROID_KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.DSIP_ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then echo "no signing key: the debug key"; exit 0; fi
+          printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/dsip.p12"
+          {
+            echo "DSIP_ANDROID_KEYSTORE=$RUNNER_TEMP/dsip.p12"
+            echo "DSIP_ANDROID_KEYSTORE_PASSWORD=$PASSWORD"
+            echo "DSIP_ANDROID_KEY_ALIAS=$ALIAS"
+          } >> "$GITHUB_ENV"
+      # Phones (arm64, older arm) and the emulator (x86_64); 32-bit x86 is only old emulators.
       - run: flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+      - name: Signed with the app's key
+        if: env.DSIP_ANDROID_KEYSTORE != ''
+        run: |
+          signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          got=$("$signer" verify --print-certs build/app/outputs/flutter-apk/app-release.apk \
+            | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          want=$(cat android/signing-cert.sha256)
+          echo "signed by $got"
+          [ "$got" = "$want" ] || { echo "expected $want"; exit 1; }
+          rm -f "$RUNNER_TEMP/dsip.p12"
       - uses: actions/upload-artifact@v4
         with:
           name: dsip-app-android
