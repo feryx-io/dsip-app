@@ -158,8 +158,16 @@ jobs:
             echo "DSIP_ANDROID_KEYSTORE=$RUNNER_TEMP/dsip.p12"
             echo "DSIP_ANDROID_KEYSTORE_PASSWORD=$PASSWORD"
           } >> "$GITHUB_ENV"
-      # Phones (arm64, older arm) and the emulator (x86_64); 32-bit x86 is only old emulators.
+      # Phones (arm64, older arm) and the emulator (x86_64); 32-bit x86 is only old emulators. Waking (A5d) through
+      # the push gateway on L2 and the Firebase project feryx-disp: its values from repository secrets (what
+      # google-services.json holds); without them (a fork's pull request) the app builds with push off.
       - run: flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+        env:
+          DSIP_PUSH_GATEWAY: did:web:172-238-48-78.ip.linodeusercontent.com%3A8445
+          DSIP_FCM_APP_ID: ${{ secrets.DSIP_FCM_APP_ID }}
+          DSIP_FCM_SENDER_ID: ${{ secrets.DSIP_FCM_SENDER_ID }}
+          DSIP_FCM_API_KEY: ${{ secrets.DSIP_FCM_API_KEY }}
+          DSIP_FCM_PROJECT_ID: ${{ secrets.DSIP_FCM_PROJECT_ID }}
       - name: Signed with the app's key
         if: env.DSIP_ANDROID_KEYSTORE != ''
         run: |
