@@ -1,7 +1,8 @@
 //! Presence between two apps, each with its own mailbox, found through hints: Alice introduces herself, Bob accepts,
 //! and the grant his phone issued (calls, messages and presence) reaches Alice through her mailbox. Her app hands it to
 //! her phone and follows Bob, so his relay admits her: she sees his relay's claim, then the state he picks, then the
-//! next. Bob, who holds no grant of hers, sees nothing of hers.
+//! next. Accepting introduces Bob to Alice in turn, which her app accepts by itself (she asked first): he follows her
+//! too.
 #![cfg(target_os = "linux")]
 
 use std::path::Path;
@@ -119,10 +120,17 @@ async fn accepting_an_introduction_shares_presence_with_the_one_who_asked() {
     assert_eq!(bob.command(Command::SetPresence { state: Some("dnd".into()) }).await, Response::Ok);
     until(&alice, "Bob dnd", |_| shown(&alice, &bob_did).is_some_and(|p| p.state.as_deref() == Some("dnd"))).await;
 
-    // P§6: Bob holds no grant of Alice's: following her shows nothing
-    assert_eq!(bob.command(Command::WatchPresence { identity: alice_did.clone() }).await, Response::Ok);
-    tokio::time::sleep(Duration::from_secs(3)).await;
-    assert_eq!(shown(&bob, &alice_did).and_then(|p| p.state), None);
+    // and the other way: Bob's app introduced him back, Alice's accepted it by itself, and he follows her (P§6)
+    until(&bob, "Bob holds Alice's grant", |s| s.messaging.introduced.iter().any(|i| i.to == alice_did && i.accepted)).await;
+    assert!(alice.state().messaging.requests.is_empty(), "accepted by itself, never left waiting");
+    assert_eq!(alice.state().names.get(&bob_did).map(String::as_str), Some("Bob"), "Bob is Alice's contact, by his name");
+    assert_eq!(alice.command(Command::SetPresence { state: Some("away".into()) }).await, Response::Ok);
+    until(&bob, "Alice away", |_| shown(&bob, &alice_did).is_some_and(|p| p.state.as_deref() == Some("away"))).await;
+    // no further round: each holds the other's grant, and neither introduces itself again
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    assert!(alice.state().messaging.requests.is_empty() && bob.state().messaging.requests.is_empty());
+    assert_eq!(alice.state().messaging.introduced.len(), 1);
+    assert_eq!(bob.state().messaging.introduced.len(), 1);
 
     assert!(matches!(bob.command(Command::SetPresence { state: Some("asleep".into()) }).await, Response::Error { .. }));
     assert_eq!(alice.command(Command::UnwatchPresence { identity: bob_did.clone() }).await, Response::Ok);

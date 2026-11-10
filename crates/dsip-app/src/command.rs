@@ -81,6 +81,17 @@ pub enum Command {
         /// The text.
         text: String,
     },
+    /// Send a file: to a conversation or an identity, as [`Command::Message`] sends a text. Sealed and uploaded to
+    /// this identity's mailbox, and sent as an `image` (by its media type) or a `file` (M§8.2, M§8.4).
+    SendFile {
+        /// A group id or an identity DID.
+        to: String,
+        /// The file on this device.
+        path: String,
+        /// The name it is sent under; without one, the file's own.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
     /// Make a group conversation with these identities (M§7.3): each must have granted you permission to message
     /// (accepting your introduction does). Answers with its group id.
     CreateGroup {

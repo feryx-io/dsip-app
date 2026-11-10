@@ -396,10 +396,7 @@ impl App {
                 }
                 let r = self.ask(|reply| messaging::Req::Introduce { to: to.clone(), purpose: purpose.clone(), reply }).await;
                 if r == Response::Ok {
-                    let mut introduced = self.state().messaging.introduced;
-                    introduced.retain(|i| i.to != to);
-                    introduced.push(Introduced { to, name, purpose, sent_at: dsip_transport::now_s(), accepted: false });
-                    self.set_introduced(introduced);
+                    self.record_introduced(to, name, purpose);
                 }
                 r
             }
@@ -443,6 +440,7 @@ impl App {
             }
             Command::DeclineRequest { id } => self.ask(|reply| messaging::Req::DeclineRequest { id, reply }).await,
             Command::Message { to, text } => self.ask(|reply| messaging::Req::Message { to, text, reply }).await,
+            Command::SendFile { to, path, name } => self.ask(|reply| messaging::Req::SendFile { to, path, name, reply }).await,
             Command::Thread { conversation } => self.ask(|reply| messaging::Req::Thread { conversation, reply }).await,
             Command::CreateGroup { members } => self.ask(|reply| messaging::Req::CreateGroup { members, reply }).await,
             Command::AddMember { conversation, identity } => {
@@ -595,13 +593,15 @@ impl App {
         save_json(&path, &self.state().names);
     }
 
-    /// Make `did` a contact, named `offered` (else its DID, shortened), unless it has a name already.
+    /// Make `did` a contact, named `offered` (else its DID, shortened), unless it has a name already; the shortened DID
+    /// a contact was given for want of a name gives way to one offered later.
     pub(crate) fn add_contact(&self, did: &str, offered: Option<&str>) {
         let mut names = self.state().names;
-        if names.contains_key(did) || did.trim().is_empty() {
+        let offered = offered.map(str::trim).filter(|n| name_error(n).is_none() && !n.is_empty());
+        let placeholder = names.get(did).is_some_and(|n| *n == short_did(did));
+        if (names.contains_key(did) && !(placeholder && offered.is_some())) || did.trim().is_empty() {
             return;
         }
-        let offered = offered.map(str::trim).filter(|n| name_error(n).is_none() && !n.is_empty());
         names.insert(did.to_string(), offered.map_or_else(|| short_did(did), String::from));
         self.publish(Change::Names { names });
         self.save_names();
@@ -621,6 +621,14 @@ impl App {
             self.set_introduced(introduced);
         }
         self.add_contact(by, name.as_deref());
+    }
+
+    /// Add an introduction sent to `to` to the list, in place of one sent before.
+    pub(crate) fn record_introduced(&self, to: String, name: Option<String>, purpose: String) {
+        let mut introduced = self.state().messaging.introduced;
+        introduced.retain(|i| i.to != to);
+        introduced.push(Introduced { to, name, purpose, sent_at: dsip_transport::now_s(), accepted: false });
+        self.set_introduced(introduced);
     }
 
     fn set_introduced(&self, introduced: Vec<Introduced>) {

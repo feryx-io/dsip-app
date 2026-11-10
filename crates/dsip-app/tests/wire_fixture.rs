@@ -97,11 +97,23 @@ fn the_messages_the_desktop_app_reads() {
         kind: kind.into(),
         text: text.map(String::from),
         sent_at,
+        name: None,
+        content_type: None,
+        size: None,
+        path: None,
+    };
+    let file = MessageView {
+        name: Some("plan.pdf".into()),
+        content_type: Some("application/pdf".into()),
+        size: Some(48_213),
+        path: Some("/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC4-plan.pdf".into()),
+        ..message("01M6EKRTVG3C55DFMQ401G3MC4", "did:key:z6MkBob", false, None, "file", 1_793_600_180)
     };
     let thread = Response::Thread {
         messages: vec![
             message("01M6EKRTVG3C55DFMQ401G3MC1", "did:key:z6MkAlice", true, Some("hello Bob"), "text", 1_793_600_000),
             message("01M6EKRTVG3C55DFMQ401G3MC2", "did:key:z6MkBob", false, None, "audio", 1_793_600_060),
+            file,
         ],
     };
     let arrived = Change::Message { message: message("01M6EKRTVG3C55DFMQ401G3MC3", "did:key:z6MkBob", false, Some("hi Alice"), "text", 1_793_600_120) };
@@ -110,6 +122,8 @@ fn the_messages_the_desktop_app_reads() {
         "message": arrived,
         "conversation": Response::Conversation { conversation: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into() },
         "granted": Change::Granted { by: "did:key:z6MkBob".into() },
+        "message_file": Change::MessageFile { conversation: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into(), id: "01M6EKRTVG3C55DFMQ401G3MC4".into(),
+                                              path: "/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC4-plan.pdf".into() },
         "removed": Change::Removed { conversation: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into(), by: "did:key:z6MkCarol".into() },
     }));
 }

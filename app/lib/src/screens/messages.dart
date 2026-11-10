@@ -4,6 +4,7 @@ import 'package:flutter/semantics.dart';
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import 'attachments.dart';
 import 'confirm.dart';
 import 'form_dialog.dart';
 import 'name_dialog.dart';
@@ -289,6 +290,21 @@ class _ThreadState extends State<_Thread> {
     if (r['response'] == 'conversation') _text.clear();
   }
 
+  /// The file being sent, while it is sealed and uploaded.
+  String? _sending;
+
+  Future<void> _attach() async {
+    final picked = await pickToSend();
+    if (picked == null || !mounted) return;
+    final (path, name) = picked;
+    setState(() => _sending = name);
+    try {
+      await widget.controller.run({'command': 'send_file', 'to': group, 'path': path, 'name': name});
+    } finally {
+      if (mounted) setState(() => _sending = null);
+    }
+  }
+
   Future<void> _add() async {
     final s = Strings.of(context);
     final v = await showDialog<List<String>>(
@@ -394,10 +410,20 @@ class _ThreadState extends State<_Thread> {
                 ),
         ),
         const Divider(height: 1),
+        if (_sending != null) ...[
+          const LinearProgressIndicator(),
+          Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 0), child: Text(s.attachSending(_sending!))),
+        ],
         Padding(
           padding: const EdgeInsets.all(8),
           child: Row(
             children: [
+              IconButton(
+                key: const Key('attach'),
+                tooltip: s.attachAction,
+                icon: const Icon(Icons.attach_file),
+                onPressed: _sending == null ? _attach : null,
+              ),
               Expanded(
                 child: TextField(
                   key: const Key('compose'),
@@ -454,7 +480,10 @@ class _Bubble extends StatelessWidget {
           children: [
             if (group && !message.mine)
               Text(from, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: onBubble)),
-            Text(message.text ?? s.threadNotText(message.kind), style: TextStyle(color: onBubble)),
+            if (message.attachment)
+              AttachmentView(message: message, color: onBubble)
+            else
+              Text(message.text ?? s.threadNotText(message.kind), style: TextStyle(color: onBubble)),
           ],
         ),
       ),

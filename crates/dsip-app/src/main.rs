@@ -201,6 +201,16 @@ enum Cmd {
         #[arg(num_args = 1.., required = true)]
         text: Vec<String>,
     },
+    /// Send a file to an identity or a conversation, as `message` sends a text.
+    SendFile {
+        /// The identity DID or group id.
+        to: String,
+        /// The file.
+        path: std::path::PathBuf,
+        /// The name it is sent under (the file's own without one).
+        #[arg(long)]
+        name: Option<String>,
+    },
     /// Make a group conversation with these identities (each must have granted you); prints its group id.
     Group {
         /// The other members' identity DIDs.
@@ -482,6 +492,11 @@ async fn main() -> Result<ExitCode> {
         Cmd::Accept { id } => Command::AcceptRequest { id },
         Cmd::DeclineRequest { id } => Command::DeclineRequest { id },
         Cmd::Message { to, text } => Command::Message { to, text: text.join(" ") },
+        Cmd::SendFile { to, path, name } => {
+            // the app may run elsewhere than this shell's directory
+            let path = std::path::absolute(&path).with_context(|| format!("{}", path.display()))?;
+            Command::SendFile { to, path: path.to_string_lossy().into_owned(), name }
+        }
         Cmd::Thread { conversation } => Command::Thread { conversation },
         Cmd::Group { members } => Command::CreateGroup { members },
         Cmd::Add { conversation, identity } => Command::AddMember { conversation, identity },

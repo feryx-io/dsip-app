@@ -339,6 +339,10 @@ class MessageView {
     required this.kind,
     this.text,
     required this.sentAt,
+    this.name,
+    this.contentType,
+    this.size,
+    this.path,
   });
 
   /// The conversation's group id.
@@ -354,6 +358,31 @@ class MessageView {
   /// Unix seconds, the sender's clock.
   final int sentAt;
 
+  /// An attachment's name, media type and size.
+  final String? name;
+  final String? contentType;
+  final int? size;
+
+  /// An attachment's file on this device, once fetched.
+  final String? path;
+
+  /// Whether it carries a file (an `image`, a `file`, or a kind with a media type).
+  bool get attachment => contentType != null || kind == 'image' || kind == 'file';
+
+  MessageView withPath(String path) => MessageView(
+    conversation: conversation,
+    id: id,
+    from: from,
+    mine: mine,
+    kind: kind,
+    text: text,
+    sentAt: sentAt,
+    name: name,
+    contentType: contentType,
+    size: size,
+    path: path,
+  );
+
   factory MessageView.fromJson(Map<String, dynamic> j) => MessageView(
     conversation: j['conversation'] as String,
     id: j['id'] as String,
@@ -362,6 +391,10 @@ class MessageView {
     kind: j['kind'] as String,
     text: j['text'] as String?,
     sentAt: j['sent_at'] as int,
+    name: j['name'] as String?,
+    contentType: j['content_type'] as String?,
+    size: j['size'] as int?,
+    path: j['path'] as String?,
   );
 }
 

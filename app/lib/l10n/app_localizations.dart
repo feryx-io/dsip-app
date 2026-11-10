@@ -1805,6 +1805,48 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'{name} is calling'**
   String alertIncoming(String name);
+
+  /// No description provided for @attachAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a file'**
+  String get attachAction;
+
+  /// No description provided for @attachSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending {name}…'**
+  String attachSending(String name);
+
+  /// No description provided for @attachmentFetching.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get attachmentFetching;
+
+  /// No description provided for @attachmentOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get attachmentOpen;
+
+  /// No description provided for @attachmentSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get attachmentSave;
+
+  /// No description provided for @attachmentSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved.'**
+  String get attachmentSaved;
+
+  /// No description provided for @attachmentNotOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open it here. Save it, then open it from where you saved it.'**
+  String get attachmentNotOpened;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {
