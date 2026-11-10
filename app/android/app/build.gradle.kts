@@ -54,10 +54,27 @@ android {
         resValues = true
     }
 
+    // One key for every release build, so a new APK installs over the old one and the app's data (identity,
+    // settings, contacts, history) stays: Android refuses an update signed with another key, and the debug key is
+    // made afresh on each CI runner. The keystore (PKCS12) and its password come from the environment or `-P`
+    // (CI: repository secrets); without them, the debug key, for local builds.
+    val keystore = buildValue("DSIP_ANDROID_KEYSTORE")
+    signingConfigs {
+        if (keystore != null) {
+            create("dsip") {
+                storeFile = file(keystore)
+                storeType = "pkcs12"
+                storePassword = buildValue("DSIP_ANDROID_KEYSTORE_PASSWORD")
+                    ?: throw GradleException("DSIP_ANDROID_KEYSTORE_PASSWORD is needed with DSIP_ANDROID_KEYSTORE")
+                keyAlias = buildValue("DSIP_ANDROID_KEY_ALIAS") ?: "dsip"
+                keyPassword = storePassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // The debug key until the app has an upload key (A7, with the Play account).
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (keystore != null) "dsip" else "debug")
         }
     }
 }

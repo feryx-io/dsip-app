@@ -134,7 +134,15 @@ class StringsEn extends Strings {
   String get firstRunMailboxDidNeeded => 'A mailbox needs its DID too.';
 
   @override
-  String get firstRunHints => 'Hints node (optional)';
+  String get firstRunHints => 'Hints node';
+
+  @override
+  String get firstRunHintsNeeded =>
+      'Messages need a hints node too: without one, nobody can find your mailbox.';
+
+  @override
+  String get firstRunHintsBad =>
+      'Enter a hints node address starting with https:// or http://.';
 
   @override
   String get firstRunHintsHint => 'https://hints.example.com';
@@ -1187,7 +1195,15 @@ class StringsEnXa extends StringsEn {
       '[À ɱàíĺƀóẋ ñééđš íţš ĐÍĐ ţóó. one tw]';
 
   @override
-  String get firstRunHints => '[Ĥíñţš ñóđé (óþţíóñàĺ) one ]';
+  String get firstRunHints => '[Ĥíñţš ñóđé on]';
+
+  @override
+  String get firstRunHintsNeeded =>
+      '[Ḿéššàĝéš ñééđ à ĥíñţš ñóđé ţóó: ŵíţĥóúţ óñé, ñóƀóđý çàñ ƒíñđ ýóúŕ ɱàíĺƀóẋ. one two three four]';
+
+  @override
+  String get firstRunHintsBad =>
+      '[Éñţéŕ à ĥíñţš ñóđé àđđŕéšš šţàŕţíñĝ ŵíţĥ ĥţţþš:// óŕ ĥţţþ://. one two three ]';
 
   @override
   String get firstRunHintsHint => '[ĥţţþš://ĥíñţš.éẋàɱþĺé.çóɱ one t]';

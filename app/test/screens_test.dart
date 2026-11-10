@@ -95,7 +95,13 @@ void main() {
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();
     expect(find.text('A mailbox needs its DID too.'), findsOneWidget);
+    expect(find.textContaining('Messages need a hints node too'), findsOneWidget, reason: 'nobody finds the mailbox');
     await tester.enterText(find.byKey(const Key('mailbox-did')), 'did:key:z6MkMailbox');
+    await tester.enterText(find.byKey(const Key('hints')), 'hints.example.com');
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('starting with https:// or http://'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('hints')), 'https://hints.example.com');
     await tester.runAsync(() async {
       await tester.tap(find.text('Start'));
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -108,6 +114,7 @@ void main() {
       'identity': identity,
       'relay': 'wss://relay.example.com:8443/dsip',
       'mailbox': {'uri': 'wss://mailbox.example.com:9443/dsip', 'did': 'did:key:z6MkMailbox'},
+      'hints_nodes': ['https://hints.example.com'],
     };
     expect(client.started, settings);
     expect(await tester.runAsync(() => SettingsStore(dir).load()), settings, reason: 'kept for the next start');
