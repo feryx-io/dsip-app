@@ -57,12 +57,25 @@ class AlertSettings {
   }
 }
 
+/// A button on an alert: pressing it gives [id] to [Alerter.init]'s `opened`, as tapping the alert gives its payload.
+class AlertAction {
+  const AlertAction(this.id, this.label);
+  final String id;
+  final String label;
+}
+
 /// One alert: what it says, and what tapping it opens ([payload]: `conversation:<group>`, `messages` or `calls`).
 class Alert {
-  const Alert(this.title, this.body, this.payload);
+  const Alert(this.title, this.body, this.payload, {this.actions = const [], this.call = false});
   final String title;
   final String body;
   final String payload;
+
+  /// Its buttons, where the system shows them (Windows' toasts, the Linux desktop's notifications).
+  final List<AlertAction> actions;
+
+  /// A call ringing: shown as one, staying until it is answered or declined, or [Alerter.cancel]led.
+  final bool call;
 }
 
 /// Where alerts are shown while the app is not in front: the system's notifications. Tests give their own.
@@ -72,6 +85,9 @@ abstract class Alerter {
 
   /// Show [alert], replacing the one shown before under the same [id].
   Future<void> show(int id, Alert alert);
+
+  /// Take away the alert shown under [id], if it still is.
+  Future<void> cancel(int id);
 }
 
 /// The system's notifications (flutter_local_notifications): Android's and Apple's notification centres, Windows'
@@ -103,7 +119,9 @@ class SystemAlerter implements Alerter {
                 guid: '5b0c7d2e-4c1f-4f63-9a43-7d5d2f1e8a61',
               ),
             ),
-            onDidReceiveNotificationResponse: (r) => opened(r.payload ?? ''),
+            // a button's id, else the alert's payload (Windows gives a button's as both)
+            onDidReceiveNotificationResponse: (r) =>
+                opened((r.actionId ?? '').isNotEmpty ? r.actionId! : r.payload ?? ''),
           ) ??
           false;
       // Android 13 and later ask before an app may notify
@@ -122,9 +140,29 @@ class SystemAlerter implements Alerter {
         id: id,
         title: alert.title,
         body: alert.body,
-        notificationDetails: const NotificationDetails(android: _channel),
+        notificationDetails: NotificationDetails(
+          android: _channel,
+          windows: WindowsNotificationDetails(
+            actions: [for (final a in alert.actions) WindowsAction(content: a.label, arguments: a.id)],
+            scenario: alert.call ? WindowsNotificationScenario.incomingCall : null,
+          ),
+          linux: LinuxNotificationDetails(
+            actions: [for (final a in alert.actions) LinuxNotificationAction(key: a.id, label: a.label)],
+            urgency: alert.call ? LinuxNotificationUrgency.critical : null,
+          ),
+        ),
         payload: alert.payload,
       );
+    } catch (e) {
+      debugPrint('alerts: $e');
+    }
+  }
+
+  @override
+  Future<void> cancel(int id) async {
+    if (!_ready) return;
+    try {
+      await _plugin.cancel(id: id);
     } catch (e) {
       debugPrint('alerts: $e');
     }

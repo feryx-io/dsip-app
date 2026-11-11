@@ -19,6 +19,7 @@ const group = 'MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk';
 /// The system's notifications, as a list.
 class FakeAlerter implements Alerter {
   final shown = <(int, Alert)>[];
+  final cancelled = <int>[];
   void Function(String)? opened;
 
   @override
@@ -26,6 +27,9 @@ class FakeAlerter implements Alerter {
 
   @override
   Future<void> show(int id, Alert alert) async => shown.add((id, alert));
+
+  @override
+  Future<void> cancel(int id) async => cancelled.add(id);
 }
 
 void main() {
@@ -122,6 +126,37 @@ void main() {
     final ringing = (before['calls'] as List).firstWhere((c) => (c as Map)['id'] == 3) as Map<String, dynamic>;
     await push(tester, {'change': 'call_added', 'call': ringing});
     expect((alerter.shown.last.$2.title, alerter.shown.last.$2.payload), ('Bob is calling', 'calls'));
+  });
+
+  testWidgets("a desktop's ringing call is answered or declined from its alert, which goes when it stops ringing",
+      (tester) async {
+    await open(tester);
+    controller.foreground = false;
+    final ringing = (state['calls'] as List).firstWhere((c) => (c as Map)['id'] == 3) as Map<String, dynamic>;
+    await push(tester, {'change': 'call_added', 'call': ringing});
+    final (id, a) = alerter.shown.last;
+    expect(a.call, isTrue);
+    expect([for (final b in a.actions) (b.id, b.label)], [('answer:3', 'Answer'), ('decline:3', 'Decline')]);
+
+    alerter.opened!('answer:3');
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'answer', 'call': 3});
+    expect(controller.tab, Tabs.calls);
+    alerter.opened!('decline:3');
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'decline', 'call': 3});
+    alerter.opened!('answer:99');
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'decline', 'call': 3}, reason: 'no call 99 rings here: nothing is done');
+    expect(alerter.cancelled, isEmpty, reason: 'still ringing');
+
+    // answered (here, or anywhere): the alert goes, once
+    final answered = jsonDecode(jsonEncode(state)) as Map<String, dynamic>;
+    final call = (answered['calls'] as List).firstWhere((c) => (c as Map)['id'] == 3) as Map<String, dynamic>;
+    call['state'] = {'state': 'ended', 'reason': 'user.cancelled'};
+    await push(tester, {'change': 'call_changed', 'call': call}, answered);
+    await push(tester, {'change': 'call_changed', 'call': call}, answered);
+    expect(alerter.cancelled, [id]);
   });
 
   testWidgets('alerts are on by default, turned off by kind or all at once, and kept', (tester) async {

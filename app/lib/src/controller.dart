@@ -263,9 +263,16 @@ class Controller extends ChangeNotifier {
     await settings.save(store.dir);
   }
 
-  /// Go where the alert with [payload] points: a conversation, the messages, the calls.
+  /// Go where the alert with [payload] points: a conversation, the messages, the calls; or do what its button says
+  /// (`answer:<call>`, `decline:<call>`: a desktop's ringing call, answered or declined from the system's alert).
   void openAlert(String payload) {
-    if (payload.startsWith('conversation:')) {
+    final button = RegExp(r'^(answer|decline):(\d+)$').firstMatch(payload);
+    if (button != null) {
+      final id = int.parse(button[2]!);
+      // only a call still ringing here: the alert may have outlived it
+      if (state?.live.any((c) => c.id == id && c.ringingHere) ?? false) run({'command': button[1], 'call': id});
+      showTab(Tabs.calls);
+    } else if (payload.startsWith('conversation:')) {
       showConversation(payload.substring('conversation:'.length));
     } else {
       showTab(payload == 'messages' ? Tabs.messages : Tabs.calls);
@@ -279,10 +286,20 @@ class Controller extends ChangeNotifier {
     return a;
   }
 
+  /// The alert id of a call ringing here, and the call it is for while it is shown.
+  static const _ringingId = 4;
+  int? _ringingAlert;
+
   /// Alert the user to what update [u] brought, as they asked ([alertSettings]): from the system while the app is not
   /// in front, else in the app, and not at all for a conversation they are reading.
   void _alertFor(Update u, AppState? before) {
     final (s, now, a) = (strings, u.state, alertSettings);
+    // a ringing call's alert goes once the call stops ringing here: answered, declined, cancelled, on any screen
+    final rang = _ringingAlert;
+    if (rang != null && !now.live.any((c) => c.id == rang && c.ringingHere)) {
+      _ringingAlert = null;
+      alerter?.cancel(_ringingId);
+    }
     if (s == null || before == null || !a.enabled) return;
     void alert(int id, Alert alert) {
       if (foreground) {
@@ -315,7 +332,11 @@ class Controller extends ChangeNotifier {
       // a phone rings on its own call screen; a desktop's window may be behind others
       case 'call_added' when a.calls && mobile == null && !foreground:
         final c = CallView.fromJson(u.change!['call'] as Map<String, dynamic>);
-        if (c.ringingHere) alerter?.show(4, Alert(s.alertIncoming(now.nameOf(c.peer, offered: c.peerName)), shortDid(c.peer), 'calls'));
+        if (!c.ringingHere) return;
+        _ringingAlert = c.id;
+        final who = s.alertIncoming(now.nameOf(c.peer, offered: c.peerName));
+        final buttons = [AlertAction('answer:${c.id}', s.callAnswer), AlertAction('decline:${c.id}', s.callDecline)];
+        alerter?.show(_ringingId, Alert(who, shortDid(c.peer), 'calls', actions: buttons, call: true));
     }
   }
 
