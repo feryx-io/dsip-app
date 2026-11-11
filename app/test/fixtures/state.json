@@ -122,7 +122,8 @@
         "reason": "user.cancelled",
         "ended_at": 1794200200
       }
-    ]
+    ],
+    "voice": {}
   },
   "change": {
     "change": "call_changed",

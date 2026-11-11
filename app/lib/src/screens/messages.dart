@@ -8,6 +8,10 @@ import 'attachments.dart';
 import 'confirm.dart';
 import 'form_dialog.dart';
 import 'name_dialog.dart';
+import 'voice.dart';
+
+/// The longest voice message recorded, seconds.
+const voiceMaxS = 300;
 
 /// Messages: the requests to answer, the introductions sent, the conversations, and the one open; first contact
 /// (introduce yourself), a new message to someone who accepted you, a new group. A message, or a conversation, is
@@ -305,6 +309,29 @@ class _ThreadState extends State<_Thread> {
     }
   }
 
+  /// Record a voice message for this conversation (up to [voiceMaxS]); sent from the bar that shows it.
+  Future<void> _record() async {
+    widget.controller.recordingFor = group;
+    final r = await widget.controller.run({'command': 'record', 'max_s': voiceMaxS});
+    if (r['response'] != 'ok') widget.controller.recordingFor = null;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _sendRecording() async {
+    setState(() => _sending = Strings.of(context).voiceMessage);
+    try {
+      await widget.controller.sendRecording(group);
+    } finally {
+      if (mounted) setState(() => _sending = null);
+    }
+  }
+
+  Future<void> _dropRecording() async {
+    widget.controller.recordingFor = null;
+    await widget.controller.run({'command': 'cancel_recording'});
+    if (mounted) setState(() {});
+  }
+
   Future<void> _add() async {
     final s = Strings.of(context);
     final v = await showDialog<List<String>>(
@@ -337,6 +364,7 @@ class _ThreadState extends State<_Thread> {
     final x = widget.conversation;
     final me = widget.state.me.identity;
     final messages = widget.controller.threads[group] ?? const <MessageView>[];
+    final recording = widget.state.voice.recording;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -397,6 +425,8 @@ class _ThreadState extends State<_Thread> {
                       _Bubble(
                         key: Key('message-${m.id}'),
                         message: m,
+                        controller: widget.controller,
+                        playing: m.path != null && widget.state.voice.playing == m.path,
                         group: x.kind == 'group',
                         from: widget.state.nameOf(m.from),
                         onDelete: () async {
@@ -416,13 +446,25 @@ class _ThreadState extends State<_Thread> {
         ],
         Padding(
           padding: const EdgeInsets.all(8),
-          child: Row(
+          child: recording != null && widget.controller.recordingFor == group
+              ? RecorderBar(
+                  recording: recording,
+                  onSend: _sending == null ? _sendRecording : () {},
+                  onDrop: _dropRecording,
+                )
+              : Row(
             children: [
               IconButton(
                 key: const Key('attach'),
                 tooltip: s.attachAction,
                 icon: const Icon(Icons.attach_file),
                 onPressed: _sending == null ? _attach : null,
+              ),
+              IconButton(
+                key: const Key('record'),
+                tooltip: s.voiceRecord,
+                icon: const Icon(Icons.mic),
+                onPressed: _sending == null && recording == null && !widget.controller.inCall ? _record : null,
               ),
               Expanded(
                 child: TextField(
@@ -442,9 +484,21 @@ class _ThreadState extends State<_Thread> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({super.key, required this.message, required this.group, required this.from, required this.onDelete});
+  const _Bubble({
+    super.key,
+    required this.message,
+    required this.group,
+    required this.from,
+    required this.onDelete,
+    required this.controller,
+    required this.playing,
+  });
   final MessageView message;
   final bool group;
+  final Controller controller;
+
+  /// It is a voice message or voicemail, playing.
+  final bool playing;
 
   /// Delete it on this device: from its long press, or a right click.
   final VoidCallback onDelete;
@@ -480,7 +534,9 @@ class _Bubble extends StatelessWidget {
           children: [
             if (group && !message.mine)
               Text(from, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: onBubble)),
-            if (message.attachment)
+            if (message.audio)
+              VoiceNote(message: message, playing: playing, controller: controller, color: onBubble)
+            else if (message.attachment)
               AttachmentView(message: message, color: onBubble)
             else
               Text(message.text ?? s.threadNotText(message.kind), style: TextStyle(color: onBubble)),

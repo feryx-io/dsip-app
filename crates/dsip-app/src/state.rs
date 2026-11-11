@@ -34,6 +34,35 @@ pub struct State {
     /// [`crate::HISTORY_MAX`].
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub history: Vec<CallRecord>,
+    /// A voice message or voicemail being recorded, and what plays.
+    #[serde(default)]
+    pub voice: Voice,
+}
+
+/// Recording and playing voice messages (M§8.2) and voicemail (M§13).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Voice {
+    /// The recording, under way or ended (at its limit) and not yet sent or dropped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recording: Option<RecordingView>,
+    /// The file playing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playing: Option<String>,
+}
+
+/// A recording ([`Voice::recording`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecordingView {
+    /// Under way; `false`: it stopped (at its limit, or for a call) and waits to be sent or dropped.
+    pub running: bool,
+    /// When it started, Unix seconds.
+    pub started_at: i64,
+    /// Where it stops by itself, milliseconds (a voicemail's `max_duration_s`, M§13.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_ms: Option<u64>,
+    /// How long it is, once it stopped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
 }
 
 /// A call that ended, as the call history keeps it.
@@ -226,6 +255,16 @@ pub struct MessageView {
     /// An attachment's file on this device, once fetched and decrypted ([`Change::MessageFile`]).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
+    /// Why it was sent (M§8.2): an `audio`'s `voice` (a voice message) or `voicemail` (after an unanswered call,
+    /// M§13), an attachment's `attachment`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purpose: Option<String>,
+    /// An `audio`'s length, milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    /// A voicemail's call: the invite's id (M§13.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session: Option<String>,
 }
 
 impl MessageView {
@@ -250,6 +289,9 @@ impl MessageView {
             content_type: o["blob"]["content_type"].as_str().map(String::from),
             size: o["blob"]["size"].as_u64(),
             path,
+            purpose: o["purpose"].as_str().map(String::from),
+            duration_ms: o["duration_ms"].as_u64(),
+            session: o["session"].as_str().map(String::from),
         }
     }
 }
@@ -473,6 +515,11 @@ pub enum Change {
         /// All of them, as they are now.
         introduced: Vec<Introduced>,
     },
+    /// Recording or playing changed.
+    Voice {
+        /// As it is now.
+        voice: Voice,
+    },
     /// The app stopped: its phone unbound.
     Stopped,
 }
@@ -504,6 +551,7 @@ impl State {
             Change::Names { names } => self.names = names.clone(),
             Change::History { history } => self.history = history.clone(),
             Change::Introduced { introduced } => self.messaging.introduced = introduced.clone(),
+            Change::Voice { voice } => self.voice = voice.clone(),
             Change::Message { .. } | Change::MessageFile { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }

@@ -17,7 +17,25 @@
         "from": "did:key:z6MkBob",
         "mine": false,
         "kind": "audio",
-        "sent_at": 1793600060
+        "sent_at": 1793600060,
+        "content_type": "audio/ogg; codecs=opus",
+        "size": 9421,
+        "path": "/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC2.ogg",
+        "purpose": "voice",
+        "duration_ms": 4200
+      },
+      {
+        "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",
+        "id": "01M6EKRTVG3C55DFMQ401G3MC5",
+        "from": "did:key:z6MkBob",
+        "mine": false,
+        "kind": "audio",
+        "sent_at": 1793600070,
+        "content_type": "audio/ogg; codecs=opus",
+        "size": 21870,
+        "purpose": "voicemail",
+        "duration_ms": 12640,
+        "session": "01M6EKRTVG3C55DFMQ401G3MC0"
       },
       {
         "conversation": "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk",

@@ -1901,6 +1901,78 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Could not open it here. Save it, then open it from where you saved it.'**
   String get attachmentNotOpened;
+
+  /// A message that is a recording of someone speaking, sent instead of typed.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message'**
+  String get voiceMessage;
+
+  /// A recording a caller left after a call that was not answered.
+  ///
+  /// In en, this message translates to:
+  /// **'Voicemail'**
+  String get voicemail;
+
+  /// No description provided for @voiceRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a voice message'**
+  String get voiceRecord;
+
+  /// No description provided for @voicePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get voicePlay;
+
+  /// No description provided for @voiceStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get voiceStop;
+
+  /// No description provided for @voiceRecordingTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording {time}'**
+  String voiceRecordingTime(String time);
+
+  /// No description provided for @voiceRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded {time}'**
+  String voiceRecorded(String time);
+
+  /// No description provided for @voiceDrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the recording'**
+  String get voiceDrop;
+
+  /// No description provided for @voicemailOfferTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} didn\'t answer'**
+  String voicemailOfferTitle(String name);
+
+  /// No description provided for @voicemailOfferBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave a voicemail? Up to {time}.'**
+  String voicemailOfferBody(String time);
+
+  /// No description provided for @voicemailRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get voicemailRecord;
+
+  /// No description provided for @voicemailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Voicemail sent.'**
+  String get voicemailSent;
 }
 
 class _StringsDelegate extends LocalizationsDelegate<Strings> {

@@ -45,8 +45,13 @@ void main() {
 
   test('a message and a thread are read whole', () {
     final t = [for (final x in (m['thread'] as Map)['messages'] as List) MessageView.fromJson(x as Map<String, dynamic>)];
-    expect(t.map((x) => x.mine), [true, false, false]);
-    expect((t[2].kind, t[2].name, t[2].contentType, t[2].size, t[2].attachment), ('file', 'plan.pdf', 'application/pdf', 48213, true));
+    expect(t.map((x) => x.mine), [true, false, false, false]);
+    expect((t[3].kind, t[3].name, t[3].contentType, t[3].size, t[3].attachment), ('file', 'plan.pdf', 'application/pdf', 48213, true));
+    expect((t[1].audio, t[1].voicemail, t[1].durationMs, t[1].purpose), (true, false, 4200, 'voice'));
+    expect(
+      (t[2].audio, t[2].voicemail, t[2].durationMs, t[2].session),
+      (true, true, 12640, '01M6EKRTVG3C55DFMQ401G3MC0'),
+    );
     expect(t[0].attachment, isFalse);
     expect(t[1].text, isNull);
     expect(t[1].kind, 'audio');
@@ -80,7 +85,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(client.commands.last, {'command': 'thread', 'conversation': group});
     expect(find.text('hello Bob'), findsOneWidget);
-    expect(find.text('(audio message)'), findsOneWidget);
+    expect(find.text('Voice message · 0:04'), findsOneWidget);
+    expect(find.text('Voicemail · 0:12 · Downloading…'), findsOneWidget, reason: 'not fetched yet');
     expect(find.text('1 message not yet at the hub'), findsOneWidget);
 
     client.push(state, m['message'] as Map<String, dynamic>);

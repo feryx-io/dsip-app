@@ -92,6 +92,47 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         name: Option<String>,
     },
+    /// Record a voice message, or a voicemail, from the microphone (M§8.2, M§13): to an Ogg/Opus file, until
+    /// [`Command::StopRecording`] or `max_s` (a voicemail's limit, M§13.2). Not while a call has the microphone.
+    Record {
+        /// Stop by itself after this many seconds.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_s: Option<u32>,
+    },
+    /// Stop the recording and answer with it ([`Response::Recorded`]), to send with [`Command::SendAudio`].
+    StopRecording,
+    /// Stop the recording and drop it.
+    CancelRecording,
+    /// Send a recording ([`Response::Recorded`]'s file): to a conversation or an identity, sealed and uploaded as
+    /// [`Command::SendFile`] does, as an `audio` content (M§8.2).
+    SendAudio {
+        /// A group id or an identity DID.
+        to: String,
+        /// The Ogg/Opus file.
+        path: String,
+        /// `voice` (a voice message, the default) or `voicemail` (M§13).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        purpose: Option<String>,
+        /// A voicemail's call: the session of the attempt that went unanswered (M§13.2).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        session: Option<String>,
+    },
+    /// Play an Ogg/Opus file (a voice message, a voicemail) to the speaker; one playing before stops.
+    Play {
+        /// The file.
+        path: String,
+    },
+    /// Stop playing.
+    StopPlaying,
+    /// After a call to `to` ended with `reason`, whether to offer to leave a voicemail (M§13.2): `to`'s mailbox
+    /// entry takes voicemail, this identity can message them, and the outcome is one that offers. Answers
+    /// [`Response::Voicemail`].
+    VoicemailOffer {
+        /// The callee.
+        to: String,
+        /// How the attempt ended (§15): `user.declined`, `session.timeout`, …
+        reason: String,
+    },
     /// Make a group conversation with these identities (M§7.3): each must have granted you permission to message
     /// (accepting your introduction does). Answers with its group id.
     CreateGroup {
@@ -275,6 +316,21 @@ pub enum Response {
         /// The identity the caller's device acts for, from the hint.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         on_behalf_of: Option<String>,
+    },
+    /// A recording, stopped ([`Command::StopRecording`]).
+    Recorded {
+        /// Its Ogg/Opus file.
+        path: String,
+        /// Its length, milliseconds.
+        duration_ms: u64,
+    },
+    /// Whether to offer a voicemail ([`Command::VoicemailOffer`]), and its limit.
+    Voicemail {
+        /// Offer it.
+        offer: bool,
+        /// The callee's limit, seconds (M§4.2 `voicemail.max_duration_s`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_duration_s: Option<u32>,
     },
     /// Not done, and why.
     Error {

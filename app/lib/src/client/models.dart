@@ -277,6 +277,7 @@ class AppState {
     required this.presence,
     this.names = const {},
     this.history = const [],
+    this.voice = const VoiceState(),
   });
   final Me me;
   final String relay;
@@ -292,6 +293,9 @@ class AppState {
 
   /// The calls that ended, oldest first, kept across restarts.
   final List<CallRecord> history;
+
+  /// A voice message or voicemail being recorded, and what plays.
+  final VoiceState voice;
 
   /// What to call [did]: the name the user gave it, else the name it [offered] (a caller's own, unchecked), else the
   /// identity, shortened.
@@ -312,6 +316,47 @@ class AppState {
     presence: PresenceState.fromJson(j['presence'] as Map<String, dynamic>? ?? const {}),
     names: (j['names'] as Map<String, dynamic>? ?? const {}).cast<String, String>(),
     history: [for (final c in j['history'] as List? ?? const []) CallRecord.fromJson(c as Map<String, dynamic>)],
+    voice: VoiceState.fromJson(j['voice'] as Map<String, dynamic>? ?? const {}),
+  );
+}
+
+/// Recording and playing voice messages and voicemail.
+class VoiceState {
+  const VoiceState({this.recording, this.playing});
+
+  /// The recording, under way or stopped at its limit and waiting to be sent or dropped.
+  final Recording? recording;
+
+  /// The file playing.
+  final String? playing;
+
+  factory VoiceState.fromJson(Map<String, dynamic> j) => VoiceState(
+    recording: j['recording'] == null ? null : Recording.fromJson(j['recording'] as Map<String, dynamic>),
+    playing: j['playing'] as String?,
+  );
+}
+
+/// A recording ([VoiceState.recording]).
+class Recording {
+  const Recording({required this.running, required this.startedAt, this.maxMs, this.durationMs});
+
+  /// Under way; false: it stopped (at its limit, or for a call) and waits to be sent or dropped.
+  final bool running;
+
+  /// Unix seconds.
+  final int startedAt;
+
+  /// Where it stops by itself (a voicemail's limit).
+  final int? maxMs;
+
+  /// Its length, once stopped.
+  final int? durationMs;
+
+  factory Recording.fromJson(Map<String, dynamic> j) => Recording(
+    running: j['running'] as bool,
+    startedAt: j['started_at'] as int,
+    maxMs: j['max_ms'] as int?,
+    durationMs: j['duration_ms'] as int?,
   );
 }
 
@@ -343,6 +388,9 @@ class MessageView {
     this.contentType,
     this.size,
     this.path,
+    this.purpose,
+    this.durationMs,
+    this.session,
   });
 
   /// The conversation's group id.
@@ -366,6 +414,21 @@ class MessageView {
   /// An attachment's file on this device, once fetched.
   final String? path;
 
+  /// Why it was sent: an `audio`'s `voice` or `voicemail`, an attachment's `attachment`.
+  final String? purpose;
+
+  /// An `audio`'s length.
+  final int? durationMs;
+
+  /// A voicemail's call.
+  final String? session;
+
+  /// A voice message or a voicemail: played where it is shown.
+  bool get audio => kind == 'audio';
+
+  /// Left after a call that was not answered.
+  bool get voicemail => purpose == 'voicemail';
+
   /// Whether it carries a file (an `image`, a `file`, or a kind with a media type).
   bool get attachment => contentType != null || kind == 'image' || kind == 'file';
 
@@ -381,6 +444,9 @@ class MessageView {
     contentType: contentType,
     size: size,
     path: path,
+    purpose: purpose,
+    durationMs: durationMs,
+    session: session,
   );
 
   factory MessageView.fromJson(Map<String, dynamic> j) => MessageView(
@@ -395,6 +461,9 @@ class MessageView {
     contentType: j['content_type'] as String?,
     size: j['size'] as int?,
     path: j['path'] as String?,
+    purpose: j['purpose'] as String?,
+    durationMs: j['duration_ms'] as int?,
+    session: j['session'] as String?,
   );
 }
 
