@@ -244,3 +244,58 @@ async fn following_resumes_when_the_app_starts_again() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Found on devices: with presence automatic, a call showed neither side as on a call. Now each says `busy` while the
+/// call is up, and `available` once it is over; a state the user chose is left as chosen.
+#[tokio::test(flavor = "multi_thread")]
+async fn on_automatic_a_call_shows_both_busy_until_it_ends() {
+    let dir = std::env::temp_dir().join(format!("dsip-app-auto-busy-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(&dir, &["127.0.0.1".into(), "localhost".into()]).unwrap();
+    let tls = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    let hints = dsip_testkit::hints_node().await;
+    let net = Network::new();
+    let alice = app(&net, &dir, "Alice", mailbox(&dir, "mailbox-a", &tls, &hints).await, &hints).await;
+    let bob = app(&net, &dir, "Bob", mailbox(&dir, "mailbox-b", &tls, &hints).await, &hints).await;
+    let (alice_did, bob_did) = (alice.state().me.identity, bob.state().me.identity);
+    for (who, a) in [("Alice", &alice), ("Bob", &bob)] {
+        until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
+    }
+    hints_published(&hints, &[&alice, &bob]).await;
+    granted(&alice, &bob).await;
+    until(&bob, "Bob holds Alice's grant", |s| s.messaging.introduced.iter().any(|i| i.to == alice_did && i.accepted)).await;
+    let is = |app: &App, who: &str, state: &str| shown(app, who).is_some_and(|p| p.state.as_deref() == Some(state));
+    until(&alice, "Bob there", |_| is(&alice, &bob_did, "available")).await;
+    until(&bob, "Alice there", |_| is(&bob, &alice_did, "available")).await;
+
+    let call = |r: Response| match r {
+        Response::Call { call } => call,
+        other => panic!("not a call: {other:?}"),
+    };
+    call(alice.command(Command::Call { to: bob_did.clone() }).await);
+    until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == dsip_app::CallState::Ringing)).await;
+    call(bob.command(Command::Answer { call: None }).await);
+    until(&alice, "Bob on a call", |_| is(&alice, &bob_did, "busy")).await;
+    until(&bob, "Alice on a call", |_| is(&bob, &alice_did, "busy")).await;
+    assert_eq!((alice.state().presence.mine, bob.state().presence.mine), (None, None), "still automatic");
+
+    // P§8: hung up within the publish interval, the end is still told
+    call(alice.command(Command::Hangup { call: None }).await);
+    until(&alice, "Bob off the call", |_| is(&alice, &bob_did, "available")).await;
+    until(&bob, "Alice off the call", |_| is(&bob, &alice_did, "available")).await;
+
+    // a state Bob chose stays through a call
+    assert_eq!(bob.command(Command::SetPresence { state: Some("dnd".into()) }).await, Response::Ok);
+    until(&alice, "Bob dnd", |_| is(&alice, &bob_did, "dnd")).await;
+    call(alice.command(Command::Call { to: bob_did.clone() }).await);
+    until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == dsip_app::CallState::Ringing)).await;
+    call(bob.command(Command::Answer { call: None }).await);
+    until(&bob, "Alice on a call", |_| is(&bob, &alice_did, "busy")).await;
+    tokio::time::sleep(Duration::from_secs(7)).await;
+    assert!(is(&alice, &bob_did, "dnd"), "Bob's own choice stands");
+    call(alice.command(Command::Hangup { call: None }).await);
+    alice.stop().await;
+    bob.stop().await;
+    let _ = std::fs::remove_dir_all(&dir);
+}

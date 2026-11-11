@@ -197,6 +197,8 @@ pub(crate) struct Inner {
     pub(crate) hidden: std::sync::Mutex<std::collections::BTreeSet<String>>,
     /// The waking task, when the app has a push gateway.
     wake: std::sync::OnceLock<mpsc::UnboundedSender<wake::Kick>>,
+    /// Whether `busy` is published for a call while the user's presence is automatic ([`App::auto_presence`]).
+    auto_busy: AtomicBool,
 }
 
 /// The running client. Cheap to clone; clones are the same app.
@@ -292,6 +294,7 @@ impl App {
                 hidden: std::sync::Mutex::new(saved(HIDDEN_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()),
                 identity_dir: identity_dir.clone(),
                 wake: std::sync::OnceLock::new(),
+                auto_busy: AtomicBool::new(false),
             }),
         };
         if let Some(m) = cfg.messaging {
@@ -457,6 +460,9 @@ impl App {
                 }
                 self.inner.phone.set_presence(state.as_deref());
                 self.publish(Change::MyPresence { state });
+                // back to automatic during a call: busy again
+                self.inner.auto_busy.store(false, Ordering::SeqCst);
+                self.auto_presence();
                 Response::Ok
             }
             Command::WatchPresence { identity } => {
@@ -658,6 +664,30 @@ impl App {
     }
 
     /// Publish each followed identity whose presence differs from what the phone shows now.
+    /// While the user's presence is automatic (no state of their own), the device says `busy` for as long as a call is
+    /// up, and `available` once none is. A state the user chose stays as chosen.
+    ///
+    /// Spec: P§3, P§5, P§8. Impl: automatic is this app's (no record: the relay says available while bound), so being
+    /// on a call has to be said by a record; and since a record outlives the call by up to its lifetime, the call's end
+    /// is said by another, `available`, kept fresh from then on. It shows as automatic does and is dropped at unbind
+    /// like any record. Withdrawing it at once instead would lose it to P§8's publish interval after a short call,
+    /// leaving `busy` shown for the lifetime.
+    fn auto_presence(&self) {
+        let (mine, on_call) = {
+            let st = self.inner.state.lock().unwrap_or_else(|e| e.into_inner());
+            (st.presence.mine.is_some(), st.calls.values().any(|c| matches!(c.state, CallState::Answered { .. })))
+        };
+        if mine {
+            self.inner.auto_busy.store(false, Ordering::SeqCst);
+            return;
+        }
+        match (self.inner.auto_busy.swap(on_call, Ordering::SeqCst), on_call) {
+            (false, true) => self.inner.phone.set_presence(Some("busy")),
+            (true, false) => self.inner.phone.set_presence(Some("available")),
+            _ => {}
+        }
+    }
+
     fn show_presence(&self, shown: &std::collections::BTreeMap<String, dsip_phone::Presence>) {
         let following: Vec<PresenceView> = self.inner.state.lock().unwrap_or_else(|e| e.into_inner()).presence.following.clone();
         for old in following {
@@ -763,6 +793,7 @@ impl App {
                         let ended = state.ended();
                         let err = call.error();
                         app.update(id, |v| { v.state = state; v.error = err; });
+                        app.auto_presence();
                         // the caller hears it ring (§12.4: the callee's `ringing` progress), until the answer or the end
                         if let Some(a) = &app.inner.audio {
                             if ringing_there && !a.ringing_back(id) {
