@@ -10,21 +10,21 @@ repository = "https://github.com/feryx-io/dsip-app"
 
 [workspace.dependencies]
 # dsip-rs, every crate at one ref (dsip-rs RELEASING.md, "Downstream"): the release tag
-dsip-core = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-endpoint = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-media = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-phone = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-transport = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-messenger = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-messaging-device = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196", features = ["sqlite"] }
-dsip-mls = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196", features = ["sqlite"] }
-dsip-mailbox = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-push = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-relay = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-messaging = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-testkit = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-wake = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
-dsip-schema = { git = "https://github.com/feryx-io/dsip-rs", rev = "ecc114fcce09cbc26f2ee1e7dd3341f83b189196" }
+dsip-core = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-endpoint = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-media = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-phone = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-transport = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-messenger = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-messaging-device = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7", features = ["sqlite"] }
+dsip-mls = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7", features = ["sqlite"] }
+dsip-mailbox = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-push = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-relay = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-messaging = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-testkit = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-wake = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
+dsip-schema = { git = "https://github.com/feryx-io/dsip-rs", rev = "07b331d40c998fbe4025f911bf6971e46a6596e7" }
 # Anvil's audio and updater (app plan decision 4 (a)): cpal, echo cancellation; the signed manifest, installed the way
 # this copy was. Every Anvil crate at one ref.
 anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32", features = ["tone"] }
