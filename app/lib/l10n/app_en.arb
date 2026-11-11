@@ -758,5 +758,51 @@
   "attachmentOpen": "Open",
   "attachmentSave": "Save",
   "attachmentSaved": "Saved.",
-  "attachmentNotOpened": "Could not open it here. Save it, then open it from where you saved it."
+  "attachmentNotOpened": "Could not open it here. Save it, then open it from where you saved it.",
+  "voiceMessage": "Voice message",
+  "@voiceMessage": {
+    "description": "A message that is a recording of someone speaking, sent instead of typed."
+  },
+  "voicemail": "Voicemail",
+  "@voicemail": {
+    "description": "A recording a caller left after a call that was not answered."
+  },
+  "voiceRecord": "Record a voice message",
+  "voicePlay": "Play",
+  "voiceStop": "Stop",
+  "voiceRecordingTime": "Recording {time}",
+  "@voiceRecordingTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceRecorded": "Recorded {time}",
+  "@voiceRecorded": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDrop": "Delete the recording",
+  "voicemailOfferTitle": "{name} didn't answer",
+  "@voicemailOfferTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "voicemailOfferBody": "Leave a voicemail? Up to {time}.",
+  "@voicemailOfferBody": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "voicemailRecord": "Record",
+  "voicemailSent": "Voicemail sent."
 }

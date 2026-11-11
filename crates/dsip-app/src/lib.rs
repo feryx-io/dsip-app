@@ -51,7 +51,7 @@ pub use settings::{init_identity, Mailbox, Settings};
 pub use wake::WakeConfig;
 pub use state::{
     Audio as AudioState, AudioDevice, CallRecord, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
-    Messaging, PresenceState, PresenceView, Push, Registration, RequestView, State,
+    Messaging, PresenceState, PresenceView, Push, RecordingView, Registration, RequestView, State, Voice,
 };
 
 /// This build's version: the release's (a tag `vX.Y.Z` is this crate's version, `.github/workflows/release.yml`).
@@ -66,6 +66,10 @@ pub const NAMES_FILE: &str = "names.json";
 
 /// The call history ([`State::history`]), kept in the identity directory.
 pub const HISTORY_FILE: &str = "calls.json";
+
+/// Where recordings are made, in the identity's folder: each is moved to the media folder when sent, deleted when
+/// dropped.
+pub const RECORDINGS_DIR: &str = "recordings";
 
 /// Calls kept in the history, the most recent.
 pub const HISTORY_MAX: usize = 200;
@@ -277,6 +281,7 @@ impl App {
             relay: cfg.relay,
             calls: Default::default(),
             audio: audio.as_ref().map(|a| a.view()).unwrap_or_else(|| AudioState { host: "none".into(), ..Default::default() }),
+            voice: Default::default(),
         };
         let (changes, _) = broadcast::channel(256);
         let app = App {
@@ -445,6 +450,51 @@ impl App {
             Command::DeclineRequest { id } => self.ask(|reply| messaging::Req::DeclineRequest { id, reply }).await,
             Command::Message { to, text } => self.ask(|reply| messaging::Req::Message { to, text, reply }).await,
             Command::SendFile { to, path, name } => self.ask(|reply| messaging::Req::SendFile { to, path, name, reply }).await,
+            Command::Record { max_s } => self.record(max_s).await,
+            Command::StopRecording => {
+                let Some(a) = &self.inner.audio else { return Response::error("no sound (audio none)") };
+                let taken = a.stop_recording().await;
+                self.set_voice(|v| v.recording = None);
+                match taken {
+                    Some((path, duration_ms)) => Response::Recorded { path: path.to_string_lossy().into_owned(), duration_ms },
+                    None => Response::error("not recording"),
+                }
+            }
+            Command::CancelRecording => {
+                if let Some((path, _)) = match &self.inner.audio {
+                    Some(a) => a.stop_recording().await,
+                    None => None,
+                } {
+                    let _ = std::fs::remove_file(path);
+                }
+                self.set_voice(|v| v.recording = None);
+                Response::Ok
+            }
+            Command::SendAudio { to, path, purpose, session } => {
+                let purpose = purpose.unwrap_or_else(|| "voice".into());
+                self.ask(|reply| messaging::Req::SendAudio { to, path, purpose, session, reply }).await
+            }
+            Command::Play { path } => {
+                let Some(a) = &self.inner.audio else { return Response::error("no sound (audio none)") };
+                let app = self.clone();
+                let played = path.clone();
+                let ended = move || app.set_voice(|v| if v.playing.as_deref() == Some(played.as_str()) { v.playing = None });
+                match a.play(std::path::Path::new(&path), ended) {
+                    Ok(()) => {
+                        self.set_voice(|v| v.playing = Some(path));
+                        Response::Ok
+                    }
+                    Err(e) => Response::error(e),
+                }
+            }
+            Command::StopPlaying => {
+                if let Some(a) = &self.inner.audio {
+                    a.stop_playing();
+                }
+                self.set_voice(|v| v.playing = None);
+                Response::Ok
+            }
+            Command::VoicemailOffer { to, reason } => self.ask(|reply| messaging::Req::VoicemailOffer { to, reason, reply }).await,
             Command::Thread { conversation } => self.ask(|reply| messaging::Req::Thread { conversation, reply }).await,
             Command::CreateGroup { members } => self.ask(|reply| messaging::Req::CreateGroup { members, reply }).await,
             Command::AddMember { conversation, identity } => {
@@ -663,7 +713,6 @@ impl App {
         changed
     }
 
-    /// Publish each followed identity whose presence differs from what the phone shows now.
     /// While the user's presence is automatic (no state of their own), the device says `busy` for as long as a call is
     /// up, and `available` once none is. A state the user chose stays as chosen.
     ///
@@ -688,6 +737,49 @@ impl App {
         }
     }
 
+    /// Start recording to a new file in [`RECORDINGS_DIR`]; a recording not taken before is dropped.
+    async fn record(&self, max_s: Option<u32>) -> Response {
+        let Some(a) = &self.inner.audio else { return Response::error("no sound (audio none)") };
+        let dir = self.inner.identity_dir.join(RECORDINGS_DIR);
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            return Response::error(format!("{}: {e}", dir.display()));
+        }
+        if let Some((old, _)) = a.stop_recording().await {
+            let _ = std::fs::remove_file(old);
+        }
+        let now = dsip_transport::now_s();
+        let path = dir.join(format!("{now}-{}.ogg", self.inner.next_id.fetch_add(1, Ordering::Relaxed)));
+        let max_ms = max_s.map(|s| u64::from(s) * 1000);
+        let app = self.clone();
+        // stopped by itself (its limit, a call): shown as waiting to be sent or dropped
+        let ended = move |ms| {
+            app.set_voice(|v| {
+                if let Some(r) = v.recording.as_mut().filter(|r| r.running) {
+                    r.running = false;
+                    r.duration_ms = Some(ms);
+                }
+            })
+        };
+        match a.record(&path, max_ms, ended) {
+            Ok(()) => {
+                self.set_voice(|v| v.recording = Some(RecordingView { running: true, started_at: now, max_ms, duration_ms: None }));
+                Response::Ok
+            }
+            Err(e) => Response::error(e),
+        }
+    }
+
+    /// Change the recording and playing, and say so.
+    fn set_voice(&self, f: impl FnOnce(&mut Voice)) {
+        let mut voice = self.state().voice;
+        let before = voice.clone();
+        f(&mut voice);
+        if voice != before {
+            self.publish(Change::Voice { voice });
+        }
+    }
+
+    /// Publish each followed identity whose presence differs from what the phone shows now.
     fn show_presence(&self, shown: &std::collections::BTreeMap<String, dsip_phone::Presence>) {
         let following: Vec<PresenceView> = self.inner.state.lock().unwrap_or_else(|e| e.into_inner()).presence.following.clone();
         for old in following {

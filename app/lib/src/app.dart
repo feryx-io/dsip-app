@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import 'client/models.dart';
 import 'controller.dart';
 import 'screens/update.dart';
+import 'screens/voice.dart';
 import 'screens/calls.dart';
 import 'screens/contacts.dart';
 import 'screens/first_run.dart';
@@ -90,6 +91,15 @@ class _HomeState extends State<Home> {
     for (final text in [if (error != null) s.commandFailed(error), ?told]) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text))),
+      );
+    }
+    final voicemail = widget.controller.takeVoicemailOffer();
+    if (voicemail != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => showDialog<void>(
+          context: context,
+          builder: (_) => VoicemailDialog(controller: widget.controller, offer: voicemail),
+        ),
       );
     }
     if (popup != null) {

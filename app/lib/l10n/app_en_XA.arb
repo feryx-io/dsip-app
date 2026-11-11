@@ -300,5 +300,17 @@
   "attachmentOpen": "[Óþéñ ]",
   "attachmentSave": "[Šàṽé ]",
   "attachmentSaved": "[Šàṽéđ. ]",
-  "attachmentNotOpened": "[Çóúĺđ ñóţ óþéñ íţ ĥéŕé. Šàṽé íţ, ţĥéñ óþéñ íţ ƒŕóɱ ŵĥéŕé ýóú šàṽéđ íţ. one two three fo]"
+  "attachmentNotOpened": "[Çóúĺđ ñóţ óþéñ íţ ĥéŕé. Šàṽé íţ, ţĥéñ óþéñ íţ ƒŕóɱ ŵĥéŕé ýóú šàṽéđ íţ. one two three fo]",
+  "voiceMessage": "[Ṽóíçé ɱéššàĝé one]",
+  "voicemail": "[Ṽóíçéɱàíĺ on]",
+  "voiceRecord": "[Ŕéçóŕđ à ṽóíçé ɱéššàĝé one t]",
+  "voicePlay": "[Þĺàý ]",
+  "voiceStop": "[Šţóþ ]",
+  "voiceRecordingTime": "[Ŕéçóŕđíñĝ {time} one]",
+  "voiceRecorded": "[Ŕéçóŕđéđ {time} one]",
+  "voiceDrop": "[Đéĺéţé ţĥé ŕéçóŕđíñĝ one t]",
+  "voicemailOfferTitle": "[{name} đíđñ'ţ àñšŵéŕ one ]",
+  "voicemailOfferBody": "[Ĺéàṽé à ṽóíçéɱàíĺ? Úþ ţó {time}. one tw]",
+  "voicemailRecord": "[Ŕéçóŕđ o]",
+  "voicemailSent": "[Ṽóíçéɱàíĺ šéñţ. one]"
 }

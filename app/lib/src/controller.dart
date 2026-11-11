@@ -251,6 +251,11 @@ class Controller extends ChangeNotifier {
           if (i >= 0) thread![i] = thread[i].withPath(c['path'] as String);
         case 'granted' || 'removed':
           notice = u.change;
+        case 'history':
+          final known = {for (final c in before?.history ?? const <CallRecord>[]) c.session};
+          for (final c in u.state.history.where((c) => !known.contains(c.session))) {
+            if (before != null && c.direction == Direction.outgoing && !c.answered) _offerVoicemail(c);
+          }
       }
       notifyListeners();
     });
@@ -277,6 +282,41 @@ class Controller extends ChangeNotifier {
     } else {
       showTab(payload == 'messages' ? Tabs.messages : Tabs.calls);
     }
+  }
+
+  /// A voicemail to offer, after a call placed here went unanswered: cleared once read.
+  VoicemailOffer? _voicemailOffer;
+  VoicemailOffer? takeVoicemailOffer() {
+    final o = _voicemailOffer;
+    _voicemailOffer = null;
+    return o;
+  }
+
+  /// What the recording under way is for: a conversation's group, or [VoicemailOffer.target]. Each shows it only there.
+  String? recordingFor;
+
+  /// M§13.2: offer a voicemail after [call] if its outcome, its callee's mailbox and this identity's standing allow.
+  Future<void> _offerVoicemail(CallRecord call) async {
+    final r = await client.command({'command': 'voicemail_offer', 'to': call.peer, 'reason': call.reason});
+    if (r['response'] != 'voicemail' || r['offer'] != true) return;
+    _voicemailOffer = VoicemailOffer(call.peer, call.session, r['max_duration_s'] as int?);
+    notifyListeners();
+  }
+
+  /// Stop the recording and send it to [to] (a conversation or an identity): a voice message, or with [session] a
+  /// voicemail. Whether it went.
+  Future<bool> sendRecording(String to, {String purpose = 'voice', String? session}) async {
+    final r = await run({'command': 'stop_recording'});
+    recordingFor = null;
+    if (r['response'] != 'recorded') return false;
+    final sent = await run({
+      'command': 'send_audio',
+      'to': to,
+      'path': r['path'],
+      'purpose': purpose,
+      'session': ?session,
+    });
+    return sent['response'] == 'conversation';
   }
 
   /// The in-app alert to show: cleared once read.
@@ -314,7 +354,8 @@ class Controller extends ChangeNotifier {
         final m = MessageView.fromJson(u.change!['message'] as Map<String, dynamic>);
         final reading = foreground && tab == Tabs.messages && visibleConversation == m.conversation;
         if (m.mine || reading) return;
-        alert(m.conversation.hashCode & 0x3fffffff, Alert(now.nameOf(m.from), m.text ?? s.threadNotText(m.kind),
+        final what = m.text ?? (m.audio ? (m.voicemail ? s.voicemail : s.voiceMessage) : s.threadNotText(m.kind));
+        alert(m.conversation.hashCode & 0x3fffffff, Alert(now.nameOf(m.from), what,
             'conversation:${m.conversation}'));
       case 'requests' when a.requests:
         final known = {for (final r in before.messaging.requests) r.id};
@@ -450,4 +491,16 @@ class Controller extends ChangeNotifier {
     _system?.dispose();
     super.dispose();
   }
+}
+
+/// A voicemail to offer ([Controller.takeVoicemailOffer]): to [peer], for the unanswered call [session], up to [maxS]
+/// seconds.
+class VoicemailOffer {
+  const VoicemailOffer(this.peer, this.session, this.maxS);
+  final String peer;
+  final String session;
+  final int? maxS;
+
+  /// [Controller.recordingFor] while a voicemail is recorded.
+  static const target = 'voicemail';
 }

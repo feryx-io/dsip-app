@@ -1064,6 +1064,50 @@ class StringsEn extends Strings {
   @override
   String get attachmentNotOpened =>
       'Could not open it here. Save it, then open it from where you saved it.';
+
+  @override
+  String get voiceMessage => 'Voice message';
+
+  @override
+  String get voicemail => 'Voicemail';
+
+  @override
+  String get voiceRecord => 'Record a voice message';
+
+  @override
+  String get voicePlay => 'Play';
+
+  @override
+  String get voiceStop => 'Stop';
+
+  @override
+  String voiceRecordingTime(String time) {
+    return 'Recording $time';
+  }
+
+  @override
+  String voiceRecorded(String time) {
+    return 'Recorded $time';
+  }
+
+  @override
+  String get voiceDrop => 'Delete the recording';
+
+  @override
+  String voicemailOfferTitle(String name) {
+    return '$name didn\'t answer';
+  }
+
+  @override
+  String voicemailOfferBody(String time) {
+    return 'Leave a voicemail? Up to $time.';
+  }
+
+  @override
+  String get voicemailRecord => 'Record';
+
+  @override
+  String get voicemailSent => 'Voicemail sent.';
 }
 
 /// The translations for English (`en_XA`).
@@ -2139,4 +2183,48 @@ class StringsEnXa extends StringsEn {
   @override
   String get attachmentNotOpened =>
       '[Çóúĺđ ñóţ óþéñ íţ ĥéŕé. Šàṽé íţ, ţĥéñ óþéñ íţ ƒŕóɱ ŵĥéŕé ýóú šàṽéđ íţ. one two three fo]';
+
+  @override
+  String get voiceMessage => '[Ṽóíçé ɱéššàĝé one]';
+
+  @override
+  String get voicemail => '[Ṽóíçéɱàíĺ on]';
+
+  @override
+  String get voiceRecord => '[Ŕéçóŕđ à ṽóíçé ɱéššàĝé one t]';
+
+  @override
+  String get voicePlay => '[Þĺàý ]';
+
+  @override
+  String get voiceStop => '[Šţóþ ]';
+
+  @override
+  String voiceRecordingTime(String time) {
+    return '[Ŕéçóŕđíñĝ $time one]';
+  }
+
+  @override
+  String voiceRecorded(String time) {
+    return '[Ŕéçóŕđéđ $time one]';
+  }
+
+  @override
+  String get voiceDrop => '[Đéĺéţé ţĥé ŕéçóŕđíñĝ one t]';
+
+  @override
+  String voicemailOfferTitle(String name) {
+    return '[$name đíđñ\'ţ àñšŵéŕ one ]';
+  }
+
+  @override
+  String voicemailOfferBody(String time) {
+    return '[Ĺéàṽé à ṽóíçéɱàíĺ? Úþ ţó $time. one tw]';
+  }
+
+  @override
+  String get voicemailRecord => '[Ŕéçóŕđ o]';
+
+  @override
+  String get voicemailSent => '[Ṽóíçéɱàíĺ šéñţ. one]';
 }

@@ -101,6 +101,9 @@ fn the_messages_the_desktop_app_reads() {
         content_type: None,
         size: None,
         path: None,
+        purpose: None,
+        duration_ms: None,
+        session: None,
     };
     let file = MessageView {
         name: Some("plan.pdf".into()),
@@ -112,7 +115,22 @@ fn the_messages_the_desktop_app_reads() {
     let thread = Response::Thread {
         messages: vec![
             message("01M6EKRTVG3C55DFMQ401G3MC1", "did:key:z6MkAlice", true, Some("hello Bob"), "text", 1_793_600_000),
-            message("01M6EKRTVG3C55DFMQ401G3MC2", "did:key:z6MkBob", false, None, "audio", 1_793_600_060),
+            MessageView {
+                content_type: Some("audio/ogg; codecs=opus".into()),
+                size: Some(9_421),
+                path: Some("/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC2.ogg".into()),
+                purpose: Some("voice".into()),
+                duration_ms: Some(4_200),
+                ..message("01M6EKRTVG3C55DFMQ401G3MC2", "did:key:z6MkBob", false, None, "audio", 1_793_600_060)
+            },
+            MessageView {
+                content_type: Some("audio/ogg; codecs=opus".into()),
+                size: Some(21_870),
+                purpose: Some("voicemail".into()),
+                duration_ms: Some(12_640),
+                session: Some("01M6EKRTVG3C55DFMQ401G3MC0".into()),
+                ..message("01M6EKRTVG3C55DFMQ401G3MC5", "did:key:z6MkBob", false, None, "audio", 1_793_600_070)
+            },
             file,
         ],
     };

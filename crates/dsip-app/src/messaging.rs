@@ -73,6 +73,8 @@ pub(crate) enum Req {
     DeclineRequest { id: String, reply: oneshot::Sender<Response> },
     Message { to: String, text: String, reply: oneshot::Sender<Response> },
     SendFile { to: String, path: String, name: Option<String>, reply: oneshot::Sender<Response> },
+    SendAudio { to: String, path: String, purpose: String, session: Option<String>, reply: oneshot::Sender<Response> },
+    VoicemailOffer { to: String, reason: String, reply: oneshot::Sender<Response> },
     Thread { conversation: String, reply: oneshot::Sender<Response> },
     CreateGroup { members: Vec<String>, reply: oneshot::Sender<Response> },
     AddMember { conversation: String, identity: String, reply: oneshot::Sender<Response> },
@@ -98,6 +100,8 @@ struct AppHost {
     auto_tried: std::collections::BTreeSet<String>,
     /// Where attachments are kept, fetched or sent (the messenger's `media_dir`).
     media: PathBuf,
+    /// The hints nodes: another identity's mailbox entry, for its voicemail (M§13.2).
+    hints: dsip_transport::hints::HintsClient,
 }
 
 impl Host<SqliteProvider> for AppHost {
@@ -248,7 +252,7 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
         }
     }
     let mut host = AppHost { app: app.clone(), me: identity.clone(), bound: false, auto_tried: Default::default(),
-                             media: cfg.state_dir.join("media") };
+                             media: cfg.state_dir.join("media"), hints: hints.clone() };
     app.set_messaging(|m| m.mailbox = Some(cfg.mailbox.0.clone()));
     if let Err(e) = mx.connect(&mut host).await {
         tracing::warn!("messaging: mailbox {}: {e}; redialling", cfg.mailbox.1);
@@ -271,7 +275,11 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
         if tokio::time::Instant::now() >= hint_due && mx.connection().is_some() && !cfg.hints_nodes.is_empty() {
             let seq = dsip_transport::now_s().max(last_seq + 1);
             last_seq = seq;
-            let endpoints = dsip_transport::hints::endpoints(Some(&relay), Some((&cfg.mailbox.0, &cfg.mailbox.1)));
+            let mut endpoints = dsip_transport::hints::endpoints(Some(&relay), Some((&cfg.mailbox.0, &cfg.mailbox.1)));
+            // M§4.2: this identity takes voicemail (M§13), up to VOICEMAIL_MAX_S
+            for e in endpoints.iter_mut().filter(|e| e.extra.get("service") == Some(&serde_json::json!("DSIPMailbox"))) {
+                e.extra.insert("voicemail".into(), serde_json::json!({"max_duration_s": VOICEMAIL_MAX_S}));
+            }
             let ka = id.key_agreement.as_ref().map(|k| &k.delegation);
             let hint = dsip_transport::hints::reachability_with(&identity, &id.device, &id.delegation, &endpoints, seq, dsip_transport::now_s(), HINT_TTL_S, ka);
             for (node, r) in hints.publish(&hint).await {
@@ -340,6 +348,12 @@ async fn request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, req: Re
         }
         Req::SendFile { to, path, name, reply } => {
             let _ = reply.send(send_file(mx, host, &to, &path, name).await.unwrap_or_else(Response::error));
+        }
+        Req::SendAudio { to, path, purpose, session, reply } => {
+            let _ = reply.send(send_audio(mx, host, &to, &path, &purpose, session).await.unwrap_or_else(Response::error));
+        }
+        Req::VoicemailOffer { to, reason, reply } => {
+            let _ = reply.send(voicemail_offer(mx, host, &to, &reason).await);
         }
         Req::Thread { conversation, reply } => {
             let messages = mx
@@ -667,9 +681,78 @@ async fn send_file(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &
     let blob = mx.upload_blob(&plain, content_type).await.map_err(|e| e.to_string())?;
     let id = mx.engine_mut().new_id(now);
     let obj = dsip_messaging_device::blob::attachment_content(&id, &c.conversation, &host.me, now as i64, kind, Some(&name), &blob.uploaded(), None);
+    send_content(mx, host, &c, obj, &plain, now).await
+}
+
+/// The largest voicemail this identity takes, seconds (its mailbox entry's `voicemail.max_duration_s`, M§4.2): the
+/// value M§13's example gives.
+pub const VOICEMAIL_MAX_S: u32 = 180;
+
+/// Send the Ogg/Opus recording at `path` to `to` as an `audio` content (M§8.2): `purpose` `voice`, or `voicemail`
+/// with the unanswered call's `session` (M§13.2). Sealed and uploaded as a file is; a recording made here
+/// ([`crate::RECORDINGS_DIR`]) is moved into the media folder, where the sender's thread finds it.
+async fn send_audio(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &str, path: &str, purpose: &str, session: Option<String>)
+                    -> Result<Response, String> {
+    if !matches!(purpose, "voice" | "voicemail") {
+        return Err(format!("{purpose}: voice or voicemail"));
+    }
+    if purpose == "voicemail" && session.is_none() {
+        return Err("a voicemail names its call's session (M§13.2)".into());
+    }
+    let file = std::path::Path::new(path);
+    let duration_ms = crate::audio::duration_ms(file).ok_or_else(|| format!("{path}: not an Ogg Opus recording"))?;
+    let plain = std::fs::read(file).map_err(|e| format!("{path}: {e}"))?;
+    let now = dsip_transport::now_s() as f64;
+    let c = conversation_for(mx, host, to, now).await?;
+    let blob = mx.upload_blob(&plain, AUDIO_TYPE).await.map_err(|e| e.to_string())?;
+    let id = mx.engine_mut().new_id(now);
+    let obj = dsip_messaging_device::blob::audio_content(&id, &c.conversation, &host.me, now as i64, purpose, duration_ms as i64,
+                                                         &blob.uploaded(), session.as_deref());
+    let sent = send_content(mx, host, &c, obj, &plain, now).await?;
+    if file.parent().and_then(|d| d.file_name()).is_some_and(|d| d == crate::RECORDINGS_DIR) {
+        let _ = std::fs::remove_file(file);
+    }
+    Ok(sent)
+}
+
+/// A recording's media type: M§13.2's required one.
+const AUDIO_TYPE: &str = "audio/ogg; codecs=opus";
+
+/// Whether to offer a voicemail to `to` after an attempt that ended with `reason` (M§13.2): the outcome is one that
+/// offers, this identity can message `to` (a direct conversation, or a grant held from accepting its introduction),
+/// and `to`'s mailbox entry carries `voicemail`.
+///
+/// Spec: M§13.2, M§4.2. Impl: the entry is the one `to`'s reachability hint carries; an identity that publishes no
+/// hint (a `did:web` with a document and no hint) is offered none, as this app does not fetch documents here.
+async fn voicemail_offer(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &str, reason: &str) -> Response {
+    let no = Response::Voicemail { offer: false, max_duration_s: None };
+    let outcome = if reason == "session.timeout" { "cancel" } else { "reject" };
+    let rule = |vm: &serde_json::Value, can_send: bool| {
+        dsip_messaging::client::voicemail_offer(&serde_json::json!({"voicemail": vm, "can_send": can_send,
+            "outcome": {"type": outcome, "reason": reason}}))
+    };
+    // the outcome first: most endings offer nothing, and need no lookup
+    if rule(&serde_json::json!({}), true)["offer"] != serde_json::json!(true) {
+        return no;
+    }
+    let now = dsip_transport::now_s();
+    let direct = mx.engine().conversations(now as f64).into_iter().any(|c| c.kind == "direct" && c.peer.as_deref() == Some(to) && c.may_send);
+    let granted = host.app.state().messaging.introduced.iter().any(|i| i.to == to && i.accepted);
+    let Some(hint) = host.hints.lookup(to, &dsip_core::did::StaticResolver::default(), now).await else { return no };
+    let vm = dsip_transport::hints::mailbox_entries(&hint).into_iter().map(|e| e["voicemail"].clone()).find(|v| v.is_object());
+    let offer = rule(&vm.unwrap_or_default(), direct || granted);
+    match offer["offer"].as_bool() {
+        Some(true) => Response::Voicemail { offer: true, max_duration_s: offer["max_duration_s"].as_u64().map(|m| m as u32) },
+        _ => no,
+    }
+}
+
+/// Send content `obj` in conversation `c`, its blob's plaintext `plain` kept in the media folder as the sender's copy.
+async fn send_content(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, c: &dsip_messaging_device::Conversation, obj: serde_json::Value,
+                 plain: &[u8], now: f64) -> Result<Response, String> {
     // the sender's copy, where a fetched one would be
     let kept = host.media.join(dsip_messaging_device::blob::file_name(&obj));
-    if let Err(e) = std::fs::create_dir_all(&host.media).and_then(|()| std::fs::write(&kept, &plain)) {
+    if let Err(e) = std::fs::create_dir_all(&host.media).and_then(|()| std::fs::write(&kept, plain)) {
         tracing::warn!("keeping {}: {e}", kept.display());
     }
     let sent = mx.engine_mut().send(&c.group, &obj, now).map_err(|e| e.0)?;
@@ -680,5 +763,5 @@ async fn send_file(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &
     host.app.hide(&c.group, false);
     host.app.publish(Change::Message { message: MessageView::of(&c.group, &obj, &host.me, &host.media) });
     refresh(&host.app, mx.engine());
-    Ok(Response::Conversation { conversation: c.group })
+    Ok(Response::Conversation { conversation: c.group.clone() })
 }
