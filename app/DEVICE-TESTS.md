@@ -14,8 +14,8 @@ not part of this list.
 
 - **Desktop:** the release's Windows setup, `.dmg`, AppImage or `.deb`. The first run warns because nothing is
   code-signed yet; README, "Releases", says how to get past it.
-- **Android:** `app-release.apk` from the `dsip-app-android` artifact of a CI run on `main`, installed with
-  `adb install` or from the phone's files.
+- **Android:** the release's `DSIP-vX.Y.Z-android.apk`, or, between releases, `app-release.apk` from the
+  `dsip-app-android` artifact of a CI run on `main`; installed with `adb install` or from the phone's files.
 - **iPhone:** `flutter run --release -d <iphone>` from a Mac with Xcode and your own development team. CI's build is
   unsigned and does not install.
 - **Two identities:** each needs a relay to start with (any relay you run).

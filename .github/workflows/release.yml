@@ -2,7 +2,8 @@ name: release
 
 # A tag vX.Y.Z (the dsip-app crate's version) builds and publishes a GitHub release (app plan A4; Anvil's release.yml
 # is the model): the desktop app's installers (a Windows setup, a macOS disk image, a Linux .deb and AppImage), each
-# installed, started and removed again before anything is published, and the `dsip-app` CLI for each desktop, with
+# installed, started and removed again before anything is published, the Android APK (signed with the app's key), and
+# the `dsip-app` CLI for each desktop, with
 # SHA256SUMS over the lot, and latest.json with its Ed25519 signature for the app's updater (app/rust/src/api/update.rs).
 # Nothing is code-signed yet: Windows and macOS warn before the first run.
 #
@@ -309,9 +310,87 @@ jobs:
           name: release-app-macos
           path: dist/
 
+  # The APK app.yml builds, the same way (its comments say why): three ABIs, waking on, signed with the app's one key
+  # and checked against app/android/signing-cert.sha256. A tag needs the key, since an APK under another key does not
+  # install over the last. Impl: the version name is the release's; the version code stays pubspec.yaml's, so a
+  # release APK and app.yml's test APKs install over each other either way.
+  app-android:
+    name: The app for Android
+    needs: version
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Free disk space
+        working-directory: .
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Rust, as pinned in rust-toolchain.toml, for Android
+        working-directory: .
+        run: |
+          rustup toolchain install && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)"
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> app/build"
+      - run: flutter pub get
+      - name: The signing key
+        env:
+          KEYSTORE: ${{ secrets.DSIP_ANDROID_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.DSIP_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "::error::the DSIP_ANDROID_KEYSTORE_BASE64 secret is not set"; exit 1; fi
+            echo "::warning::no signing key here: the debug key"
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/dsip.p12"
+          {
+            echo "DSIP_ANDROID_KEYSTORE=$RUNNER_TEMP/dsip.p12"
+            echo "DSIP_ANDROID_KEYSTORE_PASSWORD=$PASSWORD"
+          } >> "$GITHUB_ENV"
+      - run: >-
+          flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+          --build-name ${{ needs.version.outputs.version }}
+        env:
+          DSIP_PUSH_GATEWAY: did:web:172-238-48-78.ip.linodeusercontent.com%3A8445
+          DSIP_FCM_APP_ID: ${{ secrets.DSIP_FCM_APP_ID }}
+          DSIP_FCM_SENDER_ID: ${{ secrets.DSIP_FCM_SENDER_ID }}
+          DSIP_FCM_API_KEY: ${{ secrets.DSIP_FCM_API_KEY }}
+          DSIP_FCM_PROJECT_ID: ${{ secrets.DSIP_FCM_PROJECT_ID }}
+      - name: Signed with the app's key
+        if: env.DSIP_ANDROID_KEYSTORE != ''
+        run: |
+          signer=$(ls "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          echo "apksigner: ${signer:-none found}"
+          out=$("$signer" verify --print-certs build/app/outputs/flutter-apk/app-release.apk 2>&1) || true
+          got=$(printf '%s\n' "$out" | grep -oiE 'certificate SHA-256 digest: [0-9a-f]{64}' | head -1 | awk '{print $NF}')
+          want=$(cat android/signing-cert.sha256)
+          echo "signed by ${got:-nothing found}"
+          [ "$got" = "$want" ] || { printf '%s\n' "$out"; echo "expected $want"; exit 1; }
+          rm -f "$RUNNER_TEMP/dsip.p12"
+      - name: Package
+        run: |
+          mkdir -p ../dist
+          cp build/app/outputs/flutter-apk/app-release.apk "../dist/DSIP-${{ needs.version.outputs.label }}-android.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-app-android
+          path: dist/
+
   publish:
     name: Publish the release
-    needs: [version, cli, app-linux, app-windows, app-macos]
+    needs: [version, cli, app-linux, app-windows, app-macos, app-android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -360,11 +439,12 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
             --title "DSIP $GITHUB_REF_NAME" --notes-file - <<NOTES
-          The DSIP desktop app for Windows, macOS and Linux, and the \`dsip-app\` CLI.
+          The DSIP app for Windows, macOS, Linux and Android, and the \`dsip-app\` CLI.
 
           - **Windows**: \`DSIP-$GITHUB_REF_NAME-windows-x86_64-setup.exe\` installs for you alone, no administrator needed.
           - **macOS**: open \`DSIP-$GITHUB_REF_NAME-macos.dmg\` and drag DSIP to Applications (Apple Silicon and Intel).
           - **Linux**: \`dsip_${GITHUB_REF_NAME}_amd64.deb\` for Debian and Ubuntu, or \`DSIP-$GITHUB_REF_NAME-x86_64.AppImage\` to run in place.
+          - **Android**: \`DSIP-$GITHUB_REF_NAME-android.apk\`, installed from the phone (allow installing from your browser or files app). It installs over an earlier one and keeps its data; it does not update itself.
           - **dsip-app**, the client without a window, driven from the command line: \`dsip-app-$GITHUB_REF_NAME-<platform>\`.
 
           The app looks for new releases and updates itself (the Windows setup, an AppImage); a .deb, or a Mac app in a

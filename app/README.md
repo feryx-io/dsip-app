@@ -145,14 +145,15 @@ The launcher icons are drawn by `tool/icons.py` with the desktop's.
 ## Releases
 
 A tag `vX.Y.Z` (the `dsip-app` crate's version) runs `.github/workflows/release.yml`: the installers for each desktop,
-each installed, started and removed again in CI before anything is published, and the `dsip-app` CLI for each, with
-`SHA256SUMS` over the release. A pull request touching the packaging runs the same without publishing.
+each installed, started and removed again in CI before anything is published, the Android APK, and the `dsip-app` CLI
+for each desktop, with `SHA256SUMS` over the release. A pull request touching the packaging runs the same without publishing.
 
 | | Package | Made by |
 |---|---|---|
 | Windows | a setup for this user, no administrator needed, in `%LOCALAPPDATA%\Programs\DSIP` | `packaging/windows.iss` (Inno Setup 6) |
 | macOS | a disk image, the app universal (Apple Silicon and Intel) | `packaging/macos.sh` |
 | Linux | a `.deb` (`/opt/dsip`, `dsip` on the path) and an AppImage | `packaging/linux.sh` |
+| Android | an APK (arm64, arm, x86_64) signed with the app's key, checked against `android/signing-cert.sha256`; it does not update itself | `flutter build apk` in the workflow |
 
 Uninstalling keeps the app's folder, which holds the identity's keys, unless the user says to delete it (Windows
 asks; a silent uninstall keeps it): a `did:key` identity cannot be rotated, so its keys gone is the identity gone.
