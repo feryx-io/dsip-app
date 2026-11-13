@@ -211,6 +211,18 @@ class StringsEn extends Strings {
   String get callNoSound => 'No sound yet';
 
   @override
+  String callSound(
+    int mic,
+    int sent,
+    int heard,
+    int decoded,
+    int played,
+    int ringback,
+  ) {
+    return 'Sound: mic $mic · sent $sent · heard $heard · decoded $decoded · played $played · ringback $ringback';
+  }
+
+  @override
   String callVia(String relay) {
     return 'Through $relay';
   }
@@ -1318,6 +1330,18 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get callNoSound => '[Ñó šóúñđ ýéţ on]';
+
+  @override
+  String callSound(
+    int mic,
+    int sent,
+    int heard,
+    int decoded,
+    int played,
+    int ringback,
+  ) {
+    return '[Šóúñđ: ɱíç $mic · šéñţ $sent · ĥéàŕđ $heard · đéçóđéđ $decoded · þĺàýéđ $played · ŕíñĝƀàçķ $ringback one two three four fiv]';
+  }
 
   @override
   String callVia(String relay) {

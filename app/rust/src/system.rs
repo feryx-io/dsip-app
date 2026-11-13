@@ -428,6 +428,7 @@ mod tests {
             media: false,
             via: None,
             error: None,
+            sound: None,
         }
     }
 

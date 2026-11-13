@@ -41,6 +41,7 @@ class CallView {
     required this.media,
     this.via,
     this.error,
+    this.sound,
   });
   final int id;
   final String session;
@@ -52,6 +53,9 @@ class CallView {
   final bool media;
   final String? via;
   final String? error;
+
+  /// What its sound did on this device, while it rings back or has the devices.
+  final CallSound? sound;
 
   /// Ringing here: waiting on the user to answer or decline.
   bool get ringingHere => direction == Direction.incoming && state.name == 'ringing';
@@ -67,6 +71,41 @@ class CallView {
     media: j['media'] as bool,
     via: j['via'] as String?,
     error: j['error'] as String?,
+    sound: j['sound'] == null ? null : CallSound.fromJson(j['sound'] as Map<String, dynamic>),
+  );
+}
+
+/// A call's sound on this device, counted (`dsip-app`'s `CallSound`): each stage feeds the next, so the first that
+/// stays at 0, or an error, is where the sound stops.
+class CallSound {
+  const CallSound({
+    required this.mic,
+    required this.sent,
+    required this.heard,
+    required this.decoded,
+    required this.played,
+    required this.ringback,
+    this.micError,
+    this.speakerError,
+  });
+  final int mic;
+  final int sent;
+  final int heard;
+  final int decoded;
+  final int played;
+  final int ringback;
+  final String? micError;
+  final String? speakerError;
+
+  factory CallSound.fromJson(Map<String, dynamic> j) => CallSound(
+    mic: j['mic'] as int,
+    sent: j['sent'] as int,
+    heard: j['heard'] as int,
+    decoded: j['decoded'] as int,
+    played: j['played'] as int,
+    ringback: j['ringback'] as int,
+    micError: j['mic_error'] as String?,
+    speakerError: j['speaker_error'] as String?,
   );
 }
 

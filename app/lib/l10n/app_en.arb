@@ -100,6 +100,18 @@
     }
   },
   "callNoSound": "No sound yet",
+  "callSound": "Sound: mic {mic} · sent {sent} · heard {heard} · decoded {decoded} · played {played} · ringback {ringback}",
+  "@callSound": {
+    "description": "A call's sound counted on this device, stage by stage, to find where it stops: 20 ms frames from the microphone, frames sent, packets heard from the other side, packets decoded, frames played, ringback frames played.",
+    "placeholders": {
+      "mic": {"type": "int"},
+      "sent": {"type": "int"},
+      "heard": {"type": "int"},
+      "decoded": {"type": "int"},
+      "played": {"type": "int"},
+      "ringback": {"type": "int"}
+    }
+  },
   "callVia": "Through {relay}",
   "@callVia": {
     "placeholders": {

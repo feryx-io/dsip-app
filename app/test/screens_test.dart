@@ -341,6 +341,12 @@ void main() {
     await tester.tap(find.descendant(of: ringing, matching: find.text('Answer')));
     final answered = find.byKey(const Key('call-2'));
     expect(find.descendant(of: answered, matching: find.text('In call')), findsOneWidget);
+    // its sound counted stage by stage, and where it stopped
+    expect(
+      find.descendant(of: answered, matching: find.text('Sound: mic 250 · sent 250 · heard 248 · decoded 248 · played 0 · ringback 100')),
+      findsOneWidget,
+    );
+    expect(find.descendant(of: answered, matching: find.text('speaker: stream disconnected')), findsOneWidget);
     await tester.tap(find.descendant(of: answered, matching: find.text('Unmute')));
     await tester.tap(find.descendant(of: answered, matching: find.text('Hang up')));
     // why it ended in words, the code in the tooltip (§15)

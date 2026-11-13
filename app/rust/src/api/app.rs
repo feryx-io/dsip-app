@@ -22,12 +22,22 @@ pub(crate) fn current() -> Option<App> {
     running().lock().unwrap_or_else(|e| e.into_inner()).clone()
 }
 
-/// Set up logging (to stderr, `RUST_LOG` filters) once, when Dart loads the library.
+/// Set up logging once, when Dart loads the library ([`init_logging`]).
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
+    init_logging();
+}
+
+/// Log to stderr, or on Android to logcat (tag `dsip`), where a phone's stderr goes nowhere; `RUST_LOG` filters. The
+/// first call sets it up; later ones do nothing.
+pub(crate) fn init_logging() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
-    let _ = tracing_subscriber::fmt().with_env_filter(filter).with_writer(std::io::stderr).try_init();
+    let fmt = tracing_subscriber::fmt().with_env_filter(filter);
+    #[cfg(target_os = "android")]
+    let _ = fmt.with_ansi(false).without_time().with_writer(crate::android::Logcat::make).try_init();
+    #[cfg(not(target_os = "android"))]
+    let _ = fmt.with_writer(std::io::stderr).try_init();
 }
 
 /// Make an identity in `dir` (a controller key, a device key and the delegation between them); its DID.

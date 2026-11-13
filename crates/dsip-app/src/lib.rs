@@ -50,7 +50,7 @@ pub use messaging::MessagingConfig;
 pub use settings::{init_identity, Mailbox, Settings};
 pub use wake::WakeConfig;
 pub use state::{
-    Audio as AudioState, AudioDevice, CallRecord, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
+    Audio as AudioState, AudioDevice, CallRecord, CallSound, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
     Messaging, PresenceState, PresenceView, Push, RecordingView, Registration, RequestView, State, Voice,
 };
 
@@ -868,11 +868,13 @@ impl App {
             media: false,
             via: call.via().map(String::from),
             error: None,
+            sound: None,
         };
         self.publish(Change::CallAdded { call: view });
         let app = self.clone();
         tokio::spawn(async move {
             let mut poll = tokio::time::interval(Duration::from_millis(250));
+            let mut ticks: u64 = 0;
             let mut has_audio = false;
             let mut was_answered = false;
             loop {
@@ -921,10 +923,22 @@ impl App {
                     },
                     _ = poll.tick() => {
                         let (media, err) = (call.media_received(), call.error());
+                        // the sound's counters about once a second, while it rings back or has the devices
+                        ticks += 1;
+                        let sound = match &app.inner.audio {
+                            Some(a) if ticks.is_multiple_of(4) && (has_audio || a.ringing_back(id)) => Some(a.sound()),
+                            _ => None,
+                        };
                         let differs = app.inner.state.lock().unwrap_or_else(|e| e.into_inner()).calls.get(&id)
-                            .is_some_and(|v| v.media != media || v.error != err);
+                            .is_some_and(|v| v.media != media || v.error != err || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s)));
                         if differs {
-                            app.update(id, |v| { v.media = media; v.error = err; });
+                            app.update(id, |v| {
+                                v.media = media;
+                                v.error = err;
+                                if sound.is_some() {
+                                    v.sound = sound;
+                                }
+                            });
                         }
                     }
                 }

@@ -30,7 +30,16 @@
         },
         "muted": true,
         "media": true,
-        "via": "wss://relay.bob.example:8443/dsip"
+        "via": "wss://relay.bob.example:8443/dsip",
+        "sound": {
+          "mic": 250,
+          "sent": 250,
+          "heard": 248,
+          "decoded": 248,
+          "played": 0,
+          "ringback": 100,
+          "speaker_error": "speaker: stream disconnected"
+        }
       },
       {
         "id": 3,
