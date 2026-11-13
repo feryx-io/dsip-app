@@ -376,6 +376,30 @@ pub struct CallSound {
     /// Why the speaker refused a frame (the call's, or the ringback's), if it did.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub speaker_error: Option<String>,
+    /// The stage that stopped counting while the call went on ([`CallSound::stall`]): `mic`, `sent`, `heard`,
+    /// `decoded`, `played` or `ringback`. Where the sound stops, when it does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stalled: Option<String>,
+}
+
+impl CallSound {
+    /// The first stage that did not count on since `before`: the ringback while it rings back (`call` false), else
+    /// each stage of the call's sound in order, the microphone to the speaker. The far end's stages only once its
+    /// media has come (`media`): before, the call says it has no sound.
+    pub fn stall(&self, before: &CallSound, call: bool, media: bool) -> Option<&'static str> {
+        if !call {
+            return (self.ringback <= before.ringback).then_some("ringback");
+        }
+        let stages = [
+            ("mic", self.mic, before.mic),
+            ("sent", self.sent, before.sent),
+            ("heard", self.heard, before.heard),
+            ("decoded", self.decoded, before.decoded),
+            ("played", self.played, before.played),
+        ];
+        let ours = if media { stages.len() } else { 2 };
+        stages[..ours].iter().find(|(_, now, then)| now <= then).map(|(stage, _, _)| *stage)
+    }
 }
 
 /// Which way a call goes.
@@ -628,5 +652,25 @@ mod tests {
         let wire = serde_json::to_string(&r).unwrap();
         assert!(wire.contains(r#""calls":[{"id":7"#), "{wire}");
         assert_eq!(serde_json::from_str::<Response>(&wire).unwrap(), r);
+    }
+
+    #[test]
+    fn a_stage_stalled_is_the_first_that_stopped_counting() {
+        let n = |mic, sent, heard, decoded, played, ringback| CallSound { mic, sent, heard, decoded, played, ringback, ..CallSound::default() };
+        let before = n(100, 100, 90, 90, 90, 40);
+        // every stage counting: none
+        assert_eq!(n(200, 200, 190, 190, 190, 40).stall(&before, true, true), None);
+        // the speaker takes no more: played; the decoder too: decoded, the one before it
+        assert_eq!(n(200, 200, 190, 190, 90, 40).stall(&before, true, true), Some("played"));
+        assert_eq!(n(200, 200, 190, 90, 90, 40).stall(&before, true, true), Some("decoded"));
+        // nothing from the far end: heard, unless its media has not come (the call says it has no sound)
+        assert_eq!(n(200, 200, 90, 90, 90, 40).stall(&before, true, true), Some("heard"));
+        assert_eq!(n(200, 200, 90, 90, 90, 40).stall(&before, true, false), None);
+        // the microphone stops: mic, whatever the far end does
+        assert_eq!(n(100, 100, 190, 190, 190, 40).stall(&before, true, false), Some("mic"));
+        assert_eq!(n(200, 100, 190, 190, 190, 40).stall(&before, true, true), Some("sent"));
+        // ringing back: only the ringback counts
+        assert_eq!(n(100, 100, 90, 90, 90, 90).stall(&before, false, false), None);
+        assert_eq!(n(100, 100, 90, 90, 90, 40).stall(&before, false, false), Some("ringback"));
     }
 }

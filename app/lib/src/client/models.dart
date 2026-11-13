@@ -87,6 +87,7 @@ class CallSound {
     required this.ringback,
     this.micError,
     this.speakerError,
+    this.stalled,
   });
   final int mic;
   final int sent;
@@ -96,6 +97,11 @@ class CallSound {
   final int ringback;
   final String? micError;
   final String? speakerError;
+  /// The stage that stopped counting while the call went on: where its sound stops.
+  final String? stalled;
+
+  /// Whether anything went wrong: only then is the sound shown.
+  bool get troubled => stalled != null || micError != null || speakerError != null;
 
   factory CallSound.fromJson(Map<String, dynamic> j) => CallSound(
     mic: j['mic'] as int,
@@ -106,6 +112,7 @@ class CallSound {
     ringback: j['ringback'] as int,
     micError: j['mic_error'] as String?,
     speakerError: j['speaker_error'] as String?,
+    stalled: j['stalled'] as String?,
   );
 }
 

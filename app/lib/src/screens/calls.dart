@@ -170,13 +170,15 @@ class _LiveCall extends StatelessWidget {
             if (call.state.answered && !call.media) Text(s.callNoSound, style: Theme.of(context).textTheme.bodySmall),
             if (call.via != null) Text(s.callVia(call.via!), style: Theme.of(context).textTheme.bodySmall),
             if (call.error != null) Text(call.error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            // where the call's sound stops on this device, if it does
-            if (call.sound case final n?) ...[
+            // where the call's sound stops on this device, when a stage stalls or fails
+            if (call.sound case final n? when n.troubled) ...[
               Text(
                 s.callSound(n.mic, n.sent, n.heard, n.decoded, n.played, n.ringback),
                 key: Key('call-sound-${call.id}'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+              if (n.stalled case final stage?)
+                Text(s.callSoundStalled(stage), key: Key('call-stalled-${call.id}'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
               for (final e in [?n.micError, ?n.speakerError])
                 Text(e, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],

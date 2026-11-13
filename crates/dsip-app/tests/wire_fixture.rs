@@ -39,6 +39,7 @@ fn state() -> State {
             ringback: 100,
             mic_error: None,
             speaker_error: Some("speaker: stream disconnected".into()),
+            stalled: Some("played".into()),
         }),
     };
     for c in [

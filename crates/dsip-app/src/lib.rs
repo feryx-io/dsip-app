@@ -875,6 +875,9 @@ impl App {
         tokio::spawn(async move {
             let mut poll = tokio::time::interval(Duration::from_millis(250));
             let mut ticks: u64 = 0;
+            // the sound's last counts, a second apart, and whether they were the call's (not the ringback's); the stage stalled
+            let mut counted: (bool, std::collections::VecDeque<CallSound>) = (false, std::collections::VecDeque::new());
+            let mut stalled: Option<String> = None;
             let mut has_audio = false;
             let mut was_answered = false;
             loop {
@@ -925,10 +928,22 @@ impl App {
                         let (media, err) = (call.media_received(), call.error());
                         // the sound's counters about once a second, while it rings back or has the devices
                         ticks += 1;
-                        let sound = match &app.inner.audio {
+                        let mut sound = match &app.inner.audio {
                             Some(a) if ticks.is_multiple_of(4) && (has_audio || a.ringing_back(id)) => Some(a.sound()),
                             _ => None,
                         };
+                        // a stage stalled: counting no more over the last two seconds, the call's or the ringback's
+                        if let Some(now) = &mut sound {
+                            if counted.0 != has_audio {
+                                counted = (has_audio, std::collections::VecDeque::new());
+                                stalled = None;
+                            }
+                            if counted.1.len() == 2 {
+                                stalled = counted.1.pop_front().and_then(|b| now.stall(&b, has_audio, media)).map(String::from);
+                            }
+                            counted.1.push_back(now.clone());
+                            now.stalled = stalled.clone();
+                        }
                         let differs = app.inner.state.lock().unwrap_or_else(|e| e.into_inner()).calls.get(&id)
                             .is_some_and(|v| v.media != media || v.error != err || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s)));
                         if differs {

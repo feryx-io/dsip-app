@@ -481,6 +481,12 @@ abstract class Strings {
     int ringback,
   );
 
+  /// Shown when a stage of a call's sound stopped counting: stage is the counter's name as in callSound, untranslated (mic, sent, heard, decoded, played or ringback).
+  ///
+  /// In en, this message translates to:
+  /// **'Sound stops at: {stage}'**
+  String callSoundStalled(String stage);
+
   /// No description provided for @callVia.
   ///
   /// In en, this message translates to:

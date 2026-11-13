@@ -229,6 +229,11 @@ class StringsEn extends Strings {
   }
 
   @override
+  String callSoundStalled(String stage) {
+    return 'Sound stops at: $stage';
+  }
+
+  @override
   String callVia(String relay) {
     return 'Through $relay';
   }
@@ -1353,6 +1358,11 @@ class StringsEnXa extends StringsEn {
     int ringback,
   ) {
     return '[Šóúñđ: ɱíç $mic · šéñţ $sent · ĥéàŕđ $heard · đéçóđéđ $decoded · þĺàýéđ $played · ŕíñĝƀàçķ $ringback one two three four fiv]';
+  }
+
+  @override
+  String callSoundStalled(String stage) {
+    return '[Šóúñđ šţóþš àţ: $stage one ]';
   }
 
   @override
