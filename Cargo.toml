@@ -27,9 +27,9 @@ dsip-wake = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2"
 dsip-schema = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
 # Anvil's audio and updater (app plan decision 4 (a)): cpal, echo cancellation; the signed manifest, installed the way
 # this copy was. Every Anvil crate at one ref.
-anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32", features = ["tone"] }
-anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32", default-features = false }
-anvil-update = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.32" }
+anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.83", features = ["tone"] }
+anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.83", default-features = false }
+anvil-update = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.83" }
 
 # nix 0.26.4 (under webrtc-util, under dsip-media) does not compile for iOS with libc 0.2.190 and later; this copy keeps
 # macOS's kernel-control sockets to macOS (patches/README.md).
