@@ -245,13 +245,14 @@ dependencies = [
 
 [[package]]
 name = "anvil-audio"
-version = "0.2.32"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
+version = "0.2.83"
+source = "git+https://github.com/thevoiceguy/anvil?rev=8c1ae8304950fd9262a42f90476fa383185669a8#8c1ae8304950fd9262a42f90476fa383185669a8"
 dependencies = [
  "anvil-core",
  "async-trait",
  "cpal",
  "forge-resampler",
+ "oboe",
  "parking_lot 0.12.5",
  "sonora",
  "thiserror 1.0.69",
@@ -262,8 +263,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-core"
-version = "0.2.32"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
+version = "0.2.83"
+source = "git+https://github.com/thevoiceguy/anvil?rev=8c1ae8304950fd9262a42f90476fa383185669a8#8c1ae8304950fd9262a42f90476fa383185669a8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -271,11 +272,13 @@ dependencies = [
  "bytes",
  "dashmap 5.5.3",
  "forge-codecs",
+ "forge-core 0.2.2 (git+https://github.com/thevoiceguy/forge-media?tag=v2026.10.07)",
  "forge-dtmf",
  "forge-rtp 0.7.0",
  "futures",
  "opus",
  "parking_lot 0.12.5",
+ "quick-xml",
  "rand 0.8.8",
  "reqwest",
  "rustls",
@@ -288,7 +291,7 @@ dependencies = [
  "sip-dialog",
  "sip-dns",
  "sip-parse",
- "sip-sdp 0.3.2 (git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09)",
+ "sip-sdp 0.3.2 (git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07)",
  "sip-transaction",
  "sip-transport",
  "sip-uac",
@@ -302,8 +305,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-update"
-version = "0.2.32"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.32#967201e24326ed943a735c0c2ea1291ec319606e"
+version = "0.2.83"
+source = "git+https://github.com/thevoiceguy/anvil?rev=8c1ae8304950fd9262a42f90476fa383185669a8#8c1ae8304950fd9262a42f90476fa383185669a8"
 dependencies = [
  "futures",
  "reqwest",
@@ -4899,6 +4902,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.42.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "quinn"
 version = "0.11.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5815,7 +5827,7 @@ checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 [[package]]
 name = "sip-auth"
 version = "0.4.0"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5838,7 +5850,7 @@ dependencies = [
 [[package]]
 name = "sip-core"
 version = "0.7.8"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "bytes",
  "httpdate",
@@ -5850,8 +5862,8 @@ dependencies = [
 
 [[package]]
 name = "sip-dialog"
-version = "0.3.4"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+version = "0.4.0"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5869,7 +5881,7 @@ dependencies = [
 [[package]]
 name = "sip-dns"
 version = "0.3.0"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5883,7 +5895,7 @@ dependencies = [
 [[package]]
 name = "sip-hep"
 version = "0.0.1"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "bytes",
  "hep-rs",
@@ -5894,7 +5906,7 @@ dependencies = [
 [[package]]
 name = "sip-observe"
 version = "0.3.0"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "once_cell",
  "tracing",
@@ -5903,7 +5915,7 @@ dependencies = [
 [[package]]
 name = "sip-parse"
 version = "0.4.0"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "bytes",
  "httpdate",
@@ -5917,21 +5929,12 @@ dependencies = [
 [[package]]
 name = "sip-ratelimit"
 version = "0.3.0"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "dashmap 5.5.3",
  "parking_lot 0.12.5",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "sip-sdp"
-version = "0.3.2"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
-dependencies = [
- "nom",
- "smol_str 0.3.7",
 ]
 
 [[package]]
@@ -5944,9 +5947,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "sip-sdp"
+version = "0.3.2"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
+dependencies = [
+ "nom",
+ "smol_str 0.3.7",
+]
+
+[[package]]
 name = "sip-transaction"
-version = "0.7.1"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+version = "0.9.1"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5964,8 +5976,8 @@ dependencies = [
 
 [[package]]
 name = "sip-transport"
-version = "0.6.0"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+version = "0.7.1"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -5987,8 +5999,8 @@ dependencies = [
 
 [[package]]
 name = "sip-uac"
-version = "0.7.6"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+version = "0.9.5"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6001,7 +6013,7 @@ dependencies = [
  "sip-dialog",
  "sip-dns",
  "sip-parse",
- "sip-sdp 0.3.2 (git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09)",
+ "sip-sdp 0.3.2 (git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07)",
  "sip-transaction",
  "sip-transport",
  "smol_str 0.3.7",
@@ -6012,8 +6024,8 @@ dependencies = [
 
 [[package]]
 name = "sip-uas"
-version = "0.5.0"
-source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09#d21a4b51be4d537894ded8fe3043f935558f419b"
+version = "0.5.2"
+source = "git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07#6340380688fe15ef3fac2758fcd2f1cdc727ad41"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6023,7 +6035,7 @@ dependencies = [
  "sip-core",
  "sip-dialog",
  "sip-parse",
- "sip-sdp 0.3.2 (git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.10.09)",
+ "sip-sdp 0.3.2 (git+https://github.com/thevoiceguy/siphon-rs?tag=v2026.11.07)",
  "sip-transaction",
  "sip-transport",
  "smol_str 0.3.7",
@@ -6356,7 +6368,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
