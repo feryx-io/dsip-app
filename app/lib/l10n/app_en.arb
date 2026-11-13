@@ -2,6 +2,8 @@
   "@@locale": "en",
   "appName": "DSIP",
   "firstRunTitle": "Welcome to DSIP",
+  "startFailedTitle": "DSIP did not start",
+  "startFailedRetry": "Try again",
   "firstRunIntro": "Your identity is yours: a key on this device, not an account on a server. Make one, or use one you already have.",
   "firstRunNew": "Make an identity",
   "firstRunExisting": "Use an identity folder",

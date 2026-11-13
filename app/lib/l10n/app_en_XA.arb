@@ -2,6 +2,8 @@
   "@@locale": "en_XA",
   "appName": "[ĐŠÍÞ ]",
   "firstRunTitle": "[Ŵéĺçóɱé ţó ĐŠÍÞ one]",
+  "startFailedTitle": "[ĐŠÍÞ đíđ ñóţ šţàŕţ one ]",
+  "startFailedRetry": "[Ţŕý àĝàíñ o]",
   "firstRunIntro": "[Ýóúŕ íđéñţíţý íš ýóúŕš: à ķéý óñ ţĥíš đéṽíçé, ñóţ àñ àççóúñţ óñ à šéŕṽéŕ. Ḿàķé óñé, óŕ úšé óñé ýóú àĺŕéàđý ĥàṽé. one two three four five six]",
   "firstRunNew": "[Ḿàķé àñ íđéñţíţý one]",
   "firstRunExisting": "[Úšé àñ íđéñţíţý ƒóĺđéŕ one t]",

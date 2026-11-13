@@ -122,6 +122,10 @@ class Controller extends ChangeNotifier {
   /// The latest command that failed, for the screen to show once.
   String? error;
 
+  /// Why the app did not start from its saved settings, shown in place of the home screen until [retryStart] starts
+  /// it; null while it starts or runs.
+  String? startError;
+
   /// Something the app was told that the user should see once: a grant arrived, this identity was removed from a
   /// conversation (the change's JSON).
   Map<String, dynamic>? notice;
@@ -145,7 +149,27 @@ class Controller extends ChangeNotifier {
         _updateTimer = Timer.periodic(const Duration(hours: 1), (_) => checkForUpdate());
       });
     }
-    if (settings != null) await _start(settings);
+    if (settings != null) await _startOrSay(settings);
+  }
+
+  /// Start the saved settings again after [startError].
+  Future<void> retryStart() async {
+    final s = settings;
+    if (s == null) return;
+    startError = null;
+    notifyListeners();
+    await _startOrSay(s);
+  }
+
+  /// [_start], its failure kept as [startError]: settings the app cannot start from (an identity whose key this
+  /// device does not have) then say why instead of a spinner turning for ever.
+  Future<void> _startOrSay(Map<String, dynamic> settings) async {
+    try {
+      await _start(settings);
+    } catch (e) {
+      startError = '$e';
+      notifyListeners();
+    }
   }
 
   /// First run: make the identity when [displayName] is given, or restore it from [restore] (a recovery code and its
@@ -180,6 +204,7 @@ class Controller extends ChangeNotifier {
     _updates = null;
     await client.stop();
     state = null;
+    startError = null;
     _system?.sync(const []);
     threads.clear();
     notifyListeners();
@@ -192,12 +217,7 @@ class Controller extends ChangeNotifier {
     }
     await store.save(settings);
     this.settings = settings;
-    try {
-      await _start(settings);
-    } catch (e) {
-      error = '$e';
-      notifyListeners();
-    }
+    await _startOrSay(settings);
   }
 
   /// Move the identity onto a domain of its own: the `did:web` of [plan] ([Client.webPrepare], checked by

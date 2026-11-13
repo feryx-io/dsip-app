@@ -16,6 +16,12 @@ class StringsEn extends Strings {
   String get firstRunTitle => 'Welcome to DSIP';
 
   @override
+  String get startFailedTitle => 'DSIP did not start';
+
+  @override
+  String get startFailedRetry => 'Try again';
+
+  @override
   String get firstRunIntro =>
       'Your identity is yours: a key on this device, not an account on a server. Make one, or use one you already have.';
 
@@ -1131,6 +1137,12 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get firstRunTitle => '[Ŵéĺçóɱé ţó ĐŠÍÞ one]';
+
+  @override
+  String get startFailedTitle => '[ĐŠÍÞ đíđ ñóţ šţàŕţ one ]';
+
+  @override
+  String get startFailedRetry => '[Ţŕý àĝàíñ o]';
 
   @override
   String get firstRunIntro =>

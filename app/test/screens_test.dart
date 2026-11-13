@@ -386,4 +386,23 @@ void main() {
     expect(find.text('did:key:z6MkAlice'), findsOneWidget);
     expect(find.text('did:key:z6MkMailbox · Connected'), findsOneWidget);
   });
+
+  testWidgets('settings the app cannot start from say why, not a spinner, and it starts again when asked', (tester) async {
+    await tester.runAsync(() => SettingsStore(dir).save({'identity': '/x', 'relay': 'wss://r/dsip'}));
+    client.startFails = 'no key for the identity in this device\'s store';
+    await open(tester);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('DSIP did not start'), findsOneWidget);
+    expect(find.text("no key for the identity in this device's store"), findsOneWidget);
+
+    client.startFails = null;
+    await tester.tap(find.byKey(const Key('start-retry')));
+    await tester.runAsync(() async {});
+    await tester.pump();
+    expect(client.started, {'identity': '/x', 'relay': 'wss://r/dsip'});
+    expect(find.text('DSIP did not start'), findsNothing);
+    client.push(fixture()['state'] as Map<String, dynamic>);
+    await tester.pumpAndSettle();
+    expect(find.text('Calls'), findsWidgets);
+  });
 }
