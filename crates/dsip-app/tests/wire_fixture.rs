@@ -4,7 +4,7 @@
 //! again.
 
 use dsip_app::{
-    AudioDevice, AudioState, CallRecord, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
+    AudioDevice, AudioState, CallRecord, CallSound, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
     PresenceView, RequestView, Mailbox, Response, Settings, State,
 };
 
@@ -30,6 +30,16 @@ fn state() -> State {
         media: id == 2,
         via: (id == 2).then(|| "wss://relay.bob.example:8443/dsip".into()),
         error: None,
+        sound: (id == 2).then(|| CallSound {
+            mic: 250,
+            sent: 250,
+            heard: 248,
+            decoded: 248,
+            played: 0,
+            ringback: 100,
+            mic_error: None,
+            speaker_error: Some("speaker: stream disconnected".into()),
+        }),
     };
     for c in [
         call(1, CallState::Ended { reason: "user.hangup".into() }, Direction::Outgoing, None),

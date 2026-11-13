@@ -18,6 +18,8 @@ pub extern "system" fn Java_com_feryx_dsip_DsipNative_init(
     dir: JString,
     gateway: JString,
 ) {
+    // a push may start the app without Dart, so without `init_app`
+    crate::api::app::init_logging();
     let dir = text(&mut env, &dir);
     let gateway = Some(text(&mut env, &gateway)).filter(|g| !g.is_empty());
     crate::system::install(dir.into(), gateway);
@@ -88,4 +90,46 @@ pub extern "system" fn Java_com_feryx_dsip_DsipNative_act(mut env: JNIEnv, _clas
     let json = text(&mut env, &json);
     let result = crate::api::app::runtime().block_on(crate::system::act(&json));
     outcome(&mut env, result)
+}
+
+/// One log line on its way to logcat: `tracing`'s writer for one event, written out whole when dropped.
+pub(crate) struct Logcat(Vec<u8>);
+
+impl Logcat {
+    /// A writer for one event (`tracing_subscriber`'s `MakeWriter`).
+    pub(crate) fn make() -> Logcat {
+        Logcat(Vec::new())
+    }
+}
+
+impl std::io::Write for Logcat {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl Drop for Logcat {
+    fn drop(&mut self) {
+        while self.0.last().is_some_and(|b| *b == b'\n') {
+            self.0.pop();
+        }
+        if self.0.is_empty() {
+            return;
+        }
+        self.0.retain(|b| *b != 0);
+        let Ok(text) = std::ffi::CString::new(std::mem::take(&mut self.0)) else { return };
+        // ANDROID_LOG_INFO; the line carries tracing's own level
+        // SAFETY: both strings are NUL-terminated and outlive the call.
+        unsafe { __android_log_write(4, c"dsip".as_ptr(), text.as_ptr()) };
+    }
+}
+
+#[link(name = "log")]
+extern "C" {
+    fn __android_log_write(prio: std::ffi::c_int, tag: *const std::ffi::c_char, text: *const std::ffi::c_char) -> std::ffi::c_int;
 }

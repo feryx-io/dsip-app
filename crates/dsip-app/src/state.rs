@@ -348,6 +348,34 @@ pub struct CallView {
     /// The reason of a signed `error` about the call, when one came (a relay that could not route it).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// What its sound did on this device, counted, while it rings back or has the devices: where a call's sound
+    /// stops on a real device shows here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sound: Option<CallSound>,
+}
+
+/// A call's sound on this device, counted from when it took the devices ([`CallView::sound`]). Each stage feeds the
+/// next, so the first that stays at 0 (or an error) is where the sound stops.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CallSound {
+    /// 20 ms frames the microphone gave.
+    pub mic: u64,
+    /// Of those, Opus frames handed to the call's media to send.
+    pub sent: u64,
+    /// Opus packets from the other side, as the media received them.
+    pub heard: u64,
+    /// Of those, packets that decoded to sound.
+    pub decoded: u64,
+    /// 20 ms frames the speaker took.
+    pub played: u64,
+    /// 20 ms frames of the ringback tone the speaker took.
+    pub ringback: u64,
+    /// Why the microphone stopped giving frames, if it did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mic_error: Option<String>,
+    /// Why the speaker refused a frame (the call's, or the ringback's), if it did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speaker_error: Option<String>,
 }
 
 /// Which way a call goes.
@@ -593,6 +621,7 @@ mod tests {
             media: true,
             via: None,
             error: None,
+            sound: None,
         };
         state.apply(&Change::CallAdded { call });
         let r = Response::State { state: Box::new(state) };

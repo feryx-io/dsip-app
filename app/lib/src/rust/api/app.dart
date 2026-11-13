@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `current`, `running`, `runtime`
+// These functions are ignored because they are not marked as `pub`: `current`, `init_logging`, `running`, `runtime`
 
 /// Make an identity in `dir` (a controller key, a device key and the delegation between them); its DID.
 Future<String> initIdentity({

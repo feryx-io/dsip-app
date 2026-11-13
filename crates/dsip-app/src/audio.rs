@@ -10,7 +10,7 @@
 //! Muted, the call sends Opus-encoded silence, so its stream does not stop. A call taking the devices stops a recording
 //! (kept, as far as it got) and a playing.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use anvil_core::audio::{AudioFormat, AudioFrame, AudioHost};
@@ -65,6 +65,42 @@ pub struct Audio {
     /// The file playing, and its task.
     playing: std::sync::Mutex<Option<(std::path::PathBuf, JoinHandle<()>)>>,
     tone: Option<Arc<anvil_audio::ToneStats>>,
+    /// What the sound did ([`Audio::sound`]).
+    counters: Arc<Counters>,
+}
+
+/// The counts behind [`crate::CallSound`]: the call holding the devices, from [`Audio::start`], and the ringback
+/// tone, from [`Audio::ringback`].
+#[derive(Default)]
+struct Counters {
+    mic: AtomicU64,
+    sent: AtomicU64,
+    heard: AtomicU64,
+    decoded: AtomicU64,
+    played: AtomicU64,
+    ringback: AtomicU64,
+    mic_error: std::sync::Mutex<Option<String>>,
+    speaker_error: std::sync::Mutex<Option<String>>,
+}
+
+impl Counters {
+    fn add(n: &AtomicU64) {
+        n.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn set(slot: &std::sync::Mutex<Option<String>>, why: String) {
+        tracing::warn!("audio: {why}");
+        *slot.lock().unwrap_or_else(|e| e.into_inner()) = Some(why);
+    }
+
+    /// Back to nothing, for the call taking the devices; the ringback's count stays (it rang before).
+    fn reset_call(&self) {
+        for n in [&self.mic, &self.sent, &self.heard, &self.decoded, &self.played] {
+            n.store(0, Ordering::Relaxed);
+        }
+        *self.mic_error.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        *self.speaker_error.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
 }
 
 impl Audio {
@@ -82,7 +118,7 @@ impl Audio {
         let (tap, heard) = mpsc::unbounded_channel();
         Ok(Audio { host, kind, feed, feed_rx, heard: Arc::new(Mutex::new(heard)), tap, active: std::sync::Mutex::new(None),
                    ringback: std::sync::Mutex::new(None), recording: std::sync::Mutex::new(None),
-                   playing: std::sync::Mutex::new(None), tone })
+                   playing: std::sync::Mutex::new(None), tone, counters: Arc::default() })
     }
 
     /// The media every call's leg is made from: it sends what the microphone gives and taps what it receives.
@@ -98,6 +134,23 @@ impl Audio {
     /// The host's kind.
     pub fn kind(&self) -> HostKind {
         self.kind
+    }
+
+    /// What the sound of the call holding the devices, and of the ringback tone, did so far.
+    pub fn sound(&self) -> crate::CallSound {
+        let c = &self.counters;
+        let n = |a: &AtomicU64| a.load(Ordering::Relaxed);
+        let s = |m: &std::sync::Mutex<Option<String>>| m.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        crate::CallSound {
+            mic: n(&c.mic),
+            sent: n(&c.sent),
+            heard: n(&c.heard),
+            decoded: n(&c.decoded),
+            played: n(&c.played),
+            ringback: n(&c.ringback),
+            mic_error: s(&c.mic_error),
+            speaker_error: s(&c.speaker_error),
+        }
     }
 
     /// The devices the host offers.
@@ -136,6 +189,8 @@ impl Audio {
     /// [`Audio::start`], or another call's ringback. Made here: nothing comes from the callee before the answer.
     pub fn ringback(&self, id: u64) -> Result<(), String> {
         let mut playback = self.host.make_playback(FORMAT).map_err(|e| e.to_string())?;
+        let counters = self.counters.clone();
+        counters.ringback.store(0, Ordering::Relaxed);
         let task = tokio::spawn(async move {
             let (on, off) = (RINGBACK_CADENCE_MS.0 / 20, RINGBACK_CADENCE_MS.1 / 20); // in 20 ms frames
             let rate = FORMAT.sample_rate as f32;
@@ -157,9 +212,10 @@ impl Audio {
                     .collect();
                 n += FRAME_SAMPLES as u64;
                 if let Err(e) = playback.write_frame(&AudioFrame { samples, format: FORMAT }).await {
-                    tracing::warn!("audio: ringback: {e}");
+                    Counters::set(&counters.speaker_error, format!("ringback: {e}"));
                     return;
                 }
+                Counters::add(&counters.ringback);
             }
         });
         if let Some((_, old)) = self.ringback.lock().unwrap_or_else(|e| e.into_inner()).replace((id, task)) {
@@ -192,9 +248,11 @@ impl Audio {
         if let Ok(mut rx) = self.feed_rx.0.try_lock() {
             while rx.try_recv().is_ok() {}
         }
+        self.counters.reset_call();
         let mut capture = self.host.make_capture(FORMAT).map_err(|e| e.to_string())?;
         let mut playback = self.host.make_playback(FORMAT).map_err(|e| e.to_string())?;
         let feed = self.feed.clone();
+        let counters = self.counters.clone();
         let send = tokio::spawn(async move {
             let Ok(enc) = audiopus::coder::Encoder::new(audiopus::SampleRate::Hz48000, audiopus::Channels::Mono, audiopus::Application::Voip) else {
                 tracing::warn!("audio: no Opus encoder");
@@ -203,6 +261,7 @@ impl Audio {
             let silence = vec![0i16; FRAME_SAMPLES];
             let mut out = vec![0u8; 1500];
             while let Some(frame) = capture.next_frame().await {
+                Counters::add(&counters.mic);
                 if frame.samples.len() != FRAME_SAMPLES {
                     continue; // the host gives 20 ms at 48 kHz mono, as asked
                 }
@@ -212,11 +271,14 @@ impl Audio {
                         if feed.send(Bytes::copy_from_slice(&out[..n])).is_err() {
                             return;
                         }
+                        Counters::add(&counters.sent);
                     }
                     Err(e) => tracing::warn!("audio: Opus encode: {e}"),
                 }
             }
+            Counters::set(&counters.mic_error, "the microphone stopped".into());
         });
+        let counters = self.counters.clone();
         let heard = self.heard.clone();
         let play = tokio::spawn(async move {
             let Ok(mut dec) = audiopus::coder::Decoder::new(audiopus::SampleRate::Hz48000, audiopus::Channels::Mono) else {
@@ -227,17 +289,22 @@ impl Audio {
             while heard.try_recv().is_ok() {}
             let mut pcm = vec![0i16; FRAME_SAMPLES * 6]; // Opus frames are at most 120 ms
             while let Some(packet) = heard.recv().await {
+                Counters::add(&counters.heard);
                 let n = match (audiopus::packet::Packet::try_from(&packet[..]), audiopus::MutSignals::try_from(&mut pcm[..])) {
                     (Ok(p), Ok(s)) => dec.decode(Some(p), s, false).unwrap_or(0),
                     _ => 0,
                 };
+                if n > 0 {
+                    Counters::add(&counters.decoded);
+                }
                 // the speaker takes 20 ms frames
                 for chunk in pcm[..n].chunks(FRAME_SAMPLES) {
                     let frame = AudioFrame { samples: chunk.to_vec(), format: FORMAT };
                     if let Err(e) = playback.write_frame(&frame).await {
-                        tracing::warn!("audio: speaker: {e}");
+                        Counters::set(&counters.speaker_error, format!("speaker: {e}"));
                         return;
                     }
+                    Counters::add(&counters.played);
                 }
             }
         });

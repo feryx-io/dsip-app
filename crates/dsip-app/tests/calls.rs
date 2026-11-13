@@ -75,7 +75,18 @@ async fn a_call_rings_is_answered_carries_sound_both_ways_and_hangs_up() {
         .await
         .unwrap_or_else(|_| panic!("{who} heard nothing: {:?}", a.tone_heard()));
         until(a, "media flag", |s| s.calls.values().any(|c| c.media)).await;
+        // the call's sound counted at every stage, the microphone to the speaker
+        until(a, "sound counted", |s| {
+            s.calls.values().any(|c| {
+                c.sound.as_ref().is_some_and(|n| {
+                    n.mic > 0 && n.sent > 0 && n.heard > 0 && n.decoded > 0 && n.played > 0 && n.mic_error.is_none() && n.speaker_error.is_none()
+                })
+            })
+        })
+        .await;
     }
+    // the caller's counts kept the ringback it played before the answer
+    assert!(alice.state().calls[&id].sound.as_ref().is_some_and(|n| n.ringback > 0), "{:?}", alice.state().calls[&id].sound);
 
     // mute shows in the state
     call_of(alice.command(Command::Mute { call: Some(id) }).await);

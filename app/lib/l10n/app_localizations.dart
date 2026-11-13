@@ -468,6 +468,19 @@ abstract class Strings {
   /// **'No sound yet'**
   String get callNoSound;
 
+  /// A call's sound counted on this device, stage by stage, to find where it stops: 20 ms frames from the microphone, frames sent, packets heard from the other side, packets decoded, frames played, ringback frames played.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound: mic {mic} · sent {sent} · heard {heard} · decoded {decoded} · played {played} · ringback {ringback}'**
+  String callSound(
+    int mic,
+    int sent,
+    int heard,
+    int decoded,
+    int played,
+    int ringback,
+  );
+
   /// No description provided for @callVia.
   ///
   /// In en, this message translates to:
