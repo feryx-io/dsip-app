@@ -40,10 +40,44 @@ class DsipApp extends StatelessWidget {
       builder: (context, _) => switch ((controller.configured, controller.state)) {
         (false, _) => FirstRun(controller: controller),
         (true, final state?) => Home(controller: controller, state: state),
+        (true, null) when controller.startError != null => StartFailed(controller: controller),
         _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
       },
     ),
   );
+}
+
+/// Saved settings the app did not start from: why, and starting again.
+class StartFailed extends StatelessWidget {
+  const StartFailed({super.key, required this.controller});
+  final Controller controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(s.startFailedTitle, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  SelectableText(controller.startError ?? '', key: const Key('start-error'), textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  FilledButton(key: const Key('start-retry'), onPressed: controller.retryStart, child: Text(s.startFailedRetry)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class Home extends StatefulWidget {

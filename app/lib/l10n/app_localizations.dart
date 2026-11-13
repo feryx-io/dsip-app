@@ -108,6 +108,18 @@ abstract class Strings {
   /// **'Welcome to DSIP'**
   String get firstRunTitle;
 
+  /// No description provided for @startFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP did not start'**
+  String get startFailedTitle;
+
+  /// No description provided for @startFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get startFailedRetry;
+
   /// No description provided for @firstRunIntro.
   ///
   /// In en, this message translates to:

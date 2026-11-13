@@ -16,7 +16,12 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <!-- The screen off at the ear during a call (proximity). -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- No backup, cloud or device to device: the identity's key is in the Keystore, which never leaves the device, so
+         the settings and the wrapped key a backup brings back to a new install name an identity it cannot open. -->
     <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
