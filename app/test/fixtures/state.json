@@ -38,7 +38,8 @@
           "decoded": 248,
           "played": 0,
           "ringback": 100,
-          "speaker_error": "speaker: stream disconnected"
+          "speaker_error": "speaker: stream disconnected",
+          "stalled": "played"
         }
       },
       {

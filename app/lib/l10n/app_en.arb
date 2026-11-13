@@ -114,6 +114,13 @@
       "ringback": {"type": "int"}
     }
   },
+  "callSoundStalled": "Sound stops at: {stage}",
+  "@callSoundStalled": {
+    "description": "Shown when a stage of a call's sound stopped counting: stage is the counter's name as in callSound, untranslated (mic, sent, heard, decoded, played or ringback).",
+    "placeholders": {
+      "stage": {"type": "String", "example": "played"}
+    }
+  },
   "callVia": "Through {relay}",
   "@callVia": {
     "placeholders": {

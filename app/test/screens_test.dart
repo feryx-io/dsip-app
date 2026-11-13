@@ -328,6 +328,25 @@ void main() {
         'DSIPW2-SCANNED');
   });
 
+  testWidgets("a call's sound shows only when a stage stalls or fails", (tester) async {
+    await tester.runAsync(() => SettingsStore(dir).save({'identity': '/x', 'relay': 'wss://r/dsip'}));
+    await open(tester);
+    final state = fixture()['state'] as Map<String, dynamic>;
+    final call = (state['calls'] as List).cast<Map<String, dynamic>>().firstWhere((c) => c['id'] == 2);
+    // every stage counting, no error: nothing to say
+    call['sound'] = {'mic': 250, 'sent': 250, 'heard': 248, 'decoded': 248, 'played': 248, 'ringback': 100};
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('call-2')), findsOneWidget);
+    expect(find.byKey(const Key('call-sound-2')), findsNothing);
+    // the speaker stops taking frames: the counts, and where it stops
+    call['sound'] = {...call['sound'] as Map<String, dynamic>, 'stalled': 'played'};
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('call-sound-2')), findsOneWidget);
+    expect(find.text('Sound stops at: played'), findsOneWidget);
+  });
+
   testWidgets('with settings saved, the app starts at once and shows its calls', (tester) async {
     await tester.runAsync(() => SettingsStore(dir).save({'identity': '/x', 'relay': 'wss://r/dsip'}));
     await open(tester);
@@ -347,6 +366,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.descendant(of: answered, matching: find.text('speaker: stream disconnected')), findsOneWidget);
+    expect(find.descendant(of: answered, matching: find.text('Sound stops at: played')), findsOneWidget);
     await tester.tap(find.descendant(of: answered, matching: find.text('Unmute')));
     await tester.tap(find.descendant(of: answered, matching: find.text('Hang up')));
     // why it ended in words, the code in the tooltip (§15)

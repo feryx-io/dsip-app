@@ -79,7 +79,7 @@ async fn a_call_rings_is_answered_carries_sound_both_ways_and_hangs_up() {
         until(a, "sound counted", |s| {
             s.calls.values().any(|c| {
                 c.sound.as_ref().is_some_and(|n| {
-                    n.mic > 0 && n.sent > 0 && n.heard > 0 && n.decoded > 0 && n.played > 0 && n.mic_error.is_none() && n.speaker_error.is_none()
+                    n.mic > 0 && n.sent > 0 && n.heard > 0 && n.decoded > 0 && n.played > 0 && n.mic_error.is_none() && n.speaker_error.is_none() && n.stalled.is_none()
                 })
             })
         })

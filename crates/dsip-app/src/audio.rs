@@ -150,6 +150,7 @@ impl Audio {
             ringback: n(&c.ringback),
             mic_error: s(&c.mic_error),
             speaker_error: s(&c.speaker_error),
+            stalled: None,
         }
     }
 
