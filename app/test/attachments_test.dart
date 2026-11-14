@@ -36,7 +36,7 @@ void main() {
     controller = Controller(client, SettingsStore(dir));
     opened.clear();
     saved.clear();
-    openAttachment = (path) async {
+    openAttachment = (path, type) async {
       opened.add(path);
       return true;
     };

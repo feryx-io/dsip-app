@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What FileProvider may hand another app to open (AndroidManifest.xml): attachments are kept under the app's files
+     (its state directory's media/), files picked to send under its cache. -->
+<paths>
+    <files-path name="files" path="."/>
+    <cache-path name="cache" path="."/>
+</paths>

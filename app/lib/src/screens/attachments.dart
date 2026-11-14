@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -26,8 +27,11 @@ Future<(String, String)?> Function() pickToSend = () async {
   return (copy.path, file.name);
 };
 
-/// Open [path] with the system's app for it; whether it did. Tests set it.
-Future<bool> Function(String path) openAttachment = (path) => launchUrl(Uri.file(path));
+/// Open [path], of media type [type] when known, with the system's app for it; whether it did. Tests set it. Android
+/// refuses another app a file: URI, so there it goes as a content: one (`openFile`, MainActivity.kt).
+Future<bool> Function(String path, String? type) openAttachment = (path, type) async => Platform.isAndroid
+    ? await const MethodChannel('dsip/mobile').invokeMethod<bool>('openFile', {'path': path, 'type': type}) ?? false
+    : launchUrl(Uri.file(path));
 
 /// Save the file at [path] where the user chooses, offered as [name]; whether it was saved. Tests set it.
 Future<bool> Function(String name, String path) saveAttachment = (name, path) async =>
@@ -53,7 +57,7 @@ class AttachmentView extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     bool opened;
     try {
-      opened = await openAttachment(path);
+      opened = await openAttachment(path, message.contentType);
     } catch (_) {
       opened = false;
     }
