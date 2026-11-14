@@ -47,7 +47,7 @@ void main() {
     final t = [for (final x in (m['thread'] as Map)['messages'] as List) MessageView.fromJson(x as Map<String, dynamic>)];
     expect(t.map((x) => x.mine), [true, false, false, false]);
     expect((t[3].kind, t[3].name, t[3].contentType, t[3].size, t[3].attachment), ('file', 'plan.pdf', 'application/pdf', 48213, true));
-    expect((t[1].audio, t[1].voicemail, t[1].durationMs, t[1].purpose), (true, false, 4200, 'voice'));
+    expect((t[1].audio, t[1].voicemail, t[1].durationMs, t[1].purpose), (true, false, 4200, 'voice-message'));
     expect(
       (t[2].audio, t[2].voicemail, t[2].durationMs, t[2].session),
       (true, true, 12640, '01M6EKRTVG3C55DFMQ401G3MC0'),

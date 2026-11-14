@@ -130,7 +130,7 @@ async fn a_voice_message_and_a_voicemail_after_a_declined_call() {
         _ => None,
     })
     .await;
-    assert_eq!((m.purpose.as_deref(), m.duration_ms, m.content_type.as_deref()), (Some("voice"), Some(ms), Some("audio/ogg; codecs=opus")));
+    assert_eq!((m.purpose.as_deref(), m.duration_ms, m.content_type.as_deref()), (Some("voice-message"), Some(ms), Some("audio/ogg; codecs=opus")));
     let file = next(&mut b_changes, "Bob's copy", |c| match c {
         Change::MessageFile { id, path, .. } if *id == m.id => Some(path.clone()),
         _ => None,

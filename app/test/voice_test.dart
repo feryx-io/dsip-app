@@ -99,7 +99,7 @@ void main() {
     await tester.pump();
     expect(client.commands.reversed.take(2).toList().reversed, [
       {'command': 'stop_recording'},
-      {'command': 'send_audio', 'to': group, 'path': '/rec/1.ogg', 'purpose': 'voice'},
+      {'command': 'send_audio', 'to': group, 'path': '/rec/1.ogg', 'purpose': 'voice-message'},
     ]);
     client.push(state);
     await tester.pump(const Duration(milliseconds: 300));

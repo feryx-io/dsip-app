@@ -130,7 +130,7 @@ fn the_messages_the_desktop_app_reads() {
                 content_type: Some("audio/ogg; codecs=opus".into()),
                 size: Some(9_421),
                 path: Some("/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC2.ogg".into()),
-                purpose: Some("voice".into()),
+                purpose: Some("voice-message".into()),
                 duration_ms: Some(4_200),
                 ..message("01M6EKRTVG3C55DFMQ401G3MC2", "did:key:z6MkBob", false, None, "audio", 1_793_600_060)
             },

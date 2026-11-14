@@ -325,7 +325,7 @@ class Controller extends ChangeNotifier {
 
   /// Stop the recording and send it to [to] (a conversation or an identity): a voice message, or with [session] a
   /// voicemail. Whether it went.
-  Future<bool> sendRecording(String to, {String purpose = 'voice', String? session}) async {
+  Future<bool> sendRecording(String to, {String purpose = 'voice-message', String? session}) async {
     final r = await run({'command': 'stop_recording'});
     recordingFor = null;
     if (r['response'] != 'recorded') return false;

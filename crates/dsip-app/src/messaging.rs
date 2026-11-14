@@ -688,13 +688,14 @@ async fn send_file(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &
 /// value M§13's example gives.
 pub const VOICEMAIL_MAX_S: u32 = 180;
 
-/// Send the Ogg/Opus recording at `path` to `to` as an `audio` content (M§8.2): `purpose` `voice`, or `voicemail`
+/// Send the Ogg/Opus recording at `path` to `to` as an `audio` content (M§8.2): `purpose` `voice-message`, or `voicemail`
 /// with the unanswered call's `session` (M§13.2). Sealed and uploaded as a file is; a recording made here
 /// ([`crate::RECORDINGS_DIR`]) is moved into the media folder, where the sender's thread finds it.
 async fn send_audio(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &str, path: &str, purpose: &str, session: Option<String>)
                     -> Result<Response, String> {
-    if !matches!(purpose, "voice" | "voicemail") {
-        return Err(format!("{purpose}: voice or voicemail"));
+    // M§8.2's purposes: a receiver takes an unknown one as a plain `message`
+    if !matches!(purpose, "voice-message" | "voicemail") {
+        return Err(format!("{purpose}: voice-message or voicemail"));
     }
     if purpose == "voicemail" && session.is_none() {
         return Err("a voicemail names its call's session (M§13.2)".into());

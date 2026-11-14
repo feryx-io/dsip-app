@@ -21,7 +21,7 @@
         "content_type": "audio/ogg; codecs=opus",
         "size": 9421,
         "path": "/home/alice/.local/share/dsip/media/01M6EKRTVG3C55DFMQ401G3MC2.ogg",
-        "purpose": "voice",
+        "purpose": "voice-message",
         "duration_ms": 4200
       },
       {

@@ -110,7 +110,8 @@ pub enum Command {
         to: String,
         /// The Ogg/Opus file.
         path: String,
-        /// `voice` (a voice message, the default) or `voicemail` (M§13).
+        /// `voice-message` (the default) or `voicemail` (M§13): M§8.2's purposes. `voice`, which earlier versions
+        /// sent, is taken as `voice-message`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         purpose: Option<String>,
         /// A voicemail's call: the session of the attempt that went unanswered (M§13.2).

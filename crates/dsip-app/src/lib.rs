@@ -471,7 +471,11 @@ impl App {
                 Response::Ok
             }
             Command::SendAudio { to, path, purpose, session } => {
-                let purpose = purpose.unwrap_or_else(|| "voice".into());
+                // M§8.2's token; `voice` is what earlier versions said
+                let purpose = match purpose.as_deref() {
+                    None | Some("voice") => "voice-message".to_string(),
+                    Some(p) => p.to_string(),
+                };
                 self.ask(|reply| messaging::Req::SendAudio { to, path, purpose, session, reply }).await
             }
             Command::Play { path } => {
