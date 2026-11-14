@@ -17,6 +17,7 @@ fn state() -> State {
             devices: vec![AudioDevice { id: "mic-1".into(), name: "Built-in microphone".into(), kind: "input".into(), default: true }],
             ..AudioState::default()
         },
+        video: true,
         ..State::default()
     };
     let call = |id, state, direction, peer_name: Option<&str>| CallView {
@@ -41,6 +42,8 @@ fn state() -> State {
             speaker_error: Some("speaker: stream disconnected".into()),
             stalled: Some("played".into()),
         }),
+        video: id == 2,
+        camera: id == 2,
     };
     for c in [
         call(1, CallState::Ended { reason: "user.hangup".into() }, Direction::Outgoing, None),

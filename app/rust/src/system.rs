@@ -429,6 +429,8 @@ mod tests {
             via: None,
             error: None,
             sound: None,
+            video: false,
+            camera: false,
         }
     }
 

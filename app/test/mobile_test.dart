@@ -33,7 +33,13 @@ void main() {
     await tester.runAsync(() => SettingsStore(dir).save({'identity': '/x', 'relay': 'wss://r/dsip'}));
     await tester.pumpWidget(DsipApp(controller: controller));
     await tester.runAsync(controller.load);
-    client.push(fixture()['state'] as Map<String, dynamic>);
+    // the fixture's answered call as an audio one: these are about where its sound goes, the video area aside
+    final state = fixture()['state'] as Map<String, dynamic>;
+    for (final c in (state['calls'] as List).cast<Map<String, dynamic>>()) {
+      c.remove('video');
+      c.remove('camera');
+    }
+    client.push(state);
     await tester.pumpAndSettle();
     // The routes are asked for once the calls are known, on the real event loop (the app started in runAsync).
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));

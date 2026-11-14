@@ -10,6 +10,7 @@ import '../mobile/platform.dart';
 import 'confirm.dart';
 import 'name_dialog.dart';
 import 'reasons.dart';
+import 'video_tile.dart';
 
 /// Calls: place one to an identity, answer or decline one ringing here, hang up, mute; the history below, each call in
 /// it to call back, name or delete.
@@ -31,10 +32,12 @@ class _CallsScreenState extends State<CallsScreen> {
     super.dispose();
   }
 
-  Future<void> _call() async {
+  /// Call who is typed in, with video when [video] (asking for the camera first on a phone).
+  Future<void> _call({bool video = false}) async {
     final to = _to.text.trim();
     if (to.isEmpty) return;
-    final r = await widget.controller.run({'command': 'call', 'to': to});
+    if (video) await widget.controller.mobile?.requestCamera();
+    final r = await widget.controller.run({'command': 'call', 'to': to, if (video) 'video': true});
     if (r['response'] == 'call') _to.clear();
   }
 
@@ -72,6 +75,24 @@ class _CallsScreenState extends State<CallsScreen> {
             ),
             const SizedBox(width: 12),
             FilledButton.icon(onPressed: _call, icon: const Icon(Icons.call), label: Text(s.callButton)),
+            if (widget.state.video) ...[
+              const SizedBox(width: 8),
+              // on a phone's width the address keeps its room: the camera alone says what it is
+              if (MediaQuery.sizeOf(context).width < 600)
+                IconButton.outlined(
+                  key: const Key('video-call'),
+                  tooltip: s.callVideoButton,
+                  onPressed: () => _call(video: true),
+                  icon: const Icon(Icons.videocam),
+                )
+              else
+                OutlinedButton.icon(
+                  key: const Key('video-call'),
+                  onPressed: () => _call(video: true),
+                  icon: const Icon(Icons.videocam),
+                  label: Text(s.callVideoButton),
+                ),
+            ],
           ],
         ),
         const SizedBox(height: 16),
@@ -182,6 +203,10 @@ class _LiveCall extends StatelessWidget {
               for (final e in [?n.micError, ?n.speakerError])
                 Text(e, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
+            if (call.video && call.state.answered) ...[
+              const SizedBox(height: 12),
+              _VideoArea(key: Key('video-${call.id}'), call: call, controller: controller),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -206,10 +231,66 @@ class _LiveCall extends StatelessWidget {
                           icon: Icon(call.muted ? Icons.mic : Icons.mic_off),
                           label: Text(call.muted ? s.callUnmute : s.callMute),
                         )),
+                      if (call.video && call.state.answered)
+                        OutlinedButton.icon(
+                          key: Key('camera-${call.id}'),
+                          onPressed: () => controller.run({'command': 'camera', 'call': call.id, 'on': !call.camera}),
+                          icon: Icon(call.camera ? Icons.videocam_off : Icons.videocam),
+                          label: Text(call.camera ? s.callCameraOff : s.callCameraOn),
+                        ),
                       if (controller.system case final system?) AudioRouteButton(system: system),
                     ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A video call's pictures: the far end's, and this side's camera in a corner while it sends; at most 240 high, 4:3,
+/// so the call's card stays a card. On a phone the camera is asked for when the call starts showing video, and turned
+/// on once allowed (the core starts it with the call, which fails while the system has not said yes).
+class _VideoArea extends StatefulWidget {
+  const _VideoArea({super.key, required this.call, required this.controller});
+  final CallView call;
+  final Controller controller;
+
+  @override
+  State<_VideoArea> createState() => _VideoAreaState();
+}
+
+class _VideoAreaState extends State<_VideoArea> {
+  @override
+  void initState() {
+    super.initState();
+    final mobile = widget.controller.mobile;
+    if (mobile != null && !widget.call.camera) {
+      mobile.requestCamera().then((allowed) {
+        if (allowed && mounted) widget.controller.run({'command': 'camera', 'call': widget.call.id, 'on': true});
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final far = VideoTile(key: const Key('video-far'), stream: widget.call.id);
+    const self = VideoTile(key: Key('video-self'), stream: null, mirror: true);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 240),
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              children: [
+                Positioned.fill(child: far),
+                if (widget.call.camera) const Positioned(right: 8, bottom: 8, width: 80, height: 60, child: self),
+              ],
+            ),
+          ),
         ),
       ),
     );

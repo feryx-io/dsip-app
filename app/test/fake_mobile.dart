@@ -48,6 +48,12 @@ class FakeMobile implements MobilePlatform {
   }
 
   @override
+  Future<bool> requestCamera() async {
+    log.add('requestCamera');
+    return allow;
+  }
+
+  @override
   Future<void> startAudio() async => log.add('startAudio$_when');
 
   @override

@@ -10,26 +10,27 @@ repository = "https://github.com/feryx-io/dsip-app"
 
 [workspace.dependencies]
 # dsip-rs, every crate at one ref (dsip-rs RELEASING.md, "Downstream"): the release tag
-dsip-core = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-endpoint = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-media = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-phone = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-transport = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-messenger = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-messaging-device = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2", features = ["sqlite"] }
-dsip-mls = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2", features = ["sqlite"] }
-dsip-mailbox = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-push = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-relay = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-messaging = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-testkit = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-wake = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
-dsip-schema = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.11.2" }
+dsip-core = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-endpoint = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-media = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-phone = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-transport = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-messenger = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-messaging-device = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14", features = ["sqlite"] }
+dsip-mls = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14", features = ["sqlite"] }
+dsip-mailbox = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-push = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-relay = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-messaging = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-testkit = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-wake = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
+dsip-schema = { git = "https://github.com/feryx-io/dsip-rs", tag = "v2026.11.14" }
 # Anvil's audio and updater (app plan decision 4 (a)): cpal, echo cancellation; the signed manifest, installed the way
 # this copy was. Every Anvil crate at one ref.
 anvil-audio = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.83", features = ["tone"] }
 anvil-core = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.83", default-features = false }
 anvil-update = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.83" }
+anvil-video = { git = "https://github.com/thevoiceguy/anvil", tag = "v0.2.83" }
 
 # nix 0.26.4 (under webrtc-util, under dsip-media) does not compile for iOS with libc 0.2.190 and later; this copy keeps
 # macOS's kernel-control sockets to macOS (patches/README.md).

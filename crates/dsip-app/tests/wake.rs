@@ -99,7 +99,7 @@ async fn a_call_to_the_sleeping_app_wakes_it_and_open_wake_reads_who_calls() {
 
     let alice = App::start(config(&net, net.identity("Alice"), None)).await.unwrap();
     let me = alice.state().me;
-    assert!(matches!(alice.command(Command::Call { to: bob_did }).await, Response::Call { .. }));
+    assert!(matches!(alice.command(Command::Call { to: bob_did, video: false }).await, Response::Call { .. }));
     let p = pushes(&gw, 1).await;
     assert_eq!(p[0]["token"], "fcm-token-bob");
 
@@ -126,7 +126,7 @@ async fn with_the_token_gone_the_registration_ends_and_a_call_wakes_nothing() {
     tokio::time::sleep(Duration::from_millis(300)).await;
 
     let alice = App::start(config(&net, net.identity("Alice"), None)).await.unwrap();
-    alice.command(Command::Call { to: bob_did }).await;
+    alice.command(Command::Call { to: bob_did, video: false }).await;
     tokio::time::sleep(Duration::from_millis(1000)).await;
     assert!(gw.recorder.pushes().is_empty(), "{:?}", gw.recorder.pushes());
 }
@@ -276,7 +276,7 @@ async fn an_iphone_enrols_its_two_tokens_apart_calls_at_the_relay_and_messages_a
     bob.stop().await;
     tokio::time::sleep(Duration::from_millis(300)).await;
     let alice = App::start(config(&net, net.identity("Alice"), None)).await.unwrap();
-    alice.command(Command::Call { to: bob_did }).await;
+    alice.command(Command::Call { to: bob_did, video: false }).await;
     let pushed = tokio::time::timeout(Duration::from_secs(10), async {
         loop {
             if let Some(p) = recorder.pushes().into_iter().next() {

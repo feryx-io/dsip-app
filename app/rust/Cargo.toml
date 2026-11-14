@@ -26,6 +26,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # The JVM and context cpal's Android backend needs (src/android.rs); the versions cpal 0.15 uses.
 jni         = "0.21"
 ndk-context = "0.1"
+# Drawing a call's pictures on Flutter's surfaces (src/android_video.rs), as Anvil's app does.
+ndk-sys     = "0.5"
+
+# Video calls' pictures on Flutter textures (src/api/video.rs): where the app has video.
+[target.'cfg(any(target_os = "android", windows))'.dependencies]
+anvil-video.workspace = true
+anvil-core.workspace = true
+parking_lot = "0.12"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

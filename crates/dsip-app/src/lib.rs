@@ -10,7 +10,7 @@
 //! let identity = dsip_phone::Identity::load(std::path::Path::new("alice"))?;
 //! let app = App::start(Config::new(identity, "wss://relay.example:8443/dsip")).await?;
 //! let mut changes = app.subscribe();
-//! app.command(Command::Call { to: "did:key:z6Mk…".into() }).await;
+//! app.command(Command::Call { to: "did:key:z6Mk…".into(), video: false }).await;
 //! while let Ok(change) = changes.recv().await {
 //!     println!("{change:?}");
 //! }
@@ -30,6 +30,7 @@ pub mod keys;
 pub mod messaging;
 pub mod pairing;
 pub mod servers;
+pub mod video;
 mod settings;
 mod state;
 #[cfg(windows)]
@@ -125,6 +126,8 @@ pub struct Config {
     pub dialer: Option<Arc<dyn dsip_phone::Dialer>>,
     /// Calls with sound (`Some`: through this host) or signalled only (`None`).
     pub audio: Option<HostKind>,
+    /// Video calls through this host ([`video`]), on a platform that has video and with sound; `None`: audio only.
+    pub video: Option<HostKind>,
     /// STUN servers for the calls' media.
     pub stun: Vec<String>,
     /// Where calls get TURN credentials, for when no direct path opens between the two sides (a phone on a mobile
@@ -156,6 +159,7 @@ impl Config {
             tls: None,
             dialer: None,
             audio: Some(HostKind::System),
+            video: Some(HostKind::System),
             stun: vec![],
             turn: None,
             messaging: None,
@@ -188,6 +192,8 @@ pub(crate) struct Inner {
     calls: std::sync::Mutex<HashMap<u64, CallCtl>>,
     next_id: AtomicU64,
     audio: Option<audio::Audio>,
+    /// The calls' video, where there is one ([`Config::video`]).
+    video: Option<video::Video>,
     messaging: std::sync::OnceLock<mpsc::UnboundedSender<messaging::Req>>,
     stopped: tokio::sync::watch::Sender<bool>,
     /// The identities followed, kept across restarts ([`FOLLOWING_FILE`] in the identity directory); held while
@@ -249,8 +255,12 @@ impl App {
         if let Some(d) = cfg.dialer {
             b = b.dialer(d);
         }
+        // video only with sound: it rides the call's media leg next to the audio
+        let video = audio.as_ref().and(cfg.video).and_then(video::Video::new);
         if let Some(a) = &audio {
-            b = b.media(dsip_phone::Media::Native(a.media(cfg.stun)));
+            let mut media = a.media(cfg.stun);
+            media.video = video.as_ref().map(video::Video::media);
+            b = b.media(dsip_phone::Media::Native(media));
         }
         if let Some(h) = &cfg.hints {
             b = b.hints(h.clone());
@@ -281,6 +291,7 @@ impl App {
             relay: cfg.relay,
             calls: Default::default(),
             audio: audio.as_ref().map(|a| a.view()).unwrap_or_else(|| AudioState { host: "none".into(), ..Default::default() }),
+            video: video.is_some(),
             voice: Default::default(),
         };
         let (changes, _) = broadcast::channel(256);
@@ -292,6 +303,7 @@ impl App {
                 calls: Default::default(),
                 next_id: AtomicU64::new(1),
                 audio,
+                video,
                 messaging: std::sync::OnceLock::new(),
                 stopped: tokio::sync::watch::channel(false).0,
                 following_file: std::sync::Mutex::new(identity_dir.join(FOLLOWING_FILE)),
@@ -385,14 +397,30 @@ impl App {
         self.inner.audio.as_ref().and_then(|a| a.tone_heard())
     }
 
+    /// The tiles calls' pictures are drawn on, for the app's textures (Android and Windows).
+    #[cfg(any(target_os = "android", windows))]
+    pub fn video_tiles(&self) -> Option<anvil_video::Tiles> {
+        self.inner.video.as_ref().and_then(video::Video::tiles)
+    }
+
+    /// The video frames the call holding the video has sent and received, where the app has video.
+    pub fn video_frames(&self) -> Option<(u64, u64)> {
+        self.inner.video.as_ref().map(video::Video::frames)
+    }
+
     /// Carry out `cmd`.
     pub async fn command(&self, cmd: Command) -> Response {
         match cmd {
             Command::State => Response::State { state: Box::new(self.state()) },
-            Command::Call { to } => match self.inner.phone.call(&to).await {
+            Command::Call { to, video } => match if video && self.inner.video.is_some() {
+                self.inner.phone.video_call(&to).await
+            } else {
+                self.inner.phone.call(&to).await
+            } {
                 Ok(call) => Response::Call { call: self.track(call, Direction::Outgoing, to, None) },
                 Err(e) => Response::error(e.to_string()),
             },
+            Command::Camera { call, on } => self.camera(call, on),
             Command::Answer { call } => self.act(call, Pick::Ringing, Action::Accept),
             Command::Decline { call } => self.act(call, Pick::Ringing, Action::Decline),
             Command::Hangup { call } => self.act(call, Pick::Latest, Action::HangUp),
@@ -873,6 +901,8 @@ impl App {
             via: call.via().map(String::from),
             error: None,
             sound: None,
+            video: false,
+            camera: false,
         };
         self.publish(Change::CallAdded { call: view });
         let app = self.clone();
@@ -883,6 +913,7 @@ impl App {
             let mut counted: (bool, std::collections::VecDeque<CallSound>) = (false, std::collections::VecDeque::new());
             let mut stalled: Option<String> = None;
             let mut has_audio = false;
+            let mut has_video = false;
             let mut was_answered = false;
             loop {
                 tokio::select! {
@@ -917,6 +948,9 @@ impl App {
                             if let Some(a) = &app.inner.audio {
                                 a.stop(id);
                             }
+                            if let Some(v) = &app.inner.video {
+                                v.stop(id);
+                            }
                             app.remember(id, was_answered);
                             app.inner.calls.lock().unwrap_or_else(|e| e.into_inner()).remove(&id);
                             app.forget_ended();
@@ -930,6 +964,20 @@ impl App {
                     },
                     _ = poll.tick() => {
                         let (media, err) = (call.media_received(), call.error());
+                        // a video call's camera and picture, once it has the devices (what the answer accepted is known
+                        // only then, B§2.1)
+                        let video = call.video();
+                        if let Some(v) = &app.inner.video {
+                            if has_audio && video && !has_video {
+                                has_video = true;
+                                if let Err(e) = v.show(id) {
+                                    tracing::warn!("call {id}: its video not shown: {e}");
+                                }
+                                if let Err(e) = v.send(id) {
+                                    tracing::warn!("call {id}: no camera: {e}");
+                                }
+                            }
+                        }
                         // the sound's counters about once a second, while it rings back or has the devices
                         ticks += 1;
                         let mut sound = match &app.inner.audio {
@@ -948,11 +996,15 @@ impl App {
                             counted.1.push_back(now.clone());
                             now.stalled = stalled.clone();
                         }
+                        let camera = app.inner.video.as_ref().is_some_and(|v| v.sending_to(id));
                         let differs = app.inner.state.lock().unwrap_or_else(|e| e.into_inner()).calls.get(&id)
-                            .is_some_and(|v| v.media != media || v.error != err || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s)));
+                            .is_some_and(|v| v.media != media || v.error != err || v.video != video || v.camera != camera
+                                || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s)));
                         if differs {
                             app.update(id, |v| {
                                 v.media = media;
+                                v.video = video;
+                                v.camera = camera;
                                 v.error = err;
                                 if sound.is_some() {
                                     v.sound = sound;
@@ -964,6 +1016,23 @@ impl App {
             }
         });
         id
+    }
+
+    /// The camera on or off in video call `call` (the one shown, without).
+    fn camera(&self, call: Option<u64>, on: bool) -> Response {
+        let Some(v) = &self.inner.video else { return Response::error("this app has no video") };
+        let Some(id) = call.or_else(|| v.showing()) else { return Response::error("no video call") };
+        if !self.state().calls.get(&id).is_some_and(|c| c.video) {
+            return Response::error(format!("call {id} is not a video call"));
+        }
+        let r = if on { v.send(id) } else { v.stop_sending(); Ok(()) };
+        match r {
+            Ok(()) => {
+                self.update(id, |c| c.camera = on);
+                Response::Ok
+            }
+            Err(e) => Response::error(format!("camera: {e}")),
+        }
     }
 
     /// Change call `id`'s view with `f` and publish it.

@@ -37,7 +37,7 @@ async fn a_call_rings_is_answered_carries_sound_both_ways_and_hangs_up() {
     let net = Network::new();
     let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);
     let mut bob_changes = bob.subscribe();
-    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity }).await);
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity, video: false }).await);
 
     // Bob's app rings: the call is added, incoming, from Alice
     let added = tokio::time::timeout(Duration::from_secs(10), async {
@@ -103,7 +103,7 @@ async fn a_call_rings_is_answered_carries_sound_both_ways_and_hangs_up() {
 async fn the_caller_hears_ringback_while_it_rings_and_not_after() {
     let net = Network::new();
     let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);
-    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity }).await);
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity, video: false }).await);
     until(&alice, "ringing at Bob", |s| s.calls[&id].state == CallState::Ringing).await;
     tokio::time::sleep(Duration::from_millis(600)).await;
     let (frames, peak) = alice.tone_heard().unwrap();
@@ -122,7 +122,7 @@ async fn the_caller_hears_ringback_while_it_rings_and_not_after() {
 async fn a_declined_call_ends_at_the_caller() {
     let net = Network::new();
     let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);
-    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity }).await);
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity, video: false }).await);
     until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == CallState::Ringing)).await;
     call_of(bob.command(Command::Decline { call: None }).await);
     until(&alice, "declined at Alice", |s| s.calls[&id].state.ended()).await;
@@ -144,7 +144,7 @@ async fn ended_calls_are_kept_in_the_history_across_restarts_until_deleted() {
     let alice = start(alice_id).await.unwrap();
     let bob_did = bob.state().me.identity;
     for _ in 0..2 {
-        let id = call_of(alice.command(Command::Call { to: bob_did.clone() }).await);
+        let id = call_of(alice.command(Command::Call { to: bob_did.clone(), video: false }).await);
         until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == CallState::Ringing)).await;
         call_of(bob.command(Command::Decline { call: None }).await);
         until(&alice, "declined at Alice", |s| s.calls[&id].state.ended()).await;
@@ -212,7 +212,7 @@ async fn the_control_channel_drives_the_same_app() {
         lines
     });
     tokio::time::sleep(Duration::from_millis(200)).await;
-    let r = dsip_app::control::request(&path, &Command::Call { to: bob.state().me.identity }).await.unwrap();
+    let r = dsip_app::control::request(&path, &Command::Call { to: bob.state().me.identity, video: false }).await.unwrap();
     assert!(matches!(r, Response::Call { .. }), "{r:?}");
     let lines = tokio::time::timeout(Duration::from_secs(10), watcher).await.unwrap().unwrap();
     assert!(lines[0].contains("\"response\":\"state\""), "{lines:?}");
@@ -245,7 +245,7 @@ async fn a_call_to_someone_on_another_relay_goes_through_theirs_and_carries_soun
     let bob = start(&theirs, "Bob").await.unwrap();
     tokio::time::sleep(Duration::from_millis(300)).await; // each has published its hint
 
-    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity }).await);
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity, video: false }).await);
     assert_eq!(alice.state().calls[&id].via.as_deref(), Some(theirs.url()), "through Bob's relay");
     until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == CallState::Ringing)).await;
     call_of(bob.command(Command::Answer { call: None }).await);
