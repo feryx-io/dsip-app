@@ -7,6 +7,8 @@
 pub mod api;
 #[cfg(target_os = "android")]
 mod android;
+#[cfg(target_os = "android")]
+mod android_video;
 #[allow(missing_docs)] // generated
 mod frb_generated;
 #[cfg(any(target_os = "ios", test))]

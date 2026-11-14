@@ -71,6 +71,11 @@ android-native-keyring-store = "1"
 [target.'cfg(all(target_os = "linux", not(target_os = "android")))'.dependencies]
 zbus-secret-service-keyring-store = { version = "1", features = ["rt-async-io-crypto-rust"] }
 
+# The camera and H.264 in hardware for video calls (video.rs): Android (Camera2, MediaCodec) and Windows (Media
+# Foundation) for now; elsewhere calls are audio only
+[target.'cfg(any(target_os = "android", windows))'.dependencies]
+anvil-video.workspace = true
+
 [dev-dependencies]
 dsip-testkit.workspace = true
 

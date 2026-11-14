@@ -42,6 +42,8 @@ class CallView {
     this.via,
     this.error,
     this.sound,
+    this.video = false,
+    this.camera = false,
   });
   final int id;
   final String session;
@@ -57,6 +59,12 @@ class CallView {
   /// What its sound did on this device, while it rings back or has the devices.
   final CallSound? sound;
 
+  /// It carries video: offered with it, and the answer took it.
+  final bool video;
+
+  /// This side's camera sends to it.
+  final bool camera;
+
   /// Ringing here: waiting on the user to answer or decline.
   bool get ringingHere => direction == Direction.incoming && state.name == 'ringing';
 
@@ -70,6 +78,8 @@ class CallView {
     muted: j['muted'] as bool,
     media: j['media'] as bool,
     via: j['via'] as String?,
+    video: j['video'] as bool? ?? false,
+    camera: j['camera'] as bool? ?? false,
     error: j['error'] as String?,
     sound: j['sound'] == null ? null : CallSound.fromJson(j['sound'] as Map<String, dynamic>),
   );
@@ -321,10 +331,13 @@ class AppState {
     required this.audio,
     required this.messaging,
     required this.presence,
+    this.video = false,
     this.names = const {},
     this.history = const [],
     this.voice = const VoiceState(),
   });
+  /// The app makes and takes video calls here: it has a camera and H.264.
+  final bool video;
   final Me me;
   final String relay;
 
@@ -358,6 +371,7 @@ class AppState {
     relay: j['relay'] as String,
     calls: [for (final c in j['calls'] as List) CallView.fromJson(c as Map<String, dynamic>)],
     audio: AudioState.fromJson(j['audio'] as Map<String, dynamic>),
+    video: j['video'] as bool? ?? false,
     messaging: Messaging.fromJson(j['messaging'] as Map<String, dynamic>),
     presence: PresenceState.fromJson(j['presence'] as Map<String, dynamic>? ?? const {}),
     names: (j['names'] as Map<String, dynamic>? ?? const {}).cast<String, String>(),

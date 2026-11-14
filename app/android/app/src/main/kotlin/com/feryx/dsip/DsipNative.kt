@@ -27,4 +27,20 @@ object DsipNative {
     /** What the user did at the system's call screen, as JSON. Null, or what went wrong. */
     @JvmStatic
     external fun act(json: String): String?
+
+    /** A slot in the Rust core for a video tile's surface (VideoTextures.kt, app/rust/src/android_video.rs). */
+    @JvmStatic
+    external fun videoSlot(): Long
+
+    /** The tile's surface now, or none (null) while Flutter has let it go. */
+    @JvmStatic
+    external fun videoSurface(slot: Long, surface: android.view.Surface?)
+
+    /** The tile is gone: Dart detached it from the Rust core. */
+    @JvmStatic
+    external fun videoRelease(slot: Long)
+
+    /** The address of the Rust function that draws a picture on a slot's surface, for Dart to hand the core. */
+    @JvmStatic
+    external fun videoPresent(): Long
 }

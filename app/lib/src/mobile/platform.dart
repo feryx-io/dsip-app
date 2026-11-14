@@ -101,6 +101,9 @@ abstract class MobilePlatform {
   /// not been asked yet; whether the app may use the microphone.
   Future<bool> requestMicrophone();
 
+  /// Ask for the camera, for a video call, if the system has not been asked yet; whether the app may use it.
+  Future<bool> requestCamera();
+
   /// Set the system's audio up for calls (iOS: play and record, voice chat), before the app starts.
   Future<void> startAudio();
 
@@ -154,6 +157,15 @@ class NativeMobile implements MobilePlatform {
 
   @override
   Future<bool> requestMicrophone() async => await _channel.invokeMethod<bool>('requestMicrophone') ?? false;
+
+  @override
+  Future<bool> requestCamera() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestCamera') ?? false;
+    } on MissingPluginException {
+      return false; // a system without video calls (iOS, for now)
+    }
+  }
 
   @override
   Future<void> startAudio() => _channel.invokeMethod<void>('startAudio');

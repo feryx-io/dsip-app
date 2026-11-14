@@ -273,7 +273,7 @@ async fn on_automatic_a_call_shows_both_busy_until_it_ends() {
         Response::Call { call } => call,
         other => panic!("not a call: {other:?}"),
     };
-    call(alice.command(Command::Call { to: bob_did.clone() }).await);
+    call(alice.command(Command::Call { to: bob_did.clone(), video: false }).await);
     until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == dsip_app::CallState::Ringing)).await;
     call(bob.command(Command::Answer { call: None }).await);
     until(&alice, "Bob on a call", |_| is(&alice, &bob_did, "busy")).await;
@@ -288,7 +288,7 @@ async fn on_automatic_a_call_shows_both_busy_until_it_ends() {
     // a state Bob chose stays through a call
     assert_eq!(bob.command(Command::SetPresence { state: Some("dnd".into()) }).await, Response::Ok);
     until(&alice, "Bob dnd", |_| is(&alice, &bob_did, "dnd")).await;
-    call(alice.command(Command::Call { to: bob_did.clone() }).await);
+    call(alice.command(Command::Call { to: bob_did.clone(), video: false }).await);
     until(&bob, "Bob's call rings", |s| s.calls.values().any(|c| c.state == dsip_app::CallState::Ringing)).await;
     call(bob.command(Command::Answer { call: None }).await);
     until(&bob, "Alice on a call", |_| is(&bob, &alice_did, "busy")).await;
