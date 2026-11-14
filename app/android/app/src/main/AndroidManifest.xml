@@ -75,6 +75,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Attachments opened in another app ("openFile", MainActivity.kt): a content: URI it may read, as Android 7
+             on refuses a file: one. Only the app's own files and cache. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"/>
+        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

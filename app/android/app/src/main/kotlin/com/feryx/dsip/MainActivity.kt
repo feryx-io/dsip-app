@@ -1,11 +1,15 @@
 package com.feryx.dsip
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
+import java.io.File
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -65,6 +69,7 @@ class MainActivity : FlutterActivity() {
                 // AAudio needs nothing set up front: Telecom sets the call's audio mode and routes it.
                 "startAudio" -> result.success(null)
                 "audioRoutes" -> result.success(CallSystem.audioRoutes())
+                "openFile" -> result.success(openFile(call.text("path"), call.argument<String>("type")))
                 "setAudioRoute" -> {
                     CallSystem.setAudioRoute(call.text("route"))
                     result.success(null)
@@ -115,6 +120,31 @@ class MainActivity : FlutterActivity() {
     private fun MethodCall.id(): Long = (argument<Number>("id") ?: -1).toLong()
 
     private fun MethodCall.text(key: String): String = argument<String>(key) ?: ""
+
+    /**
+     * Open the file at [path] in the app the user has for its [type] (a media type; else guessed from its name): as a
+     * content: URI it may read, since Android 7 refuses a file: one. Whether an app took it.
+     */
+    private fun openFile(path: String, type: String?): Boolean {
+        val file = File(path)
+        val uri = try {
+            FileProvider.getUriForFile(this, "$packageName.files", file)
+        } catch (e: IllegalArgumentException) {
+            return false // not under the app's files or cache
+        }
+        val mime = type?.takeIf { it.isNotBlank() }
+            ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
+            ?: "application/octet-stream"
+        val view = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, mime)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        return try {
+            startActivity(view)
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+    }
 
     private fun requestMicrophone(result: MethodChannel.Result) {
         // The call's notification (Android 13 on) is asked for alongside.
