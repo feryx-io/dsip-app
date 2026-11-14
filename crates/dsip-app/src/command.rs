@@ -19,6 +19,14 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         video: bool,
     },
+    /// Turn the camera on or off in a video call (B§3.4); without `call`, the one whose video is shown.
+    Camera {
+        /// The app's call id.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        call: Option<u64>,
+        /// On or off.
+        on: bool,
+    },
     /// Answer a call ringing here; without `call`, the one ringing longest.
     Answer {
         /// The app's call id.

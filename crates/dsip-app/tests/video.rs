@@ -53,6 +53,17 @@ async fn a_video_call_carries_frames_both_ways() {
         a.0 >= 10 && a.1 >= 10 && b.0 >= 10 && b.1 >= 10
     })
     .await;
+    assert!(alice.state().calls[&id].camera, "a video call's camera starts with it");
+    // the camera off: Alice's view says so, and her frames stop
+    assert_eq!(alice.command(Command::Camera { call: Some(id), on: false }).await, Response::Ok);
+    assert!(!alice.state().calls[&id].camera);
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let sent = alice.video_frames().unwrap().0;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(alice.video_frames().unwrap().0, sent, "no frames with the camera off");
+    // and on again
+    assert_eq!(alice.command(Command::Camera { call: None, on: true }).await, Response::Ok);
+    until("frames again", || alice.video_frames().unwrap().0 >= 5).await;
     alice.command(Command::Hangup { call: Some(id) }).await;
 }
 
@@ -69,5 +80,7 @@ async fn a_plain_call_carries_no_video() {
     assert!(!alice.state().calls[&id].video, "an audio call is not a video one");
     assert_eq!(alice.video_frames(), Some((0, 0)), "no camera, nothing received");
     assert_eq!(bob.video_frames(), Some((0, 0)));
+    assert!(matches!(alice.command(Command::Camera { call: Some(id), on: true }).await, Response::Error { .. }),
+            "no camera in an audio call");
     alice.command(Command::Hangup { call: Some(id) }).await;
 }

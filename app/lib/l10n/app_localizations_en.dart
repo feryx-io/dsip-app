@@ -242,6 +242,15 @@ class StringsEn extends Strings {
   String get introductionYours => 'You introduced yourself';
 
   @override
+  String get callVideoButton => 'Video call';
+
+  @override
+  String get callCameraOn => 'Camera on';
+
+  @override
+  String get callCameraOff => 'Camera off';
+
+  @override
   String callVia(String relay) {
     return 'Through $relay';
   }
@@ -1380,6 +1389,15 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get introductionYours => '[Ýóú íñţŕóđúçéđ ýóúŕšéĺƒ one tw]';
+
+  @override
+  String get callVideoButton => '[Ṽíđéó çàĺĺ on]';
+
+  @override
+  String get callCameraOn => '[Çàɱéŕà óñ o]';
+
+  @override
+  String get callCameraOff => '[Çàɱéŕà óƒƒ on]';
 
   @override
   String callVia(String relay) {

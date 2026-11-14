@@ -499,6 +499,24 @@ abstract class Strings {
   /// **'You introduced yourself'**
   String get introductionYours;
 
+  /// Button beside Call that places a video call to the identity typed in.
+  ///
+  /// In en, this message translates to:
+  /// **'Video call'**
+  String get callVideoButton;
+
+  /// Button in a video call that turns this side's camera on.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera on'**
+  String get callCameraOn;
+
+  /// Button in a video call that turns this side's camera off.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera off'**
+  String get callCameraOff;
+
   /// No description provided for @callVia.
   ///
   /// In en, this message translates to:

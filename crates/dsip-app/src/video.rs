@@ -46,6 +46,9 @@ pub struct Video {
     sending: std::sync::Mutex<Option<(u64, JoinHandle<()>)>>,
     /// Frames sent and received, for the call's view.
     pub(crate) counters: Arc<Counters>,
+    /// The platform's host, whose tiles the app's textures show ([`Video::tiles`]).
+    #[cfg(any(target_os = "android", windows))]
+    desktop: Option<anvil_video::DesktopVideoHost>,
 }
 
 /// What a call's video did.
@@ -56,32 +59,52 @@ pub(crate) struct Counters {
 }
 
 /// The platform's video host, where the app has one.
-fn platform() -> Option<Arc<dyn VideoHost>> {
-    #[cfg(any(target_os = "android", windows))]
-    {
-        // OpenH264 is not used here: Android and Windows encode H.264 in hardware (MediaCodec, Media Foundation)
-        let dir = std::env::temp_dir().join("dsip-openh264");
-        Some(Arc::new(anvil_video::DesktopVideoHost::platform(&dir)))
-    }
-    #[cfg(not(any(target_os = "android", windows)))]
-    {
-        None
-    }
+#[cfg(any(target_os = "android", windows))]
+fn platform() -> Option<anvil_video::DesktopVideoHost> {
+    // OpenH264 is not used here: Android and Windows encode H.264 in hardware (MediaCodec, Media Foundation)
+    let dir = std::env::temp_dir().join("dsip-openh264");
+    Some(anvil_video::DesktopVideoHost::platform(&dir))
 }
 
 impl Video {
     /// The video of `kind`'s host: the platform's camera and codecs, or numbered frames for tests. `None` where the
     /// platform has no video yet, or its host cannot both encode and decode H.264.
     pub fn new(kind: HostKind) -> Option<Video> {
+        #[cfg(any(target_os = "android", windows))]
+        let desktop = match kind {
+            HostKind::System => Some(platform()?),
+            HostKind::Tone => None,
+        };
         let host: Arc<dyn VideoHost> = match kind {
-            HostKind::System => platform()?,
+            #[cfg(any(target_os = "android", windows))]
+            HostKind::System => Arc::new(desktop.clone()?),
+            #[cfg(not(any(target_os = "android", windows)))]
+            HostKind::System => return None,
             HostKind::Tone => Arc::new(anvil_core::video::synthetic::SyntheticVideoHost::new(&[VideoCodec::H264])),
         };
         if !host.codecs().iter().any(|c| c.codec == VideoCodec::H264 && c.encode && c.decode) {
             tracing::warn!("video: the host cannot encode and decode H.264; calls are audio only");
             return None;
         }
-        Some(Video::with_host(host))
+        #[allow(unused_mut)]
+        let mut video = Video::with_host(host);
+        #[cfg(any(target_os = "android", windows))]
+        {
+            video.desktop = desktop;
+        }
+        Some(video)
+    }
+
+    /// The tiles the platform host draws calls' pictures on (each call's stream, and this side's camera as its
+    /// self-view), for the app's textures.
+    #[cfg(any(target_os = "android", windows))]
+    pub fn tiles(&self) -> Option<anvil_video::Tiles> {
+        self.desktop.as_ref().map(anvil_video::DesktopVideoHost::tiles)
+    }
+
+    /// The call whose video is shown, if any.
+    pub fn showing(&self) -> Option<u64> {
+        self.showing.lock().unwrap_or_else(|e| e.into_inner()).as_ref().map(|(id, _)| *id)
     }
 
     /// Video on `host`.
@@ -91,7 +114,9 @@ impl Video {
         let (requests, requests_rx) = mpsc::unbounded_channel();
         Video { host, feed, feed_rx, sink, received: Arc::new(Mutex::new(received)), requests,
                 requests_rx: Arc::new(Mutex::new(requests_rx)), showing: Default::default(), sending: Default::default(),
-                counters: Arc::default() }
+                counters: Arc::default(),
+                #[cfg(any(target_os = "android", windows))]
+                desktop: None }
     }
 
     /// The host, for showing calls' pictures.

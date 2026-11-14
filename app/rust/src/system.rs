@@ -430,6 +430,7 @@ mod tests {
             error: None,
             sound: None,
             video: false,
+            camera: false,
         }
     }
 

@@ -19,6 +19,7 @@ import io.flutter.plugin.common.MethodChannel
  * asks of the phone and the system's call screen (lib/src/mobile/platform.dart). As Anvil's U4a and U4b. */
 class MainActivity : FlutterActivity() {
     private var microphoneAnswer: MethodChannel.Result? = null
+    private var cameraAnswer: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before Dart opens the library: its audio (cpal's oboe) needs the JVM. The app's calls reach Telecom from here
@@ -61,11 +62,13 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        VideoTextures.register(flutterEngine)
         val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dsip/mobile")
         CallSystem.channel = channel
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "requestMicrophone" -> requestMicrophone(result)
+                "requestCamera" -> requestCamera(result)
                 // AAudio needs nothing set up front: Telecom sets the call's audio mode and routes it.
                 "startAudio" -> result.success(null)
                 "audioRoutes" -> result.success(CallSystem.audioRoutes())
@@ -112,6 +115,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        VideoTextures.clear()
         CallSystem.channel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
@@ -162,8 +166,23 @@ class MainActivity : FlutterActivity() {
         requestPermissions(wanted.toTypedArray(), MICROPHONE)
     }
 
+    /** The camera, for a video call: whether the app may use it, asking the user if it has not been decided. */
+    private fun requestCamera(result: MethodChannel.Result) {
+        if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            result.success(true)
+            return
+        }
+        cameraAnswer?.success(false)
+        cameraAnswer = result
+        requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA)
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA) {
+            cameraAnswer?.success(checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+            cameraAnswer = null
+        }
         if (requestCode == MICROPHONE) {
             microphoneAnswer?.success(
                 checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED,
@@ -174,5 +193,6 @@ class MainActivity : FlutterActivity() {
 
     private companion object {
         const val MICROPHONE = 1
+        const val CAMERA = 2
     }
 }

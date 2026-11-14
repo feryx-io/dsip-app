@@ -128,6 +128,12 @@
   },
   "introductionYours": "You introduced yourself",
   "@introductionYours": {"description": "Heading of the introduction this user sent, shown on top of the conversation with someone who accepted it; its text follows."},
+  "callVideoButton": "Video call",
+  "@callVideoButton": {"description": "Button beside Call that places a video call to the identity typed in."},
+  "callCameraOn": "Camera on",
+  "@callCameraOn": {"description": "Button in a video call that turns this side's camera on."},
+  "callCameraOff": "Camera off",
+  "@callCameraOff": {"description": "Button in a video call that turns this side's camera off."},
   "callVia": "Through {relay}",
   "@callVia": {
     "placeholders": {

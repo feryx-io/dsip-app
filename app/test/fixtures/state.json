@@ -41,7 +41,8 @@
           "speaker_error": "speaker: stream disconnected",
           "stalled": "played"
         },
-        "video": true
+        "video": true,
+        "camera": true
       },
       {
         "id": 3,
@@ -67,6 +68,7 @@
         }
       ]
     },
+    "video": true,
     "messaging": {
       "mailbox": "did:key:z6MkMailbox",
       "connected": true,

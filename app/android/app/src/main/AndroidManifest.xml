@@ -4,6 +4,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <!-- The person called hears the user; asked for before the app starts. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Video calls (app/rust/src/api/video.rs); asked for when one is placed or answered. A phone with no camera
+         still installs the app, and its calls are audio only. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <!-- The app's own calls with Telecom (a self-managed ConnectionService). -->
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>

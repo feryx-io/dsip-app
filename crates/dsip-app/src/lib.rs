@@ -291,6 +291,7 @@ impl App {
             relay: cfg.relay,
             calls: Default::default(),
             audio: audio.as_ref().map(|a| a.view()).unwrap_or_else(|| AudioState { host: "none".into(), ..Default::default() }),
+            video: video.is_some(),
             voice: Default::default(),
         };
         let (changes, _) = broadcast::channel(256);
@@ -396,6 +397,12 @@ impl App {
         self.inner.audio.as_ref().and_then(|a| a.tone_heard())
     }
 
+    /// The tiles calls' pictures are drawn on, for the app's textures (Android and Windows).
+    #[cfg(any(target_os = "android", windows))]
+    pub fn video_tiles(&self) -> Option<anvil_video::Tiles> {
+        self.inner.video.as_ref().and_then(video::Video::tiles)
+    }
+
     /// The video frames the call holding the video has sent and received, where the app has video.
     pub fn video_frames(&self) -> Option<(u64, u64)> {
         self.inner.video.as_ref().map(video::Video::frames)
@@ -413,6 +420,7 @@ impl App {
                 Ok(call) => Response::Call { call: self.track(call, Direction::Outgoing, to, None) },
                 Err(e) => Response::error(e.to_string()),
             },
+            Command::Camera { call, on } => self.camera(call, on),
             Command::Answer { call } => self.act(call, Pick::Ringing, Action::Accept),
             Command::Decline { call } => self.act(call, Pick::Ringing, Action::Decline),
             Command::Hangup { call } => self.act(call, Pick::Latest, Action::HangUp),
@@ -894,6 +902,7 @@ impl App {
             error: None,
             sound: None,
             video: false,
+            camera: false,
         };
         self.publish(Change::CallAdded { call: view });
         let app = self.clone();
@@ -987,13 +996,15 @@ impl App {
                             counted.1.push_back(now.clone());
                             now.stalled = stalled.clone();
                         }
+                        let camera = app.inner.video.as_ref().is_some_and(|v| v.sending_to(id));
                         let differs = app.inner.state.lock().unwrap_or_else(|e| e.into_inner()).calls.get(&id)
-                            .is_some_and(|v| v.media != media || v.error != err || v.video != video
+                            .is_some_and(|v| v.media != media || v.error != err || v.video != video || v.camera != camera
                                 || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s)));
                         if differs {
                             app.update(id, |v| {
                                 v.media = media;
                                 v.video = video;
+                                v.camera = camera;
                                 v.error = err;
                                 if sound.is_some() {
                                     v.sound = sound;
@@ -1005,6 +1016,23 @@ impl App {
             }
         });
         id
+    }
+
+    /// The camera on or off in video call `call` (the one shown, without).
+    fn camera(&self, call: Option<u64>, on: bool) -> Response {
+        let Some(v) = &self.inner.video else { return Response::error("this app has no video") };
+        let Some(id) = call.or_else(|| v.showing()) else { return Response::error("no video call") };
+        if !self.state().calls.get(&id).is_some_and(|c| c.video) {
+            return Response::error(format!("call {id} is not a video call"));
+        }
+        let r = if on { v.send(id) } else { v.stop_sending(); Ok(()) };
+        match r {
+            Ok(()) => {
+                self.update(id, |c| c.camera = on);
+                Response::Ok
+            }
+            Err(e) => Response::error(format!("camera: {e}")),
+        }
     }
 
     /// Change call `id`'s view with `f` and publish it.

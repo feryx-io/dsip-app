@@ -19,6 +19,9 @@ pub struct State {
     pub calls: BTreeMap<u64, CallView>,
     /// The audio devices.
     pub audio: Audio,
+    /// The app makes and takes video calls here (B§3.4): it has a camera and H.264 ([`crate::video`]).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub video: bool,
     /// Messages: the mailbox, the conversations, the requests to answer.
     pub messaging: Messaging,
     /// This device's presence, and the identities it follows.
@@ -355,6 +358,9 @@ pub struct CallView {
     /// It carries video: offered with it, and the answer took it (B§3.4).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub video: bool,
+    /// This side's camera sends to it ([`crate::Command::Camera`]).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub camera: bool,
 }
 
 /// A call's sound on this device, counted from when it took the devices ([`CallView::sound`]). Each stage feeds the
@@ -650,6 +656,7 @@ mod tests {
             error: None,
             sound: None,
             video: false,
+            camera: false,
         };
         state.apply(&Change::CallAdded { call });
         let r = Response::State { state: Box::new(state) };
