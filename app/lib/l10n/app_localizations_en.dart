@@ -234,6 +234,14 @@ class StringsEn extends Strings {
   }
 
   @override
+  String introductionTheirs(String name) {
+    return '$name introduced themselves';
+  }
+
+  @override
+  String get introductionYours => 'You introduced yourself';
+
+  @override
   String callVia(String relay) {
     return 'Through $relay';
   }
@@ -1364,6 +1372,14 @@ class StringsEnXa extends StringsEn {
   String callSoundStalled(String stage) {
     return '[Šóúñđ šţóþš àţ: $stage one ]';
   }
+
+  @override
+  String introductionTheirs(String name) {
+    return '[$name íñţŕóđúçéđ ţĥéɱšéĺṽéš one two]';
+  }
+
+  @override
+  String get introductionYours => '[Ýóú íñţŕóđúçéđ ýóúŕšéĺƒ one tw]';
 
   @override
   String callVia(String relay) {

@@ -121,6 +121,13 @@
       "stage": {"type": "String", "example": "played"}
     }
   },
+  "introductionTheirs": "{name} introduced themselves",
+  "@introductionTheirs": {
+    "description": "Heading of the introduction a new contact sent, shown on top of the conversation with them once accepted; its text follows.",
+    "placeholders": {"name": {"type": "String", "example": "Carol"}}
+  },
+  "introductionYours": "You introduced yourself",
+  "@introductionYours": {"description": "Heading of the introduction this user sent, shown on top of the conversation with someone who accepted it; its text follows."},
   "callVia": "Through {relay}",
   "@callVia": {
     "placeholders": {

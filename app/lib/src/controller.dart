@@ -107,6 +107,10 @@ class Controller extends ChangeNotifier {
   /// A conversation another screen asked the messages screen to open (its group id), until it does.
   String? openRequested;
 
+  /// The introduction each new contact came with, by identity: its text, and whether it was theirs (a request
+  /// accepted here) or this one's (accepted there). Shown at the top of the conversation with them, this run.
+  final Map<String, ({String text, bool theirs})> introductions = {};
+
   /// Go to the tab [tab].
   void showTab(int tab) {
     this.tab = tab;

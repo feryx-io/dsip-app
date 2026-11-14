@@ -79,6 +79,36 @@ void main() {
     ]);
   });
 
+  testWidgets('an introduction accepted opens the conversation with it on top, made by the first message', (tester) async {
+    await open(tester);
+    await tester.tap(find.byTooltip('Accept'));
+    await tester.pumpAndSettle();
+    final intro = find.byKey(const Key('introduction-did:key:z6MkCarol'));
+    expect(find.descendant(of: intro, matching: find.text('Carol Jones introduced themselves')), findsOneWidget);
+    expect(find.descendant(of: intro, matching: find.text('We met at the conference')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('compose')), 'great to meet you');
+    await tester.tap(find.byTooltip('Send'));
+    await tester.pumpAndSettle();
+    expect(client.commands.sublist(0, 2), [
+      {'command': 'accept_request', 'id': '01M6EKRTVG3C55DFMQ401G3MB0'},
+      {'command': 'message', 'to': 'did:key:z6MkCarol', 'text': 'great to meet you'},
+    ]);
+    // the conversation made is the one open
+    expect(client.commands.last, {'command': 'thread', 'conversation': group});
+  });
+
+  testWidgets('an introduction of yours, accepted, opens the conversation with it on top', (tester) async {
+    final introduced = ((state['messaging'] as Map)['introduced'] as List).cast<Map<String, dynamic>>();
+    introduced.first['accepted'] = true;
+    await open(tester);
+    await tester.tap(find.byKey(const Key('introduced-did:key:z6MkDave')));
+    await tester.pumpAndSettle();
+    final intro = find.byKey(const Key('introduction-did:key:z6MkDave'));
+    expect(find.descendant(of: intro, matching: find.text('You introduced yourself')), findsOneWidget);
+    expect(find.descendant(of: intro, matching: find.text('Lunch on Friday?')), findsOneWidget);
+    expect(find.byKey(const Key('compose')), findsOneWidget);
+  });
+
   testWidgets('a conversation opens on its thread, takes what arrives, and sends', (tester) async {
     await open(tester);
     await tester.tap(find.byKey(const Key('conversation-$group')));

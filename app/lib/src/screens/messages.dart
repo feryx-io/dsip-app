@@ -28,11 +28,39 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
   String? _open;
 
+  /// Someone to write to who has no conversation with this one yet (an introduction just accepted): its identity.
+  String? _draft;
+
   Controller get c => widget.controller;
 
   Future<void> _select(String group) async {
-    setState(() => _open = group);
+    setState(() {
+      _open = group;
+      _draft = null;
+    });
     await c.openThread(group);
+  }
+
+  /// The direct conversation with [peer], if there is one.
+  ConversationView? _directWith(String peer) => widget.state.messaging.conversations
+      .where((x) => x.kind != 'group' && _peer(x, widget.state.me.identity) == peer)
+      .firstOrNull;
+
+  /// Go to the conversation with [peer], an introduction between you accepted: the one there is, or a new one, made
+  /// by the first message; its introduction ([text], [theirs] or this one's) on top.
+  Future<void> _startWith(String peer, String? text, {required bool theirs}) async {
+    if (text != null && text.isNotEmpty) c.introductions[peer] = (text: text, theirs: theirs);
+    final existing = _directWith(peer);
+    if (existing != null) return _select(existing.group);
+    setState(() {
+      _open = null;
+      _draft = peer;
+    });
+  }
+
+  Future<void> _accept(RequestView r) async {
+    final response = await c.run({'command': 'accept_request', 'id': r.id});
+    if (response['response'] == 'ok' && mounted) await _startWith(r.from, r.purpose, theirs: true);
   }
 
   @override
@@ -116,6 +144,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final m = widget.state.messaging;
     if (m.mailbox == null) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(s.messagingOff)));
     final open = m.conversations.where((x) => x.group == _open).firstOrNull;
+    // the draft's conversation made (by either side): it, from now on
+    if (_draft case final peer? when _directWith(peer) != null) {
+      final group = _directWith(peer)!.group;
+      WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _select(group) : null);
+    }
     // no alert for a message in the conversation being read
     c.visibleConversation = open?.group;
     final list = ListView(
@@ -159,7 +192,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         IconButton(
                           tooltip: s.requestAccept,
                           icon: const Icon(Icons.check),
-                          onPressed: () => c.run({'command': 'accept_request', 'id': r.id}),
+                          onPressed: () => _accept(r),
                         ),
                         IconButton(
                           tooltip: s.requestDecline,
@@ -192,6 +225,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 for (final i in m.introduced.reversed)
                   ListTile(
                     key: Key('introduced-${i.to}'),
+                    // accepted: write to them
+                    onTap: i.accepted ? () => _startWith(i.to, i.purpose, theirs: false) : null,
                     leading: Icon(i.accepted ? Icons.check_circle_outline : Icons.hourglass_empty),
                     title: Text(widget.state.names[i.to] ?? i.name ?? shortDid(i.to), overflow: TextOverflow.ellipsis),
                     subtitle: Text(
@@ -219,13 +254,23 @@ class _MessagesScreenState extends State<MessagesScreen> {
       onBack: narrow ? () => setState(() => _open = null) : null,
       onDelete: () => _deleteConversation(open),
     );
+    final draft = _draft == null || open != null
+        ? null
+        : _Draft(
+            key: ValueKey('draft-$_draft'),
+            controller: c,
+            peer: _draft!,
+            state: widget.state,
+            onBack: narrow ? () => setState(() => _draft = null) : null,
+            onMade: _select,
+          );
     // A phone: the list, or the conversation open over it with a way back. Wider: both, side by side.
-    if (narrow) return open == null ? list : thread(open);
+    if (narrow) return open != null ? thread(open) : draft ?? list;
     return Row(
       children: [
         SizedBox(width: 340, child: list),
         const VerticalDivider(width: 1),
-        Expanded(child: open == null ? const SizedBox.shrink() : thread(open)),
+        Expanded(child: open != null ? thread(open) : draft ?? const SizedBox.shrink()),
       ],
     );
   }
@@ -365,6 +410,8 @@ class _ThreadState extends State<_Thread> {
     final me = widget.state.me.identity;
     final messages = widget.controller.threads[group] ?? const <MessageView>[];
     final recording = widget.state.voice.recording;
+    final peer = _peer(x, me);
+    final introduction = peer == null ? null : _Introduction.of(widget.controller, widget.state, peer);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -416,11 +463,12 @@ class _ThreadState extends State<_Thread> {
         ),
         const Divider(height: 1),
         Expanded(
-          child: messages.isEmpty
+          child: messages.isEmpty && introduction == null
               ? Center(child: Text(s.threadEmpty))
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    ?introduction,
                     for (final m in messages)
                       _Bubble(
                         key: Key('message-${m.id}'),
@@ -470,6 +518,114 @@ class _ThreadState extends State<_Thread> {
                 child: TextField(
                   key: const Key('compose'),
                   controller: _text,
+                  decoration: InputDecoration(hintText: s.messageHint),
+                  onSubmitted: (_) => _send(),
+                ),
+              ),
+              IconButton(tooltip: s.send, icon: const Icon(Icons.send), onPressed: _send),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The introduction a new contact came with, on top of the conversation with them.
+class _Introduction extends StatelessWidget {
+  const _Introduction({required this.peer, required this.text, required this.theirs, required this.name});
+  final String peer;
+  final String text;
+
+  /// Theirs (a request accepted here), or this one's.
+  final bool theirs;
+
+  /// What to call them.
+  final String name;
+
+  /// [peer]'s introduction, if one was accepted this run.
+  static _Introduction? of(Controller c, AppState state, String peer) => switch (c.introductions[peer]) {
+    final i? => _Introduction(peer: peer, text: i.text, theirs: i.theirs, name: state.nameOf(peer)),
+    null => null,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return Card(
+      key: Key('introduction-$peer'),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ListTile(
+        leading: const Icon(Icons.waving_hand_outlined),
+        title: Text(theirs ? s.introductionTheirs(name) : s.introductionYours),
+        subtitle: Text(text),
+      ),
+    );
+  }
+}
+
+/// A conversation not made yet, with someone whose introduction was just accepted: their introduction, and the first
+/// message, which makes it.
+class _Draft extends StatefulWidget {
+  const _Draft({super.key, required this.controller, required this.peer, required this.state, this.onBack, required this.onMade});
+  final Controller controller;
+  final String peer;
+  final AppState state;
+
+  /// Back to the list, on a phone.
+  final VoidCallback? onBack;
+
+  /// The conversation made, by its group id.
+  final void Function(String group) onMade;
+
+  @override
+  State<_Draft> createState() => _DraftState();
+}
+
+class _DraftState extends State<_Draft> {
+  final _text = TextEditingController();
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _text.text.trim();
+    if (text.isEmpty) return;
+    final r = await widget.controller.run({'command': 'message', 'to': widget.peer, 'text': text});
+    if (r['response'] == 'conversation') widget.onMade(r['conversation'] as String);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final introduction = _Introduction.of(widget.controller, widget.state, widget.peer);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ListTile(
+          leading: widget.onBack == null ? null : BackButton(key: const Key('thread-back'), onPressed: widget.onBack),
+          title: Text(widget.state.nameOf(widget.peer)),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [?introduction, Center(child: Text(s.threadEmpty))],
+          ),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('compose'),
+                  controller: _text,
+                  autofocus: true,
                   decoration: InputDecoration(hintText: s.messageHint),
                   onSubmitted: (_) => _send(),
                 ),
