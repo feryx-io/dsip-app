@@ -487,6 +487,18 @@ abstract class Strings {
   /// **'Sound stops at: {stage}'**
   String callSoundStalled(String stage);
 
+  /// Heading of the introduction a new contact sent, shown on top of the conversation with them once accepted; its text follows.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} introduced themselves'**
+  String introductionTheirs(String name);
+
+  /// Heading of the introduction this user sent, shown on top of the conversation with someone who accepted it; its text follows.
+  ///
+  /// In en, this message translates to:
+  /// **'You introduced yourself'**
+  String get introductionYours;
+
   /// No description provided for @callVia.
   ///
   /// In en, this message translates to:
