@@ -352,6 +352,9 @@ pub struct CallView {
     /// stops on a real device shows here.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sound: Option<CallSound>,
+    /// It carries video: offered with it, and the answer took it (B§3.4).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub video: bool,
 }
 
 /// A call's sound on this device, counted from when it took the devices ([`CallView::sound`]). Each stage feeds the
@@ -646,6 +649,7 @@ mod tests {
             via: None,
             error: None,
             sound: None,
+            video: false,
         };
         state.apply(&Change::CallAdded { call });
         let r = Response::State { state: Box::new(state) };

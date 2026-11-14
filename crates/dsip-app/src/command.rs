@@ -15,6 +15,9 @@ pub enum Command {
     Call {
         /// The DID called.
         to: String,
+        /// A video call (B§3.4), where the app has video; else audio only.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        video: bool,
     },
     /// Answer a call ringing here; without `call`, the one ringing longest.
     Answer {

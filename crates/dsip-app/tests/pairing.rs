@@ -32,7 +32,7 @@ async fn a_device_that_joined_by_codes_rings_for_its_identity() {
     cfg.dialer = Some(net.dialer());
     cfg.audio = None;
     let bob = App::start(cfg).await.unwrap();
-    assert!(matches!(bob.command(Command::Call { to: ann.meta.identity.clone() }).await, Response::Call { .. }));
+    assert!(matches!(bob.command(Command::Call { to: ann.meta.identity.clone(), video: false }).await, Response::Call { .. }));
     tokio::time::timeout(Duration::from_secs(15), async {
         while !device.state().calls.values().any(|c| c.direction == Direction::Incoming && c.state == CallState::Ringing) {
             tokio::time::sleep(Duration::from_millis(50)).await;

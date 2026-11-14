@@ -524,7 +524,7 @@ async fn main() -> Result<ExitCode> {
             .with_context(|| format!("no app at {}", path.display()))?;
             return Ok(ExitCode::SUCCESS);
         }
-        Cmd::Call { to } => Command::Call { to },
+        Cmd::Call { to } => Command::Call { to, video: false },
         Cmd::Introduce { to, purpose, name } => Command::Introduce { to, purpose, name },
         Cmd::DeleteMessage { conversation, id } => Command::DeleteMessage { conversation, id },
         Cmd::DeleteConversation { conversation } => Command::DeleteConversation { conversation },

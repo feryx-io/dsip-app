@@ -41,6 +41,7 @@ fn state() -> State {
             speaker_error: Some("speaker: stream disconnected".into()),
             stalled: Some("played".into()),
         }),
+        video: id == 2,
     };
     for c in [
         call(1, CallState::Ended { reason: "user.hangup".into() }, Direction::Outgoing, None),

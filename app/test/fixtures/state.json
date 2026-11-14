@@ -40,7 +40,8 @@
           "ringback": 100,
           "speaker_error": "speaker: stream disconnected",
           "stalled": "played"
-        }
+        },
+        "video": true
       },
       {
         "id": 3,
