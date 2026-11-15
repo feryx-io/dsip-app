@@ -63,6 +63,19 @@ void main() {
     expect(client.commands.last, {'command': 'camera', 'call': 2, 'on': false});
   });
 
+  testWidgets("each picture keeps its own shape: a phone's upright one is tall", (tester) async {
+    showTile = (stream) async => _FakeTexture(stream == null ? 1 : 2);
+    tileShape = (stream) => stream == null ? const Size(640, 480) : const Size(480, 640);
+    addTearDown(() => tileShape = (_) => null);
+    await open(tester);
+    await tester.pump(const Duration(milliseconds: 600));
+    final area = tester.getSize(find.byKey(const Key('video-far')));
+    expect(area.width / area.height, closeTo(480 / 640, 0.01), reason: "the far end's upright picture");
+    final self = tester.getSize(find.byKey(const Key('video-self')));
+    expect(self.width / self.height, closeTo(640 / 480, 0.01), reason: "this side's own camera");
+    expect(find.byType(Texture), findsNWidgets(2));
+  });
+
   testWidgets('on a phone, a video call asks for the camera first', (tester) async {
     final mobile = FakeMobile();
     await open(tester, mobile: mobile);
@@ -72,4 +85,12 @@ void main() {
     expect(mobile.log, contains('requestCamera'));
     expect(client.commands.last, {'command': 'call', 'to': 'did:key:z6MkCarol', 'video': true});
   });
+}
+
+class _FakeTexture implements VideoTexture {
+  _FakeTexture(this.textureId);
+  @override
+  final int textureId;
+  @override
+  Future<void> close() async {}
 }

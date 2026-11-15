@@ -29,15 +29,35 @@ pub fn init_app() {
     init_logging();
 }
 
-/// Log to stderr, or on Android to logcat (tag `dsip`), where a phone's stderr goes nowhere; `RUST_LOG` filters. The
-/// first call sets it up; later ones do nothing.
+/// Log to stderr; on Android to logcat (tag `dsip`), and on Windows to `%LOCALAPPDATA%\dsip\dsip.log` (the run
+/// before kept as `dsip.old.log`), where an app's stderr goes nowhere; `RUST_LOG` filters. The first call sets it up;
+/// later ones do nothing.
 pub(crate) fn init_logging() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
     let fmt = tracing_subscriber::fmt().with_env_filter(filter);
     #[cfg(target_os = "android")]
     let _ = fmt.with_ansi(false).without_time().with_writer(crate::android::Logcat::make).try_init();
-    #[cfg(not(target_os = "android"))]
+    #[cfg(windows)]
+    match log_file() {
+        Some(file) => {
+            let _ = fmt.with_ansi(false).with_writer(std::sync::Mutex::new(file)).try_init();
+        }
+        None => {
+            let _ = fmt.with_writer(std::io::stderr).try_init();
+        }
+    }
+    #[cfg(not(any(target_os = "android", windows)))]
     let _ = fmt.with_writer(std::io::stderr).try_init();
+}
+
+/// This run's log file on Windows, the last run's moved aside.
+#[cfg(windows)]
+fn log_file() -> Option<std::fs::File> {
+    let dir = std::path::PathBuf::from(std::env::var_os("LOCALAPPDATA")?).join("dsip");
+    std::fs::create_dir_all(&dir).ok()?;
+    let path = dir.join("dsip.log");
+    let _ = std::fs::rename(&path, dir.join("dsip.old.log"));
+    std::fs::File::create(path).ok()
 }
 
 /// Make an identity in `dir` (a controller key, a device key and the delegation between them); its DID.

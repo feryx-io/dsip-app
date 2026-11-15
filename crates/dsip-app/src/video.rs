@@ -42,8 +42,11 @@ pub struct Video {
     requests_rx: Arc<Mutex<mpsc::UnboundedReceiver<VideoRequest>>>,
     /// The call shown, and its decoder's task.
     showing: std::sync::Mutex<Option<(u64, JoinHandle<()>)>>,
-    /// The call the camera sends to, and its task.
+    /// The call the camera sends to, and its task: it ends when the camera stops giving pictures (a phone takes it
+    /// away from an app off the screen).
     sending: std::sync::Mutex<Option<(u64, JoinHandle<()>)>>,
+    /// The call the camera is wanted for, until turned off: [`Video::heal`] opens it again when it stopped.
+    wanted: std::sync::Mutex<Option<u64>>,
     /// Frames sent and received, for the call's view.
     pub(crate) counters: Arc<Counters>,
     /// The platform's host, whose tiles the app's textures show ([`Video::tiles`]).
@@ -114,7 +117,7 @@ impl Video {
         let (requests, requests_rx) = mpsc::unbounded_channel();
         Video { host, feed, feed_rx, sink, received: Arc::new(Mutex::new(received)), requests,
                 requests_rx: Arc::new(Mutex::new(requests_rx)), showing: Default::default(), sending: Default::default(),
-                counters: Arc::default(),
+                wanted: Default::default(), counters: Arc::default(),
                 #[cfg(any(target_os = "android", windows))]
                 desktop: None }
     }
@@ -156,14 +159,41 @@ impl Video {
     }
 
     /// Send the camera to call `id`: captured, encoded as H.264, into its leg; the far end's keyframe and bitrate
-    /// requests go to the encoder.
+    /// requests go to the encoder. Wanted from now on, even if it will not open yet ([`Video::heal`]); already sending
+    /// to `id`, it goes on as it is (a camera opened twice is busy).
     pub fn send(&self, id: u64) -> Result<(), String> {
-        self.stop_sending();
+        *self.wanted.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
+        if self.sending_to(id) {
+            return Ok(());
+        }
+        self.start_sending(id)
+    }
+
+    /// Open the camera again for call `id` if it is wanted there and stopped: a phone gives the camera back once the
+    /// app is on the screen again. True when it was opened again.
+    pub fn heal(&self, id: u64) -> bool {
+        let wanted = *self.wanted.lock().unwrap_or_else(|e| e.into_inner()) == Some(id);
+        if !wanted || self.sending_to(id) {
+            return false;
+        }
+        match self.start_sending(id) {
+            Ok(()) => {
+                tracing::info!("call {id}: the camera is back");
+                true
+            }
+            Err(e) => {
+                tracing::debug!("call {id}: the camera will not open again yet: {e}");
+                false
+            }
+        }
+    }
+
+    fn start_sending(&self, id: u64) -> Result<(), String> {
+        self.abort_sending();
         let cfg = SendConfig { codec: VideoCodec::H264, kind: VideoKind::Camera, camera: None, max: MAX, kbps: START_KBPS,
                                fps: FPS, encodings: vec![EncodingId(0)] };
         let mut source = self.host.start_send(cfg).map_err(|e| e.to_string())?;
         let (feed, requests, counters) = (self.feed.clone(), self.requests_rx.clone(), self.counters.clone());
-        counters.sent.store(0, Ordering::Relaxed);
         let task = tokio::spawn(async move {
             let mut requests = requests.lock().await;
             while requests.try_recv().is_ok() {}
@@ -171,7 +201,10 @@ impl Video {
             loop {
                 tokio::select! {
                     frame = source.next_frame() => {
-                        let Some((_, f)) = frame else { break };
+                        let Some((_, f)) = frame else {
+                            tracing::warn!("call {id}: the camera stopped");
+                            break;
+                        };
                         let ticks = f.captured.saturating_duration_since(start).as_micros() as u64 * CLOCK / 1_000_000;
                         if feed.send(VideoFrame { data: f.data, keyframe: f.keyframe, timestamp: ticks as u32 }).is_err() {
                             break;
@@ -189,8 +222,13 @@ impl Video {
         Ok(())
     }
 
-    /// Stop the camera; the call's picture stays shown.
+    /// Stop the camera, until asked for again; the call's picture stays shown.
     pub fn stop_sending(&self) {
+        *self.wanted.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        self.abort_sending();
+    }
+
+    fn abort_sending(&self) {
         if let Some((_, t)) = self.sending.lock().unwrap_or_else(|e| e.into_inner()).take() {
             t.abort();
         }
@@ -202,14 +240,17 @@ impl Video {
         }
     }
 
-    /// Whether the camera sends to call `id`.
+    /// Whether the camera sends to call `id`: started for it, and still giving pictures.
     pub fn sending_to(&self, id: u64) -> bool {
-        self.sending.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|(c, _)| *c == id)
+        self.sending.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|(c, t)| *c == id && !t.is_finished())
     }
 
     /// Stop call `id`'s video, sent and shown.
     pub fn stop(&self, id: u64) {
-        if self.sending_to(id) {
+        let ours = |c: &Option<u64>| *c == Some(id);
+        if ours(&self.wanted.lock().unwrap_or_else(|e| e.into_inner()))
+            || self.sending.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|(c, _)| *c == id)
+        {
             self.stop_sending();
         }
         if self.showing.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|(c, _)| *c == id) {
@@ -221,9 +262,128 @@ impl Video {
     pub fn frames(&self) -> (u64, u64) {
         (self.counters.sent.load(Ordering::Relaxed), self.counters.received.load(Ordering::Relaxed))
     }
+
+    /// Call `id`'s pictures so far, for its view. Where the host has no tiles (tests' synthetic host), what was
+    /// captured and shown is what was sent and received.
+    pub fn pictures(&self, id: u64) -> crate::state::CallPictures {
+        let (sent, received) = self.frames();
+        #[allow(unused_mut)]
+        let (mut captured, mut shown) = (sent, received);
+        #[cfg(any(target_os = "android", windows))]
+        if let Some(tiles) = self.tiles() {
+            let presented = |k| tiles.stats(k).map_or(0, |s| s.presented);
+            captured = presented(anvil_video::TileKey::SelfView);
+            shown = presented(anvil_video::TileKey::Stream(stream(id)));
+        }
+        let _ = id;
+        crate::state::CallPictures { captured, sent, received, shown, stalled: None }
+    }
 }
 
 /// The tile a call's picture is drawn on.
 pub fn stream(id: u64) -> StreamId {
     StreamId(id as u32)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::AtomicUsize;
+    use std::time::Duration;
+
+    use anvil_core::error::AnvilError;
+    use anvil_core::video::host::{CameraInfo, VideoCodecCaps, VideoSink, VideoSource};
+    use anvil_core::video::synthetic::SyntheticVideoHost;
+
+    use super::*;
+
+    /// The synthetic host whose first camera stops after a few frames, as a phone's does when it takes the camera
+    /// away; the ones opened after go on.
+    struct Taken {
+        host: SyntheticVideoHost,
+        opened: AtomicUsize,
+    }
+
+    struct Stops {
+        source: Box<dyn VideoSource>,
+        left: u32,
+    }
+
+    #[async_trait::async_trait]
+    impl VideoSource for Stops {
+        async fn next_frame(&mut self) -> Option<(EncodingId, CodedFrame)> {
+            if self.left == 0 {
+                return None;
+            }
+            self.left -= 1;
+            self.source.next_frame().await
+        }
+        fn request_keyframe(&self) {
+            self.source.request_keyframe();
+        }
+        fn set_target(&self, kbps: u32, max: Resolution, fps: u32) {
+            self.source.set_target(kbps, max, fps);
+        }
+    }
+
+    impl VideoHost for Taken {
+        fn codecs(&self) -> Vec<VideoCodecCaps> {
+            self.host.codecs()
+        }
+        fn cameras(&self) -> Vec<CameraInfo> {
+            self.host.cameras()
+        }
+        fn start_send(&self, cfg: SendConfig) -> Result<Box<dyn VideoSource>, AnvilError> {
+            let source = self.host.start_send(cfg)?;
+            Ok(match self.opened.fetch_add(1, Ordering::Relaxed) {
+                0 => Box::new(Stops { source, left: 3 }),
+                _ => source,
+            })
+        }
+        fn start_receive(&self, stream: StreamId, cfg: ReceiveConfig) -> Result<Box<dyn VideoSink>, AnvilError> {
+            self.host.start_receive(stream, cfg)
+        }
+    }
+
+    async fn until(what: &str, want: impl Fn() -> bool) {
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while !want() {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("{what}"));
+    }
+
+    #[tokio::test]
+    async fn a_camera_taken_away_comes_back_until_turned_off() {
+        let host = Arc::new(Taken { host: SyntheticVideoHost::new(&[VideoCodec::H264]), opened: AtomicUsize::new(0) });
+        let video = Video::with_host(host.clone());
+        video.send(1).unwrap();
+        // asked again while it sends: the camera is not opened twice
+        video.send(1).unwrap();
+        assert_eq!(host.opened.load(Ordering::Relaxed), 1);
+        until("the camera stops", || !video.sending_to(1)).await;
+        assert!(!video.heal(2), "only the call it is wanted for");
+        assert!(video.heal(1), "opened again");
+        assert!(video.sending_to(1));
+        assert_eq!(host.opened.load(Ordering::Relaxed), 2);
+        until("frames again", || video.frames().0 > 3).await;
+        // turned off, it stays off
+        video.stop_sending();
+        assert!(!video.sending_to(1));
+        assert!(!video.heal(1));
+    }
+
+    #[test]
+    fn a_stage_that_stops_counting_is_where_the_picture_stops() {
+        use crate::state::CallPictures;
+        let at = |captured, sent, received, shown| CallPictures { captured, sent, received, shown, stalled: None };
+        assert_eq!(at(60, 60, 60, 60).stall(&at(30, 30, 30, 30), true), None);
+        assert_eq!(at(0, 0, 60, 60).stall(&at(0, 0, 30, 30), true), Some("captured"));
+        assert_eq!(at(60, 0, 60, 60).stall(&at(30, 0, 30, 30), true), Some("sent"));
+        assert_eq!(at(60, 60, 60, 0).stall(&at(30, 30, 30, 0), true), Some("shown"));
+        // the camera off, or the far end's: neither is a stall here
+        assert_eq!(at(0, 0, 60, 60).stall(&at(0, 0, 30, 30), false), None);
+        assert_eq!(at(60, 60, 30, 30).stall(&at(30, 30, 30, 30), true), None);
+    }
 }

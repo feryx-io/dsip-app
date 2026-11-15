@@ -234,6 +234,16 @@ class StringsEn extends Strings {
   }
 
   @override
+  String callPictures(int captured, int sent, int received, int shown) {
+    return 'Video: camera $captured · sent $sent · received $received · shown $shown';
+  }
+
+  @override
+  String callPicturesStalled(String stage) {
+    return 'Video stops at: $stage';
+  }
+
+  @override
   String introductionTheirs(String name) {
     return '$name introduced themselves';
   }
@@ -1380,6 +1390,16 @@ class StringsEnXa extends StringsEn {
   @override
   String callSoundStalled(String stage) {
     return '[Šóúñđ šţóþš àţ: $stage one ]';
+  }
+
+  @override
+  String callPictures(int captured, int sent, int received, int shown) {
+    return '[Ṽíđéó: çàɱéŕà $captured · šéñţ $sent · ŕéçéíṽéđ $received · šĥóŵñ $shown one two three fo]';
+  }
+
+  @override
+  String callPicturesStalled(String stage) {
+    return '[Ṽíđéó šţóþš àţ: $stage one ]';
   }
 
   @override

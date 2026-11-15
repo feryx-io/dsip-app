@@ -63,7 +63,12 @@ async fn a_video_call_carries_frames_both_ways() {
     assert_eq!(alice.video_frames().unwrap().0, sent, "no frames with the camera off");
     // and on again
     assert_eq!(alice.command(Command::Camera { call: None, on: true }).await, Response::Ok);
-    until("frames again", || alice.video_frames().unwrap().0 >= 5).await;
+    until("frames again", || alice.video_frames().unwrap().0 >= sent + 5).await;
+    // the pictures' counters on the call's view, nothing stalled
+    until("the pictures counted", || {
+        alice.state().calls[&id].pictures.as_ref().is_some_and(|p| p.sent > 0 && p.received > 0 && p.stalled.is_none())
+    })
+    .await;
     alice.command(Command::Hangup { call: Some(id) }).await;
 }
 

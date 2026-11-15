@@ -44,6 +44,7 @@ class CallView {
     this.sound,
     this.video = false,
     this.camera = false,
+    this.pictures,
   });
   final int id;
   final String session;
@@ -65,6 +66,9 @@ class CallView {
   /// This side's camera sends to it.
   final bool camera;
 
+  /// What its video did on this device, while it has video.
+  final CallPictures? pictures;
+
   /// Ringing here: waiting on the user to answer or decline.
   bool get ringingHere => direction == Direction.incoming && state.name == 'ringing';
 
@@ -82,6 +86,28 @@ class CallView {
     camera: j['camera'] as bool? ?? false,
     error: j['error'] as String?,
     sound: j['sound'] == null ? null : CallSound.fromJson(j['sound'] as Map<String, dynamic>),
+    pictures: j['pictures'] == null ? null : CallPictures.fromJson(j['pictures'] as Map<String, dynamic>),
+  );
+}
+
+/// A video call's pictures on this device, counted (`dsip-app`'s `CallPictures`): this side's camera to the network,
+/// the far end's from the network to the screen; the first stage that stops counting is where the picture stops.
+class CallPictures {
+  const CallPictures({required this.captured, required this.sent, required this.received, required this.shown, this.stalled});
+  final int captured;
+  final int sent;
+  final int received;
+  final int shown;
+
+  /// The stage that stopped counting while it should have: `captured`, `sent` or `shown`. Only then are they shown.
+  final String? stalled;
+
+  factory CallPictures.fromJson(Map<String, dynamic> j) => CallPictures(
+    captured: j['captured'] as int,
+    sent: j['sent'] as int,
+    received: j['received'] as int,
+    shown: j['shown'] as int,
+    stalled: j['stalled'] as String?,
   );
 }
 

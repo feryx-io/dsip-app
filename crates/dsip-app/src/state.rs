@@ -361,6 +361,41 @@ pub struct CallView {
     /// This side's camera sends to it ([`crate::Command::Camera`]).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub camera: bool,
+    /// What its video did on this device, counted, while it has video: where a call's picture stops shows here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pictures: Option<CallPictures>,
+}
+
+/// A video call's pictures on this device ([`CallView::pictures`]): this side's camera through to the network, and
+/// the far end's from the network to the screen. Each stage feeds the next, so the first that stops counting is where
+/// the picture stops.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CallPictures {
+    /// Pictures the camera gave (shown in the self-view).
+    pub captured: u64,
+    /// Of those, frames encoded and handed to the call's media to send.
+    pub sent: u64,
+    /// Frames from the other side, as the media received them.
+    pub received: u64,
+    /// Pictures of theirs decoded and shown.
+    pub shown: u64,
+    /// The stage that stopped counting while it should have ([`CallPictures::stall`]): `captured`, `sent` or `shown`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stalled: Option<String>,
+}
+
+impl CallPictures {
+    /// The first stage that did not count on since `before`: the camera's two while it is on (`camera`), and the
+    /// screen while frames come in. Frames not coming in is not this side's to say (the far end's camera may be off).
+    pub fn stall(&self, before: &CallPictures, camera: bool) -> Option<&'static str> {
+        if camera && self.captured <= before.captured {
+            return Some("captured");
+        }
+        if camera && self.sent <= before.sent {
+            return Some("sent");
+        }
+        (self.received > before.received && self.shown <= before.shown).then_some("shown")
+    }
 }
 
 /// A call's sound on this device, counted from when it took the devices ([`CallView::sound`]). Each stage feeds the
@@ -657,6 +692,7 @@ mod tests {
             sound: None,
             video: false,
             camera: false,
+            pictures: None,
         };
         state.apply(&Change::CallAdded { call });
         let r = Response::State { state: Box::new(state) };

@@ -37,6 +37,9 @@ class SystemCalls {
   /// Whether the screen goes off at the ear now, as last asked.
   bool? _proximity;
 
+  /// The video calls whose audio was put on the speaker: once each, so the user may take it back to the earpiece.
+  final _onSpeaker = <int>{};
+
   /// Send the calls' audio this way.
   Future<void> setRoute(AudioRoute route) async {
     try {
@@ -49,7 +52,22 @@ class SystemCalls {
   void _routed(AudioRoutes routes) {
     if (_told.isEmpty) return;
     this.routes.value = routes;
+    _speakerFor(calls());
     _proximityFor(calls());
+  }
+
+  /// A video call's audio goes to the speaker, as phones' video calls do: the phone is held out to be seen, not at the
+  /// ear. Once per call, when it has video and the system has said where the audio goes.
+  void _speakerFor(List<CallView> now) {
+    final current = routes.value?.current;
+    if (current == null) return;
+    for (final c in now.where((c) => !c.state.ended && c.video && !_onSpeaker.contains(c.id))) {
+      _onSpeaker.add(c.id);
+      if (current == AudioRoute.earpiece && routes.value!.available.contains(AudioRoute.speaker)) {
+        unawaited(setRoute(AudioRoute.speaker));
+      }
+    }
+    _onSpeaker.removeWhere((id) => !now.any((c) => c.id == id && !c.state.ended));
   }
 
   /// The routes come and go with the calls (Telecom's come with a call): asked again whenever the calls change.
@@ -59,10 +77,13 @@ class SystemCalls {
   }
 
   /// The screen goes off at the ear: a call answered or being placed, its audio on the earpiece (the phone's default
-  /// when the system has not said). Not for a call only ringing in: the user is looking at it.
+  /// when the system has not said). Not for a call only ringing in: the user is looking at it; nor while a video call
+  /// is on: a screen gone off takes the camera away (Android gives it only to the app on screen).
   void _proximityFor(List<CallView> now) {
+    final live = now.where((c) => !c.state.ended);
     final atEar =
-        now.any((c) => !c.state.ended && (c.state.answered || c.direction == Direction.outgoing)) &&
+        !live.any((c) => c.video) &&
+        live.any((c) => c.state.answered || c.direction == Direction.outgoing) &&
         (routes.value?.current ?? AudioRoute.earpiece) == AudioRoute.earpiece;
     if (atEar != _proximity) {
       _proximity = atEar;
@@ -106,6 +127,7 @@ class SystemCalls {
     } else if (changed) {
       unawaited(_askRoutes().catchError((Object _) {}));
     }
+    _speakerFor(now);
     _proximityFor(now);
   }
 
