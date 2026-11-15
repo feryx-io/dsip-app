@@ -64,6 +64,8 @@
   "callNoSound": "[Ñó šóúñđ ýéţ on]",
   "callSound": "[Šóúñđ: ɱíç {mic} · šéñţ {sent} · ĥéàŕđ {heard} · đéçóđéđ {decoded} · þĺàýéđ {played} · ŕíñĝƀàçķ {ringback} one two three four fiv]",
   "callSoundStalled": "[Šóúñđ šţóþš àţ: {stage} one ]",
+  "callPictures": "[Ṽíđéó: çàɱéŕà {captured} · šéñţ {sent} · ŕéçéíṽéđ {received} · šĥóŵñ {shown} one two three fo]",
+  "callPicturesStalled": "[Ṽíđéó šţóþš àţ: {stage} one ]",
   "introductionTheirs": "[{name} íñţŕóđúçéđ ţĥéɱšéĺṽéš one two]",
   "introductionYours": "[Ýóú íñţŕóđúçéđ ýóúŕšéĺƒ one tw]",
   "callVideoButton": "[Ṽíđéó çàĺĺ on]",

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -19,6 +21,19 @@ abstract class VideoTexture {
 Future<VideoTexture?> Function(int? stream) showTile = _show;
 
 const _channel = MethodChannel('dsip/video');
+
+/// The size of the picture on call [stream]'s tile (or the self-view's, `null`), once it has one. Tests set it.
+Size? Function(int? stream) tileShape = _shape;
+
+Size? _shape(int? stream) {
+  try {
+    final info = rust.tileInfo(stream: stream);
+    if (info == null || info.width == 0 || info.height == 0) return null;
+    return Size(info.width.toDouble(), info.height.toDouble());
+  } catch (_) {
+    return null;
+  }
+}
 
 Future<VideoTexture?> _show(int? stream) async {
   final Map<Object?, Object?>? made;
@@ -58,14 +73,18 @@ class _Texture implements VideoTexture {
   }
 }
 
-/// A call's picture ([stream], its id) or this side's camera (`null`), filling its box, the picture's own shape kept;
-/// a dark box until a picture comes, or where the app cannot show one.
+/// A call's picture ([stream], its id) or this side's camera (`null`), in its box, the picture's own shape kept (a
+/// phone held upright sends a tall one): fitted whole, dark around it; a dark box until a picture comes, or where the
+/// app cannot show one.
 class VideoTile extends StatefulWidget {
-  const VideoTile({super.key, required this.stream, this.mirror = false});
+  const VideoTile({super.key, required this.stream, this.mirror = false, this.onAspect});
   final int? stream;
 
   /// Shown as in a mirror: the self-view.
   final bool mirror;
+
+  /// Told the picture's width over its height, when it is first known and whenever it changes (a phone turned).
+  final ValueChanged<double>? onAspect;
 
   @override
   State<VideoTile> createState() => _VideoTileState();
@@ -74,6 +93,10 @@ class VideoTile extends StatefulWidget {
 class _VideoTileState extends State<VideoTile> {
   VideoTexture? _texture;
   bool _gone = false;
+  Size? _size;
+
+  /// The picture's size asked for twice a second, while there is a texture: it changes when the far end turns.
+  Timer? _shape;
 
   @override
   void initState() {
@@ -83,13 +106,23 @@ class _VideoTileState extends State<VideoTile> {
         t?.close();
       } else if (t != null) {
         setState(() => _texture = t);
+        _measure();
+        _shape = Timer.periodic(const Duration(milliseconds: 500), (_) => _measure());
       }
     });
+  }
+
+  void _measure() {
+    final size = tileShape(widget.stream);
+    if (size == null || size == _size || !mounted) return;
+    setState(() => _size = size);
+    widget.onAspect?.call(size.width / size.height);
   }
 
   @override
   void dispose() {
     _gone = true;
+    _shape?.cancel();
     _texture?.close();
     super.dispose();
   }
@@ -97,7 +130,11 @@ class _VideoTileState extends State<VideoTile> {
   @override
   Widget build(BuildContext context) {
     final texture = _texture;
+    final size = _size;
     Widget picture = texture == null ? const SizedBox.expand() : Texture(textureId: texture.textureId);
+    if (texture != null && size != null) {
+      picture = Center(child: AspectRatio(aspectRatio: size.width / size.height, child: picture));
+    }
     if (widget.mirror) picture = Transform.flip(flipX: true, child: picture);
     return ColoredBox(color: Colors.black, child: picture);
   }

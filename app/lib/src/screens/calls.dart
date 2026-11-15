@@ -203,6 +203,15 @@ class _LiveCall extends StatelessWidget {
               for (final e in [?n.micError, ?n.speakerError])
                 Text(e, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
+            // where the call's picture stops on this device, when a stage stalls
+            if (call.pictures case final p? when p.stalled != null) ...[
+              Text(
+                s.callPictures(p.captured, p.sent, p.received, p.shown),
+                key: Key('call-pictures-${call.id}'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              Text(s.callPicturesStalled(p.stalled!), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
             if (call.video && call.state.answered) ...[
               const SizedBox(height: 12),
               _VideoArea(key: Key('video-${call.id}'), call: call, controller: controller),
@@ -248,9 +257,11 @@ class _LiveCall extends StatelessWidget {
   }
 }
 
-/// A video call's pictures: the far end's, and this side's camera in a corner while it sends; at most 240 high, 4:3,
-/// so the call's card stays a card. On a phone the camera is asked for when the call starts showing video, and turned
-/// on once allowed (the core starts it with the call, which fails while the system has not said yes).
+/// A video call's pictures: the far end's, in its own shape (a phone held upright sends a tall picture, a PC a wide
+/// one; 4:3 until the first comes), at most 40% of the window high (240 to 540) so the call's card stays a card; this side's camera
+/// in a corner while it sends, in its own shape. On a phone the camera is asked for when the call starts showing
+/// video, and turned on once allowed (the core starts it with the call, which fails while the system has not said
+/// yes).
 class _VideoArea extends StatefulWidget {
   const _VideoArea({super.key, required this.call, required this.controller});
   final CallView call;
@@ -261,6 +272,13 @@ class _VideoArea extends StatefulWidget {
 }
 
 class _VideoAreaState extends State<_VideoArea> {
+  /// The far end's picture's width over its height, and the self-view's.
+  double _far = 4 / 3;
+  double _self = 4 / 3;
+
+  /// The self-view's longer side.
+  static const _selfSide = 96.0;
+
   @override
   void initState() {
     super.initState();
@@ -274,20 +292,31 @@ class _VideoAreaState extends State<_VideoArea> {
 
   @override
   Widget build(BuildContext context) {
-    final far = VideoTile(key: const Key('video-far'), stream: widget.call.id);
-    const self = VideoTile(key: Key('video-self'), stream: null, mirror: true);
+    final far = VideoTile(
+      key: const Key('video-far'),
+      stream: widget.call.id,
+      onAspect: (a) => setState(() => _far = a),
+    );
+    final self = VideoTile(
+      key: const Key('video-self'),
+      stream: null,
+      mirror: true,
+      onAspect: (a) => setState(() => _self = a),
+    );
+    final (selfWidth, selfHeight) = _self >= 1 ? (_selfSide, _selfSide / _self) : (_selfSide * _self, _selfSide);
+    final maxHeight = (MediaQuery.sizeOf(context).height * 0.4).clamp(240.0, 540.0);
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 240),
+        constraints: BoxConstraints(maxHeight: maxHeight),
         child: AspectRatio(
-          aspectRatio: 4 / 3,
+          aspectRatio: _far,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Stack(
               children: [
                 Positioned.fill(child: far),
-                if (widget.call.camera) const Positioned(right: 8, bottom: 8, width: 80, height: 60, child: self),
+                if (widget.call.camera) Positioned(right: 8, bottom: 8, width: selfWidth, height: selfHeight, child: self),
               ],
             ),
           ),

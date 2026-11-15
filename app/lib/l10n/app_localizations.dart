@@ -487,6 +487,18 @@ abstract class Strings {
   /// **'Sound stops at: {stage}'**
   String callSoundStalled(String stage);
 
+  /// A video call's pictures counted on this device, stage by stage, to find where they stop: pictures from the camera, frames sent, frames received from the other side, pictures shown.
+  ///
+  /// In en, this message translates to:
+  /// **'Video: camera {captured} · sent {sent} · received {received} · shown {shown}'**
+  String callPictures(int captured, int sent, int received, int shown);
+
+  /// Shown when a stage of a call's video stopped counting: stage is the counter's name, untranslated (captured, sent or shown).
+  ///
+  /// In en, this message translates to:
+  /// **'Video stops at: {stage}'**
+  String callPicturesStalled(String stage);
+
   /// Heading of the introduction a new contact sent, shown on top of the conversation with them once accepted; its text follows.
   ///
   /// In en, this message translates to:

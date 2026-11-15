@@ -1784,6 +1784,7 @@ dependencies = [
  "anyhow",
  "apple-native-keyring-store",
  "argon2",
+ "async-trait",
  "audiopus",
  "bytes",
  "chacha20poly1305",

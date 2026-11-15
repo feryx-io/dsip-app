@@ -44,6 +44,7 @@ fn state() -> State {
         }),
         video: id == 2,
         camera: id == 2,
+        pictures: None,
     };
     for c in [
         call(1, CallState::Ended { reason: "user.hangup".into() }, Direction::Outgoing, None),

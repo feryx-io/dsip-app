@@ -263,6 +263,23 @@ void main() {
     expect(mobile.proximity, [true, false, true, false]);
   });
 
+  testWidgets("a video call's audio goes to the speaker, once, and the screen stays on", (tester) async {
+    final mobile = FakeMobile()..routes = phoneOnly;
+    await open(tester, mobile);
+    expect(mobile.proximity, [true]);
+    // the answered call turns out to carry video: held out to be seen, not at the ear (a screen gone off would take
+    // the camera away)
+    client.push(calls((c) => c['id'] == 2 ? {...c, 'video': true} : c));
+    await tester.pumpAndSettle();
+    expect(mobile.routeSets, [AudioRoute.speaker]);
+    expect(mobile.proximity.last, isFalse);
+    // the user takes it back to the earpiece: not moved again
+    mobile.route(phoneOnly);
+    await tester.pumpAndSettle();
+    expect(mobile.routeSets, [AudioRoute.speaker]);
+    expect(mobile.proximity.last, isFalse);
+  });
+
   testWidgets('a call only ringing in does not turn the screen off', (tester) async {
     final mobile = FakeMobile()..routes = phoneOnly;
     await open(tester, mobile);

@@ -121,6 +121,23 @@
       "stage": {"type": "String", "example": "played"}
     }
   },
+  "callPictures": "Video: camera {captured} · sent {sent} · received {received} · shown {shown}",
+  "@callPictures": {
+    "description": "A video call's pictures counted on this device, stage by stage, to find where they stop: pictures from the camera, frames sent, frames received from the other side, pictures shown.",
+    "placeholders": {
+      "captured": {"type": "int"},
+      "sent": {"type": "int"},
+      "received": {"type": "int"},
+      "shown": {"type": "int"}
+    }
+  },
+  "callPicturesStalled": "Video stops at: {stage}",
+  "@callPicturesStalled": {
+    "description": "Shown when a stage of a call's video stopped counting: stage is the counter's name, untranslated (captured, sent or shown).",
+    "placeholders": {
+      "stage": {"type": "String", "example": "captured"}
+    }
+  },
   "introductionTheirs": "{name} introduced themselves",
   "@introductionTheirs": {
     "description": "Heading of the introduction a new contact sent, shown on top of the conversation with them once accepted; its text follows.",

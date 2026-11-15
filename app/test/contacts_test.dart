@@ -116,7 +116,8 @@ void main() {
   });
 
   testWidgets('a call in the history is called back, deleted, and the history cleared', (tester) async {
-    await open(tester, 'Calls');
+    // tall enough for the history under the fixture's video call
+    await open(tester, 'Calls', size: const Size(1200, 1400));
     const missed = '01M6BTTMQ9QMKY9SYTY8415VZ9';
     final tile = find.byKey(const Key('history-$missed'));
     expect(find.descendant(of: tile, matching: find.textContaining('Missed')), findsOneWidget);

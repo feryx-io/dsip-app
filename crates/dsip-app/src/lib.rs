@@ -51,7 +51,7 @@ pub use messaging::MessagingConfig;
 pub use settings::{init_identity, Mailbox, Settings};
 pub use wake::WakeConfig;
 pub use state::{
-    Audio as AudioState, AudioDevice, CallRecord, CallSound, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
+    Audio as AudioState, AudioDevice, CallPictures, CallRecord, CallSound, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
     Messaging, PresenceState, PresenceView, Push, RecordingView, Registration, RequestView, State, Voice,
 };
 
@@ -903,6 +903,7 @@ impl App {
             sound: None,
             video: false,
             camera: false,
+            pictures: None,
         };
         self.publish(Change::CallAdded { call: view });
         let app = self.clone();
@@ -912,6 +913,9 @@ impl App {
             // the sound's last counts, a second apart, and whether they were the call's (not the ringback's); the stage stalled
             let mut counted: (bool, std::collections::VecDeque<CallSound>) = (false, std::collections::VecDeque::new());
             let mut stalled: Option<String> = None;
+            // the same for its pictures, while it has video
+            let mut seen: std::collections::VecDeque<CallPictures> = std::collections::VecDeque::new();
+            let mut pictures_stalled: Option<String> = None;
             let mut has_audio = false;
             let mut has_video = false;
             let mut was_answered = false;
@@ -996,10 +1000,30 @@ impl App {
                             counted.1.push_back(now.clone());
                             now.stalled = stalled.clone();
                         }
+                        // the camera back where it stopped (a phone takes it from an app off the screen), every two seconds
+                        if has_video && ticks.is_multiple_of(8) {
+                            if let Some(v) = &app.inner.video {
+                                v.heal(id);
+                            }
+                        }
                         let camera = app.inner.video.as_ref().is_some_and(|v| v.sending_to(id));
+                        // the pictures' counters about once a second, and the stage that stalled over the last two
+                        let pictures = match &app.inner.video {
+                            Some(v) if has_video && ticks.is_multiple_of(4) => {
+                                let mut now = v.pictures(id);
+                                if seen.len() == 2 {
+                                    pictures_stalled = seen.pop_front().and_then(|b| now.stall(&b, camera)).map(String::from);
+                                }
+                                seen.push_back(now.clone());
+                                now.stalled = pictures_stalled.clone();
+                                Some(now)
+                            }
+                            _ => None,
+                        };
                         let differs = app.inner.state.lock().unwrap_or_else(|e| e.into_inner()).calls.get(&id)
                             .is_some_and(|v| v.media != media || v.error != err || v.video != video || v.camera != camera
-                                || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s)));
+                                || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s))
+                                || pictures.as_ref().is_some_and(|p| v.pictures.as_ref() != Some(p)));
                         if differs {
                             app.update(id, |v| {
                                 v.media = media;
@@ -1008,6 +1032,9 @@ impl App {
                                 v.error = err;
                                 if sound.is_some() {
                                     v.sound = sound;
+                                }
+                                if pictures.is_some() {
+                                    v.pictures = pictures;
                                 }
                             });
                         }
