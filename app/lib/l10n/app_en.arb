@@ -121,6 +121,10 @@
       "stage": {"type": "String", "example": "played"}
     }
   },
+  "callFullScreen": "Full screen",
+  "@callFullScreen": {"description": "Button on a video call's picture: show the call filling the screen."},
+  "callExitFullScreen": "Exit full screen",
+  "@callExitFullScreen": {"description": "Button on a video call shown full screen: back to the app."},
   "callPictures": "Video: camera {captured} · sent {sent} · received {received} · shown {shown}",
   "@callPictures": {
     "description": "A video call's pictures counted on this device, stage by stage, to find where they stop: pictures from the camera, frames sent, frames received from the other side, pictures shown.",

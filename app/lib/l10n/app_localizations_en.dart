@@ -234,6 +234,12 @@ class StringsEn extends Strings {
   }
 
   @override
+  String get callFullScreen => 'Full screen';
+
+  @override
+  String get callExitFullScreen => 'Exit full screen';
+
+  @override
   String callPictures(int captured, int sent, int received, int shown) {
     return 'Video: camera $captured · sent $sent · received $received · shown $shown';
   }
@@ -1391,6 +1397,12 @@ class StringsEnXa extends StringsEn {
   String callSoundStalled(String stage) {
     return '[Šóúñđ šţóþš àţ: $stage one ]';
   }
+
+  @override
+  String get callFullScreen => '[Ƒúĺĺ šçŕééñ on]';
+
+  @override
+  String get callExitFullScreen => '[Éẋíţ ƒúĺĺ šçŕééñ one]';
 
   @override
   String callPictures(int captured, int sent, int received, int shown) {

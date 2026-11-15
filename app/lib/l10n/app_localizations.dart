@@ -487,6 +487,18 @@ abstract class Strings {
   /// **'Sound stops at: {stage}'**
   String callSoundStalled(String stage);
 
+  /// Button on a video call's picture: show the call filling the screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get callFullScreen;
+
+  /// Button on a video call shown full screen: back to the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get callExitFullScreen;
+
   /// A video call's pictures counted on this device, stage by stage, to find where they stop: pictures from the camera, frames sent, frames received from the other side, pictures shown.
   ///
   /// In en, this message translates to:

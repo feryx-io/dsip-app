@@ -4,7 +4,8 @@
 // it hands the last two to Rust, whose video threads call
 // `DsipVideoPresent` with each picture as RGBA. Dart detaches it from Rust
 // before it asks to `dispose` of the texture, so the function is never
-// called on a texture that has gone.
+// called on a texture that has gone. `fullScreen` {on} takes the window
+// over its monitor for a video call, and gives it back.
 
 #include "video_texture.h"
 
@@ -62,7 +63,8 @@ extern "C" void DsipVideoPresent(void* handle, const uint8_t* rgba,
   texture->registrar->MarkTextureFrameAvailable(texture->id);
 }
 
-VideoTextures::VideoTextures(flutter::FlutterEngine* engine) {
+VideoTextures::VideoTextures(flutter::FlutterEngine* engine, HWND window)
+    : window_(window) {
   auto* registrar =
       flutter::PluginRegistrarManager::GetInstance()
           ->GetRegistrar<flutter::PluginRegistrarWindows>(
@@ -110,10 +112,52 @@ VideoTextures::VideoTextures(flutter::FlutterEngine* engine) {
             registrar_->UnregisterTexture(id, [kept]() {});
           }
           result->Success();
+        } else if (call.method_name() == "fullScreen") {
+          const auto* args =
+              std::get_if<flutter::EncodableMap>(call.arguments());
+          bool on = false;
+          if (args) {
+            auto found = args->find(flutter::EncodableValue("on"));
+            if (found != args->end()) {
+              if (const auto* b = std::get_if<bool>(&found->second)) {
+                on = *b;
+              }
+            }
+          }
+          SetFullScreen(on);
+          result->Success();
         } else {
           result->NotImplemented();
         }
       });
+}
+
+// The window without its frame over the whole of its monitor; back, its
+// frame and place as they were.
+void VideoTextures::SetFullScreen(bool on) {
+  if (!window_ || on == full_screen_) {
+    return;
+  }
+  if (on) {
+    MONITORINFO monitor = {sizeof(MONITORINFO)};
+    if (!GetWindowPlacement(window_, &placement_) ||
+        !GetMonitorInfo(MonitorFromWindow(window_, MONITOR_DEFAULTTONEAREST),
+                        &monitor)) {
+      return;
+    }
+    style_ = GetWindowLongPtr(window_, GWL_STYLE);
+    SetWindowLongPtr(window_, GWL_STYLE, style_ & ~WS_OVERLAPPEDWINDOW);
+    const RECT& r = monitor.rcMonitor;
+    SetWindowPos(window_, HWND_TOP, r.left, r.top, r.right - r.left,
+                 r.bottom - r.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+  } else {
+    SetWindowLongPtr(window_, GWL_STYLE, style_);
+    SetWindowPlacement(window_, &placement_);
+    SetWindowPos(window_, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER |
+                     SWP_FRAMECHANGED);
+  }
+  full_screen_ = on;
 }
 
 VideoTextures::~VideoTextures() {
