@@ -10,6 +10,7 @@ import '../mobile/platform.dart';
 import 'confirm.dart';
 import 'name_dialog.dart';
 import 'reasons.dart';
+import 'video_full_screen.dart';
 import 'video_tile.dart';
 
 /// Calls: place one to an identity, answer or decline one ringing here, hang up, mute; the history below, each call in
@@ -272,6 +273,8 @@ class _VideoArea extends StatefulWidget {
 }
 
 class _VideoAreaState extends State<_VideoArea> {
+  void _full(BuildContext context) => showVideoFullScreen(context, widget.controller, widget.call.id);
+
   /// The far end's picture's width over its height, and the self-view's.
   double _far = 4 / 3;
   double _self = 4 / 3;
@@ -291,7 +294,14 @@ class _VideoAreaState extends State<_VideoArea> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<int?>(
+    valueListenable: fullScreenCall,
+    // shown full screen: not here as well (one texture per tile)
+    builder: (context, full, _) => full == widget.call.id ? const SizedBox.shrink() : _area(context),
+  );
+
+  Widget _area(BuildContext context) {
+    final s = Strings.of(context);
     final far = VideoTile(
       key: const Key('video-far'),
       stream: widget.call.id,
@@ -315,8 +325,21 @@ class _VideoAreaState extends State<_VideoArea> {
             borderRadius: BorderRadius.circular(8),
             child: Stack(
               children: [
-                Positioned.fill(child: far),
+                Positioned.fill(
+                  child: GestureDetector(onDoubleTap: () => _full(context), child: far),
+                ),
                 if (widget.call.camera) Positioned(right: 8, bottom: 8, width: selfWidth, height: selfHeight, child: self),
+                Positioned(
+                  right: 4,
+                  top: 4,
+                  child: IconButton(
+                    key: Key('video-full-${widget.call.id}'),
+                    tooltip: s.callFullScreen,
+                    style: IconButton.styleFrom(backgroundColor: Colors.black45, foregroundColor: Colors.white),
+                    onPressed: () => _full(context),
+                    icon: const Icon(Icons.fullscreen),
+                  ),
+                ),
               ],
             ),
           ),

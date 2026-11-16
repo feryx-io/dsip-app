@@ -25,7 +25,7 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
-  video_ = std::make_unique<VideoTextures>(flutter_controller_->engine());
+  video_ = std::make_unique<VideoTextures>(flutter_controller_->engine(), GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
