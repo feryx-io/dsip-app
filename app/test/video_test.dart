@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dsip_app/src/app.dart';
 import 'package:dsip_app/src/controller.dart';
+import 'package:dsip_app/src/screens/video_full_screen.dart';
 import 'package:dsip_app/src/screens/video_tile.dart';
 import 'package:dsip_app/src/settings.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ void main() {
     dir = Directory.systemTemp.createTempSync('dsip-app-test');
     client = FakeClient();
     shown.clear();
+    fullScreenCall.value = null;
     showTile = (stream) async {
       shown.add(stream);
       return null; // no plugin: a dark box
@@ -74,6 +76,41 @@ void main() {
     final self = tester.getSize(find.byKey(const Key('video-self')));
     expect(self.width / self.height, closeTo(640 / 480, 0.01), reason: "this side's own camera");
     expect(find.byType(Texture), findsNWidgets(2));
+  });
+
+  testWidgets('a video call goes full screen, its buttons there, and comes back', (tester) async {
+    final full = <bool>[];
+    setFullScreen = (on) async => full.add(on);
+    await open(tester);
+    await tester.tap(find.byKey(const Key('video-full-2')));
+    await tester.pumpAndSettle();
+    expect(find.byType(VideoFullScreen), findsOneWidget);
+    expect(full, [true], reason: 'the window taken');
+    expect(find.byKey(const Key('video-far')), findsNothing, reason: "the card's picture gives way: one texture a tile");
+    expect(find.byKey(const Key('full-far')), findsOneWidget);
+    expect(find.byKey(const Key('full-self')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('full-mute')));
+    await tester.pump();
+    expect(client.commands.last, {'command': 'unmute', 'call': 2}, reason: "the fixture's call is muted");
+    await tester.tap(find.byKey(const Key('full-leave')));
+    await tester.pumpAndSettle();
+    expect(find.byType(VideoFullScreen), findsNothing);
+    expect(full, [true, false]);
+    expect(find.byKey(const Key('video-far')), findsOneWidget, reason: 'back on the card');
+  });
+
+  testWidgets('a call that ends leaves full screen by itself', (tester) async {
+    setFullScreen = (_) async {};
+    await open(tester);
+    await tester.tap(find.byKey(const Key('video-full-2')));
+    await tester.pumpAndSettle();
+    final state = fixture()['state'] as Map<String, dynamic>;
+    for (final c in (state['calls'] as List).cast<Map<String, dynamic>>()) {
+      if (c['id'] == 2) c['state'] = {'state': 'ended', 'reason': 'user.hangup'};
+    }
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.byType(VideoFullScreen), findsNothing);
   });
 
   testWidgets('on a phone, a video call asks for the camera first', (tester) async {
