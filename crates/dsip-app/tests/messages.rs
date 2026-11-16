@@ -73,18 +73,25 @@ async fn hints_node() -> String {
 
 /// A mailbox enrolling identities that bind, on 127.0.0.1 under the shared test certificate.
 async fn mailbox(dir: &Path, name: &str, tls: &tokio_rustls::TlsAcceptor, hints: &str) -> (String, String) {
+    let (did, url, _) = mailbox_with(dir, name, tls, hints, false).await;
+    (did, url)
+}
+
+/// [`mailbox`], enrolling only by admission code when `admission` (M§4.1, spec-gap 185); the server issues them.
+async fn mailbox_with(dir: &Path, name: &str, tls: &tokio_rustls::TlsAcceptor, hints: &str, admission: bool) -> (String, String, MailboxServer) {
     let tcp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = tcp.local_addr().unwrap().port();
     let mut cfg = MailboxConfig::new(dir.join(name), format!("https://127.0.0.1:{port}/blobs"));
     cfg.serve_any = Some(4);
     cfg.hints_nodes = vec![hints.to_string()];
     cfg.ca = Some(dir.join("cert.pem"));
+    cfg.admission = admission;
     let server = MailboxServer::open(cfg).unwrap();
     server.spawn_tasks();
     let did = server.did().to_string();
-    let acceptor = tls.clone();
-    tokio::spawn(async move { server.serve_tls(tcp, acceptor).await });
-    (did, format!("wss://127.0.0.1:{port}/dsip"))
+    let (acceptor, serving) = (tls.clone(), server.clone());
+    tokio::spawn(async move { serving.serve_tls(tcp, acceptor).await });
+    (did, format!("wss://127.0.0.1:{port}/dsip"), server)
 }
 
 async fn app(net: &Network, dir: &Path, name: &str, mailbox: (String, String), hints: &str) -> App {
@@ -245,6 +252,54 @@ async fn introduced_granted_messaged_and_answered_through_mailboxes_found_by_hin
     until(&alice, "the conversation listed again", |s| s.messaging.conversations.iter().any(|c| c.group == conversation)).await;
     let texts: Vec<_> = thread(&alice, &conversation).await.into_iter().filter_map(|m| m.text).collect();
     assert_eq!(texts, ["still there?"], "only what came after");
+    alice.stop().await;
+    bob.stop().await;
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A mailbox that enrols only by admission code: the app says it needs one, refuses a wrong one without enrolling,
+/// enrols with the code the operator issued, and then messages as on any mailbox (M§4.1, spec-gap 185).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_mailbox_enrolling_by_code_asks_for_it_then_serves() {
+    let dir = std::env::temp_dir().join(format!("dsip-app-admission-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(&dir, &["127.0.0.1".into(), "localhost".into()]).unwrap();
+    let tls = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    let hints = hints_node().await;
+    let net = Network::new();
+    let (did, url, server) = mailbox_with(&dir, "mailbox-a", &tls, &hints, true).await;
+    let alice = app(&net, &dir, "Alice", (did, url), &hints).await;
+    let bob = app(&net, &dir, "Bob", mailbox(&dir, "mailbox-b", &tls, &hints).await, &hints).await;
+    let (alice_did, bob_did) = (alice.state().me.identity, bob.state().me.identity);
+
+    until(&alice, "Alice asked for a code", |s| s.messaging.admission.as_deref() == Some("required")).await;
+    assert!(matches!(alice.command(Command::Admit { code: "  ".into() }).await, Response::Error { .. }), "no code");
+    assert!(matches!(alice.command(Command::Admit { code: "not-a-code".into() }).await, Response::Error { .. }));
+    assert_eq!(alice.state().messaging.admission.as_deref(), Some("refused"));
+    let enrolled = |v: Value| v["enrolled"].as_array().map(Vec::len).unwrap_or(0);
+    assert_eq!(enrolled(server.admin("enrolments", &[], false).await), 0, "nobody enrolled");
+
+    let code = server.admin("admission-new", &[("spec", "1")], true).await["code"].as_str().unwrap().to_string();
+    assert_eq!(alice.command(Command::Admit { code: format!(" {code}\n") }).await, Response::Ok, "pasted, with spaces");
+    assert_eq!(alice.state().messaging.admission, None);
+    assert_eq!(enrolled(server.admin("enrolments", &[], false).await), 1, "Alice, by the code");
+    until(&bob, "Bob bound", |s| s.messaging.connected).await;
+    tokio::time::sleep(Duration::from_millis(500)).await; // each has published its hint once bound
+
+    // Bob, on an open mailbox, reaches Alice on hers; she grants and he is told
+    let mut b_changes = bob.subscribe();
+    let r = bob.command(Command::Introduce { to: alice_did.clone(), purpose: "hello from Bob".into(), name: Some("Alice".into()) }).await;
+    assert_eq!(r, Response::Ok);
+    until(&alice, "Alice sees the request", |s| s.messaging.requests.iter().any(|q| q.from == bob_did)).await;
+    let request = alice.state().messaging.requests[0].clone();
+    assert_eq!(alice.command(Command::AcceptRequest { id: request.id }).await, Response::Ok);
+    let by = next(&mut b_changes, "Bob's grant", |c| match c {
+        Change::Granted { by } => Some(by.clone()),
+        _ => None,
+    })
+    .await;
+    assert_eq!(by, alice_did);
     alice.stop().await;
     bob.stop().await;
     let _ = std::fs::remove_dir_all(&dir);
