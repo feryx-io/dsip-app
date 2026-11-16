@@ -146,8 +146,9 @@ impl Video {
         let (received, counters) = (self.received.clone(), self.counters.clone());
         counters.received.store(0, Ordering::Relaxed);
         let task = tokio::spawn(async move {
+            // what came before this, the call's own first frames and its keyframe among them: the far end sends the
+            // next keyframe only when asked, and its leg asks only for one it lost (the last call's are gone, `stop`)
             let mut received = received.lock().await;
-            while received.try_recv().is_ok() {} // a call before this one's
             while let Some(f) = received.recv().await {
                 counters.received.fetch_add(1, Ordering::Relaxed);
                 let now = Instant::now();
@@ -255,6 +256,14 @@ impl Video {
         }
         if self.showing.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|(c, _)| *c == id) {
             self.stop_showing();
+            // its frames still on the way, not the next call's to show (once the aborted task lets go of them)
+            let received = self.received.clone();
+            if let Ok(rt) = tokio::runtime::Handle::try_current() {
+                rt.spawn(async move {
+                    let mut received = received.lock().await;
+                    while received.try_recv().is_ok() {}
+                });
+            }
         }
     }
 
@@ -372,6 +381,50 @@ mod tests {
         video.stop_sending();
         assert!(!video.sending_to(1));
         assert!(!video.heal(1));
+    }
+
+    /// The far end's camera: what the leg hands this side, first frame a keyframe.
+    async fn far_frames(n: usize) -> Vec<VideoFrame> {
+        let cfg = SendConfig { codec: VideoCodec::H264, kind: VideoKind::Camera, camera: None, max: MAX, kbps: START_KBPS,
+                               fps: FPS, encodings: vec![EncodingId(0)] };
+        let mut camera = SyntheticVideoHost::new(&[VideoCodec::H264]).start_send(cfg).unwrap();
+        let mut frames = vec![];
+        for _ in 0..n {
+            let (_, f) = camera.next_frame().await.unwrap();
+            frames.push(VideoFrame { data: f.data, keyframe: f.keyframe, timestamp: 0 });
+        }
+        frames
+    }
+
+    #[tokio::test]
+    async fn a_call_is_shown_from_its_first_keyframe_however_late_it_is_shown() {
+        let host = SyntheticVideoHost::new(&[VideoCodec::H264]);
+        let video = Video::with_host(Arc::new(host.clone()));
+        // the leg hands over the far end's first frames before the call's poll sees its video and shows it; its
+        // keyframe among them: the far end sends the next only when asked, and nothing asks
+        let frames = far_frames(8).await;
+        for f in &frames[..5] {
+            video.sink.send(f.clone()).unwrap();
+        }
+        video.show(1).unwrap();
+        for f in &frames[5..] {
+            video.sink.send(f.clone()).unwrap();
+        }
+        let shown = |id| host.record().received.get(&stream(id)).map(|s| s.frames.clone()).unwrap_or_default();
+        until("all eight", || shown(1).len() == 8).await;
+        assert!(shown(1)[0].1, "from the keyframe: {:?}", shown(1));
+        // the call over with frames of it still queued: not the next call's to show
+        video.stop_showing();
+        for f in &frames[5..] {
+            video.sink.send(f.clone()).unwrap();
+        }
+        // (its picture's task already gone, as an aborted one is, when `stop` comes)
+        *video.showing.lock().unwrap() = Some((1, tokio::spawn(async {})));
+        video.stop(1);
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        video.show(2).unwrap();
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(shown(2).is_empty(), "the last call's frames: {:?}", shown(2));
     }
 
     #[test]
