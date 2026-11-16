@@ -59,6 +59,39 @@ void main() {
     expect(shortDid('did:key:z6MkBob'), 'did:key:z6MkBob');
   });
 
+  testWidgets("a mailbox that wants an admission code asks for it, and the code is sent", (tester) async {
+    (state['messaging'] as Map<String, dynamic>)['admission'] = 'required';
+    await open(tester);
+    expect(find.byKey(const Key('admission')), findsOneWidget);
+    expect(find.textContaining('needs an admission code'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('admission-code')), '  kq7J1mZt0pXy4bQe9vRn2A ');
+    await tester.tap(find.byKey(const Key('admission-submit')));
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'admit', 'code': 'kq7J1mZt0pXy4bQe9vRn2A'});
+  });
+
+  testWidgets('a code the mailbox refuses says why', (tester) async {
+    (state['messaging'] as Map<String, dynamic>)['admission'] = 'required';
+    client.answer = (cmd) => {'response': 'error', 'message': 'the mailbox did not accept that code'};
+    await open(tester);
+    await tester.enterText(find.byKey(const Key('admission-code')), 'nope');
+    await tester.tap(find.byKey(const Key('admission-submit')));
+    await tester.pumpAndSettle();
+    expect(find.text('the mailbox did not accept that code'), findsOneWidget);
+    // the core then says the code was refused
+    (state['messaging'] as Map<String, dynamic>)['admission'] = 'refused';
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('did not accept that code. Check it'), findsOneWidget);
+  });
+
+  testWidgets('a full mailbox says so, with no field to try', (tester) async {
+    (state['messaging'] as Map<String, dynamic>)['admission'] = 'full';
+    await open(tester);
+    expect(find.textContaining('mailbox is full'), findsOneWidget);
+    expect(find.byKey(const Key('admission-code')), findsNothing);
+  });
+
   testWidgets('a request not named by the user says the name it offers', (tester) async {
     state.remove('names');
     await open(tester);

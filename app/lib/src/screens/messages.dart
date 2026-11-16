@@ -153,7 +153,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
     c.visibleConversation = open?.group;
     final list = ListView(
             children: [
-              if (!m.connected)
+              if (m.admission case final why?)
+                AdmissionBanner(why: why, controller: c)
+              else if (!m.connected)
                 MaterialBanner(content: Text(s.messagingOffline), actions: const [SizedBox.shrink()]),
               Padding(
                 padding: const EdgeInsets.all(8),
@@ -706,3 +708,75 @@ class _Bubble extends StatelessWidget {
 }
 
 /// A dialog of text fields; pops their values, trimmed, once every one is filled.
+
+/// The mailbox enrols only by admission code and does not serve this identity yet (M§4.1, spec-gap 185): why, and a
+/// field for the code its operator gave when the user signed up. Until it is accepted nothing is sent or received.
+class AdmissionBanner extends StatefulWidget {
+  const AdmissionBanner({super.key, required this.why, required this.controller});
+
+  /// `required`, `refused`, `rate-limited` or `full`.
+  final String why;
+  final Controller controller;
+
+  @override
+  State<AdmissionBanner> createState() => _AdmissionBannerState();
+}
+
+class _AdmissionBannerState extends State<AdmissionBanner> {
+  final _code = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final code = _code.text.trim();
+    if (code.isEmpty || _busy) return;
+    setState(() => _busy = true);
+    // a refusal is said as every command's is, and the banner then says why (the state's `admission`)
+    await widget.controller.run({'command': 'admit', 'code': code});
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final text = switch (widget.why) {
+      'refused' => s.admissionRefused,
+      'rate-limited' => s.admissionRateLimited,
+      'full' => s.admissionFull,
+      _ => s.admissionRequired,
+    };
+    final canTry = widget.why != 'full';
+    return MaterialBanner(
+      key: const Key('admission'),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(text),
+          if (canTry) ...[
+            const SizedBox(height: 8),
+            TextField(
+              key: const Key('admission-code'),
+              controller: _code,
+              enabled: !_busy,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: InputDecoration(labelText: s.admissionCode),
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        if (canTry)
+          FilledButton(key: const Key('admission-submit'), onPressed: _busy ? null : _submit, child: Text(s.admissionSubmit))
+        else
+          const SizedBox.shrink(),
+      ],
+    );
+  }
+}

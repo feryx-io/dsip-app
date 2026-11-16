@@ -625,6 +625,42 @@ abstract class Strings {
   /// **'Messaging is off: this app has no mailbox. Add one in its settings to message.'**
   String get messagingOff;
 
+  /// Banner on Messages when the user's mailbox enrols only by admission code (an invitation code from the mailbox's operator) and has not enrolled them yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Your mailbox needs an admission code before it holds your messages. Enter the code you were given when you signed up.'**
+  String get admissionRequired;
+
+  /// Banner on Messages: the admission code was not one the mailbox issued, was already used, or expired.
+  ///
+  /// In en, this message translates to:
+  /// **'The mailbox did not accept that code. Check it, or ask for a new one.'**
+  String get admissionRefused;
+
+  /// Banner on Messages: the mailbox refused too many admission codes from this device and is not looking at more for a while.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many codes tried. Try again in a few minutes.'**
+  String get admissionRateLimited;
+
+  /// Banner on Messages: the mailbox enrols by admission code but has no places left.
+  ///
+  /// In en, this message translates to:
+  /// **'Your mailbox is full: it serves as many people as its operator allows. Contact its operator.'**
+  String get admissionFull;
+
+  /// Label of the field for the mailbox's admission code.
+  ///
+  /// In en, this message translates to:
+  /// **'Admission code'**
+  String get admissionCode;
+
+  /// Button presenting the admission code to the mailbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get admissionSubmit;
+
   /// No description provided for @messagingOffline.
   ///
   /// In en, this message translates to:
