@@ -184,6 +184,11 @@ pub struct Messaging {
     pub mailbox: Option<String>,
     /// Bound to it now.
     pub connected: bool,
+    /// The mailbox enrols only by admission code and does not serve this identity yet (M§4.1, spec-gap 185):
+    /// `required` (no code given yet), `refused` (the code is not one it issued, or is used up or expired),
+    /// `rate-limited` (too many codes refused: try later) or `full` (it serves as many as its operator allows).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub admission: Option<String>,
     /// The conversations this device is in (its identity's personal group left out).
     pub conversations: Vec<ConversationView>,
     /// Introductions waiting for an answer (M§14.1).
@@ -537,6 +542,9 @@ pub enum Change {
         mailbox: Option<String>,
         /// Bound now.
         connected: bool,
+        /// Why the mailbox does not serve this identity yet, where it enrols by admission code ([`Messaging::admission`]).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        admission: Option<String>,
     },
     /// The conversations changed (one added, its members, its pending count).
     Conversations {
@@ -627,9 +635,10 @@ impl State {
             Change::CallAdded { call } | Change::CallChanged { call } => {
                 self.calls.insert(call.id, call.clone());
             }
-            Change::Messaging { mailbox, connected } => {
+            Change::Messaging { mailbox, connected, admission } => {
                 self.messaging.mailbox = mailbox.clone();
                 self.messaging.connected = *connected;
+                self.messaging.admission = admission.clone();
             }
             Change::Conversations { conversations } => self.messaging.conversations = conversations.clone(),
             Change::Requests { requests } => self.messaging.requests = requests.clone(),

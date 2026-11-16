@@ -53,7 +53,7 @@ fn state() -> State {
     ] {
         s.apply(&Change::CallAdded { call: c });
     }
-    s.apply(&Change::Messaging { mailbox: Some("did:key:z6MkMailbox".into()), connected: true });
+    s.apply(&Change::Messaging { mailbox: Some("did:key:z6MkMailbox".into()), connected: true, admission: None });
     s.apply(&Change::Conversations {
         conversations: vec![ConversationView {
             group: "MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk".into(),
