@@ -89,3 +89,26 @@ async fn a_plain_call_carries_no_video() {
             "no camera in an audio call");
     alice.command(Command::Hangup { call: Some(id) }).await;
 }
+
+/// The camera's frames reach every video call, not only the first: a call over lets go of the camera's feed (dsip-media
+/// 0.2.1). Seen on devices: after the first video call, each side saw its own camera, neither the other's.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_second_video_call_carries_frames_too() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let net = Network::new();
+    let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);
+    for round in 1..=2 {
+        let id = call_of(alice.command(Command::Call { to: bob.state().me.identity, video: true }).await);
+        until("Bob's call rings", || bob.state().calls.values().any(|c| c.state == CallState::Ringing)).await;
+        call_of(bob.command(Command::Answer { call: None }).await);
+        until("answered", || answered(&alice) && answered(&bob)).await;
+        let (a0, b0) = (alice.video_frames().unwrap(), bob.video_frames().unwrap());
+        until(&format!("call {round}: frames both ways"), || {
+            let (a, b) = (alice.video_frames().unwrap(), bob.video_frames().unwrap());
+            a.1 >= a0.1 + 10 && b.1 >= b0.1 + 10
+        })
+        .await;
+        alice.command(Command::Hangup { call: Some(id) }).await;
+        until("both ended", || !answered(&alice) && !answered(&bob)).await;
+    }
+}
