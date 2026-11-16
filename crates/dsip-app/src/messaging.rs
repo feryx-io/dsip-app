@@ -87,6 +87,8 @@ pub(crate) enum Req {
     Deliver { to: String, grant: String },
     /// Register with the mailbox to be woken (A5d), or end the registration (`None`).
     Wake { ask: Option<crate::wake::MailboxAsk>, reply: oneshot::Sender<(crate::Registration, Option<crate::wake::Registered>)> },
+    /// Present an admission code to the mailbox (M§4.1, spec-gap 185).
+    Admit { code: String, reply: oneshot::Sender<Response> },
     Stop,
 }
 
@@ -102,6 +104,9 @@ struct AppHost {
     media: PathBuf,
     /// The hints nodes: another identity's mailbox entry, for its voicemail (M§13.2).
     hints: dsip_transport::hints::HintsClient,
+    /// The device's key and the mailbox's DID, for the `mailbox-config` that presents an admission code (M§5.7).
+    device: dsip_core::keys::KeyPair,
+    mailbox: String,
 }
 
 impl Host<SqliteProvider> for AppHost {
@@ -252,7 +257,8 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
         }
     }
     let mut host = AppHost { app: app.clone(), me: identity.clone(), bound: false, auto_tried: Default::default(),
-                             media: cfg.state_dir.join("media"), hints: hints.clone() };
+                             media: cfg.state_dir.join("media"), hints: hints.clone(), device: id.device.clone(),
+                             mailbox: cfg.mailbox.0.clone() };
     app.set_messaging(|m| m.mailbox = Some(cfg.mailbox.0.clone()));
     if let Err(e) = mx.connect(&mut host).await {
         tracing::warn!("messaging: mailbox {}: {e}; redialling", cfg.mailbox.1);
@@ -313,8 +319,12 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
     Ok(())
 }
 
-/// What every binding does: fresh KeyPackages (M§5.5), and a live sync (M§5.4).
+/// What every binding does: fresh KeyPackages (M§5.5), and a live sync (M§5.4); at a mailbox that enrols only by
+/// admission code and does not serve this identity yet, nothing until a code is given ([`admit`]).
 async fn on_bind(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost) {
+    if !admit(mx, host, None).await {
+        return;
+    }
     let now = dsip_transport::now_s() as f64;
     match mx.engine_mut().key_packages_frame(KEY_PACKAGES_PER_BIND, now) {
         Ok(frame) => {
@@ -432,7 +442,73 @@ async fn request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, req: Re
             };
             let _ = reply.send(r);
         }
+        Req::Admit { code, reply } => {
+            let r = if mx.connection().is_none() {
+                Response::error("not connected to the mailbox")
+            } else if admit(mx, host, Some(&code)).await {
+                on_bind(mx, host).await;
+                Response::Ok
+            } else {
+                let why = host.app.state().messaging.admission.unwrap_or_default();
+                Response::error(match why.as_str() {
+                    "refused" => "the mailbox did not accept that code: check it, or ask for a new one",
+                    "rate-limited" => "too many codes tried: try again in a few minutes",
+                    "full" => "the mailbox is full",
+                    _ => "the mailbox did not answer",
+                })
+            };
+            let _ = reply.send(r);
+        }
         Req::Stop => {}
+    }
+}
+
+/// Whether the mailbox serves this identity, where its `hello` says it enrols only by admission code (M§4.1, M§4.3,
+/// spec-gap 185): a `mailbox-config`, with `code` when given, answered `accepted` once it does. The state says why
+/// not, for the screen to ask for a code ([`crate::state::Messaging::admission`]). Elsewhere no question is asked
+/// (§11.4: `admission` goes only to a mailbox that says it takes one) and the answer is yes.
+async fn admit(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, code: Option<&str>) -> bool {
+    let by_code = mx.connection().is_some_and(|c| c.relay.capabilities["mailbox"]["enrolment"] == "admission");
+    if !by_code {
+        host.app.set_messaging(|m| m.admission = None);
+        return true;
+    }
+    let mut fields = json!({"subject": host.me});
+    if let Some(c) = code {
+        fields["admission"] = json!(c);
+    }
+    let now = dsip_transport::now_s();
+    let frame = dsip_messaging::wire::message(&host.device, "mailbox-config", &host.mailbox, now, dsip_messaging::wire::TTL_S, fields).frame();
+    let why = match mx.request(host, &frame).await {
+        Ok(a) if a["type"] == "accepted" => None,
+        Ok(a) => Some(match a["reason"].as_str().unwrap_or_default() {
+            "mailbox.admission-required" => "required",
+            "mailbox.admission-refused" => "refused",
+            "policy.rate-limited" => "rate-limited",
+            "mailbox.not-served" => "full",
+            other => {
+                tracing::warn!("messaging: the mailbox answered the admission {other}");
+                "refused"
+            }
+        }),
+        Err(e) => {
+            tracing::warn!("messaging: asking the mailbox whether it serves us: {e}");
+            return false;
+        }
+    };
+    match why {
+        None => {
+            if code.is_some() {
+                tracing::info!("messaging: enrolled at mailbox {} by admission code", host.mailbox);
+            }
+            host.app.set_messaging(|m| m.admission = None);
+            true
+        }
+        Some(w) => {
+            tracing::info!("messaging: mailbox {} does not serve us yet: {w}", host.mailbox);
+            host.app.set_messaging(|m| m.admission = Some(w.to_string()));
+            false
+        }
     }
 }
 

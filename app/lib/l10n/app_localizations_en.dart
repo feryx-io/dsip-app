@@ -320,6 +320,28 @@ class StringsEn extends Strings {
       'Messaging is off: this app has no mailbox. Add one in its settings to message.';
 
   @override
+  String get admissionRequired =>
+      'Your mailbox needs an admission code before it holds your messages. Enter the code you were given when you signed up.';
+
+  @override
+  String get admissionRefused =>
+      'The mailbox did not accept that code. Check it, or ask for a new one.';
+
+  @override
+  String get admissionRateLimited =>
+      'Too many codes tried. Try again in a few minutes.';
+
+  @override
+  String get admissionFull =>
+      'Your mailbox is full: it serves as many people as its operator allows. Contact its operator.';
+
+  @override
+  String get admissionCode => 'Admission code';
+
+  @override
+  String get admissionSubmit => 'Join';
+
+  @override
   String get messagingOffline =>
       'Not connected to your mailbox: messages go out once it is back.';
 
@@ -1484,6 +1506,28 @@ class StringsEnXa extends StringsEn {
   @override
   String get messagingOff =>
       '[Ḿéššàĝíñĝ íš óƒƒ: ţĥíš àþþ ĥàš ñó ɱàíĺƀóẋ. Àđđ óñé íñ íţš šéţţíñĝš ţó ɱéššàĝé. one two three four ]';
+
+  @override
+  String get admissionRequired =>
+      '[Ýóúŕ ɱàíĺƀóẋ ñééđš àñ àđɱíššíóñ çóđé ƀéƒóŕé íţ ĥóĺđš ýóúŕ ɱéššàĝéš. Éñţéŕ ţĥé çóđé ýóú ŵéŕé ĝíṽéñ ŵĥéñ ýóú šíĝñéđ úþ. one two three four five six se]';
+
+  @override
+  String get admissionRefused =>
+      '[Ţĥé ɱàíĺƀóẋ đíđ ñóţ àççéþţ ţĥàţ çóđé. Çĥéçķ íţ, óŕ àšķ ƒóŕ à ñéŵ óñé. one two three fo]';
+
+  @override
+  String get admissionRateLimited =>
+      '[Ţóó ɱàñý çóđéš ţŕíéđ. Ţŕý àĝàíñ íñ à ƒéŵ ɱíñúţéš. one two thr]';
+
+  @override
+  String get admissionFull =>
+      '[Ýóúŕ ɱàíĺƀóẋ íš ƒúĺĺ: íţ šéŕṽéš àš ɱàñý þéóþĺé àš íţš óþéŕàţóŕ àĺĺóŵš. Çóñţàçţ íţš óþéŕàţóŕ. one two three four five]';
+
+  @override
+  String get admissionCode => '[Àđɱíššíóñ çóđé one]';
+
+  @override
+  String get admissionSubmit => '[Ĵóíñ ]';
 
   @override
   String get messagingOffline =>

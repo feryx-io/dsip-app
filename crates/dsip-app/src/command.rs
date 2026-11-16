@@ -57,6 +57,12 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         call: Option<u64>,
     },
+    /// Present an admission code to the identity's mailbox, which enrols it there (M§4.1, spec-gap 185): given by the
+    /// mailbox's operator when the user signed up. Answers an error saying why when the mailbox refuses it.
+    Admit {
+        /// The code.
+        code: String,
+    },
     /// Ask an identity for permission to message it (M§14.1); it sees a request, and its `accept_request` is the
     /// grant.
     Introduce {

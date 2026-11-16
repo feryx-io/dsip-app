@@ -260,9 +260,14 @@ class Messaging {
     required this.conversations,
     required this.requests,
     this.introduced = const [],
+    this.admission,
   });
   final String? mailbox;
   final bool connected;
+
+  /// The mailbox enrols only by admission code and does not serve this identity yet: `required`, `refused`,
+  /// `rate-limited` or `full` (`dsip-app`'s `Messaging::admission`).
+  final String? admission;
   final List<ConversationView> conversations;
   final List<RequestView> requests;
 
@@ -277,6 +282,7 @@ class Messaging {
     ],
     requests: [for (final r in j['requests'] as List? ?? const []) RequestView.fromJson(r as Map<String, dynamic>)],
     introduced: [for (final i in j['introduced'] as List? ?? const []) Introduced.fromJson(i as Map<String, dynamic>)],
+    admission: j['admission'] as String?,
   );
 }
 

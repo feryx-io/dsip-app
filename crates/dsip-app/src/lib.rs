@@ -437,6 +437,13 @@ impl App {
                 }
                 r
             }
+            Command::Admit { code } => {
+                let code = code.trim().to_string();
+                if code.is_empty() {
+                    return Response::error("no admission code");
+                }
+                self.ask(|reply| messaging::Req::Admit { code, reply }).await
+            }
             Command::ForgetIntroduction { to } => {
                 let mut introduced = self.state().messaging.introduced;
                 let before = introduced.len();
@@ -841,12 +848,12 @@ impl App {
 
     /// Change the messaging state with `f` and publish it.
     pub(crate) fn set_messaging(&self, f: impl FnOnce(&mut Messaging)) {
-        let (mailbox, connected) = {
+        let (mailbox, connected, admission) = {
             let mut s = self.inner.state.lock().unwrap_or_else(|e| e.into_inner());
             f(&mut s.messaging);
-            (s.messaging.mailbox.clone(), s.messaging.connected)
+            (s.messaging.mailbox.clone(), s.messaging.connected, s.messaging.admission.clone())
         };
-        let _ = self.inner.changes.send(Change::Messaging { mailbox, connected });
+        let _ = self.inner.changes.send(Change::Messaging { mailbox, connected, admission });
     }
 
     fn act(&self, call: Option<u64>, pick: Pick, action: Action) -> Response {
