@@ -256,7 +256,7 @@ dependencies = [
 [[package]]
 name = "anvil-audio"
 version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.84#a4605004410ff9bacb5f0265dd325f1bcc024159"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
 dependencies = [
  "anvil-core",
  "async-trait",
@@ -274,7 +274,7 @@ dependencies = [
 [[package]]
 name = "anvil-core"
 version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.84#a4605004410ff9bacb5f0265dd325f1bcc024159"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -317,7 +317,7 @@ dependencies = [
 [[package]]
 name = "anvil-update"
 version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.84#a4605004410ff9bacb5f0265dd325f1bcc024159"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
 dependencies = [
  "futures",
  "reqwest",
@@ -333,7 +333,7 @@ dependencies = [
 [[package]]
 name = "anvil-video"
 version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.84#a4605004410ff9bacb5f0265dd325f1bcc024159"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
 dependencies = [
  "anvil-core",
  "ashpd",
@@ -6942,7 +6942,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.6",
  "windows-sys 0.61.2",
