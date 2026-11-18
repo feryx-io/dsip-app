@@ -321,7 +321,7 @@ impl Video {
 
 impl Video {
     /// What became of the frames call `id` received, for a picture that is not shown: what the leg gave (frames,
-    /// keyframes, the first frame and the last keyframe as [`describe`] has them), then, where the platform's host
+    /// keyframes, the first frame and the last keyframe with their size and NAL unit types), then, where the platform's host
     /// decodes, its sink's and its decoder's own accounts (anvil-video's `Received`).
     pub fn report(&self, id: u64) -> String {
         let c = &self.counters;
