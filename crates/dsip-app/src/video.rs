@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anvil_core::video::host::{
-    CodedFrame, EncodingId, ReceiveConfig, Resolution, SendConfig, StreamId, VideoCodec, VideoHost, VideoKind,
+    CodedFrame, Encoding, EncodingId, ReceiveConfig, Resolution, SendConfig, StreamId, VideoCodec, VideoHost, VideoKind,
 };
 use dsip_media::{VideoFeed, VideoFrame, VideoRequest};
 use tokio::sync::{mpsc, Mutex};
@@ -192,7 +192,7 @@ impl Video {
     fn start_sending(&self, id: u64) -> Result<(), String> {
         self.abort_sending();
         let cfg = SendConfig { codec: VideoCodec::H264, kind: VideoKind::Camera, camera: None, max: MAX, kbps: START_KBPS,
-                               fps: FPS, encodings: vec![EncodingId(0)] };
+                               fps: FPS, encodings: vec![Encoding { id: EncodingId(0), max: MAX, kbps: START_KBPS }] };
         let mut source = self.host.start_send(cfg).map_err(|e| e.to_string())?;
         let (feed, requests, counters) = (self.feed.clone(), self.requests_rx.clone(), self.counters.clone());
         let task = tokio::spawn(async move {
@@ -386,7 +386,7 @@ mod tests {
     /// The far end's camera: what the leg hands this side, first frame a keyframe.
     async fn far_frames(n: usize) -> Vec<VideoFrame> {
         let cfg = SendConfig { codec: VideoCodec::H264, kind: VideoKind::Camera, camera: None, max: MAX, kbps: START_KBPS,
-                               fps: FPS, encodings: vec![EncodingId(0)] };
+                               fps: FPS, encodings: vec![Encoding { id: EncodingId(0), max: MAX, kbps: START_KBPS }] };
         let mut camera = SyntheticVideoHost::new(&[VideoCodec::H264]).start_send(cfg).unwrap();
         let mut frames = vec![];
         for _ in 0..n {
