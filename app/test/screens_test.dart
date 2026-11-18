@@ -345,6 +345,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('call-sound-2')), findsOneWidget);
     expect(find.text('Sound stops at: played'), findsOneWidget);
+    // a picture received and not shown: the counts, where it stops, and the decoder's own account
+    call['pictures'] = {'captured': 60, 'sent': 60, 'received': 60, 'shown': 0, 'stalled': 'shown', 'report': 'leg: 60 frames\nsink: 60 frames'};
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.text('Video stops at: shown'), findsOneWidget);
+    expect(find.byKey(const Key('call-pictures-report-2')), findsOneWidget);
   });
 
   testWidgets('with settings saved, the app starts at once and shows its calls', (tester) async {

@@ -1023,6 +1023,9 @@ impl App {
                                 }
                                 seen.push_back(now.clone());
                                 now.stalled = pictures_stalled.clone();
+                                if now.stalled.as_deref() == Some("shown") {
+                                    now.report = Some(v.report(id));
+                                }
                                 Some(now)
                             }
                             _ => None,
