@@ -255,8 +255,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-audio"
-version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
+version = "0.2.95"
+source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
 dependencies = [
  "anvil-core",
  "async-trait",
@@ -273,8 +273,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-core"
-version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
+version = "0.2.95"
+source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -316,8 +316,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-update"
-version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
+version = "0.2.95"
+source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
 dependencies = [
  "futures",
  "reqwest",
@@ -332,8 +332,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-video"
-version = "0.2.94"
-source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.94#a4605004410ff9bacb5f0265dd325f1bcc024159"
+version = "0.2.95"
+source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
 dependencies = [
  "anvil-core",
  "ashpd",

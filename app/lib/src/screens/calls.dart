@@ -212,6 +212,9 @@ class _LiveCall extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               Text(s.callPicturesStalled(p.stalled!), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              // the decoder's own account, to read off a phone whose log cannot be reached
+              if (p.report case final report?)
+                SelectableText(report, key: Key('call-pictures-report-${call.id}'), style: Theme.of(context).textTheme.bodySmall),
             ],
             if (call.video && call.state.answered) ...[
               const SizedBox(height: 12),

@@ -387,6 +387,10 @@ pub struct CallPictures {
     /// The stage that stopped counting while it should have ([`CallPictures::stall`]): `captured`, `sent` or `shown`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stalled: Option<String>,
+    /// While `shown` is what stalled: what became of the frames received, stage by stage in the decoder's own words
+    /// (`Video::report`). For reading off the screen of a phone whose log cannot be reached.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub report: Option<String>,
 }
 
 impl CallPictures {

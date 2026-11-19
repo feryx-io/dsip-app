@@ -59,6 +59,27 @@ pub struct Video {
 pub(crate) struct Counters {
     pub(crate) sent: AtomicU64,
     pub(crate) received: AtomicU64,
+    /// Of those received, the keyframes; and the first frame and the last keyframe as [`describe`] has them.
+    keyframes: AtomicU64,
+    first: std::sync::Mutex<Option<String>>,
+    keyframe: std::sync::Mutex<Option<String>>,
+}
+
+/// An H.264 frame for [`Video::report`]: its size and its NAL units' types in order (7 and 8 the parameter sets, 5 an
+/// IDR slice, 1 any other, 9 a delimiter, 6 SEI), the first twelve, and its first bytes.
+fn describe(data: &[u8]) -> String {
+    let mut types = Vec::new();
+    let mut i = 0;
+    while i + 3 < data.len() && types.len() < 12 {
+        if data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1 {
+            types.push((data[i + 3] & 0x1f).to_string());
+            i += 3;
+        } else {
+            i += 1;
+        }
+    }
+    let head: Vec<String> = data.iter().take(5).map(|b| format!("{b:02x}")).collect();
+    format!("{} B, NALs [{}], starts {}", data.len(), types.join(" "), head.join(""))
 }
 
 /// The platform's video host, where the app has one.
@@ -145,12 +166,21 @@ impl Video {
             .map_err(|e| e.to_string())?;
         let (received, counters) = (self.received.clone(), self.counters.clone());
         counters.received.store(0, Ordering::Relaxed);
+        counters.keyframes.store(0, Ordering::Relaxed);
+        *counters.first.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        *counters.keyframe.lock().unwrap_or_else(|e| e.into_inner()) = None;
         let task = tokio::spawn(async move {
             // what came before this, the call's own first frames and its keyframe among them: the far end sends the
             // next keyframe only when asked, and its leg asks only for one it lost (the last call's are gone, `stop`)
             let mut received = received.lock().await;
             while let Some(f) = received.recv().await {
-                counters.received.fetch_add(1, Ordering::Relaxed);
+                if counters.received.fetch_add(1, Ordering::Relaxed) == 0 {
+                    *counters.first.lock().unwrap_or_else(|e| e.into_inner()) = Some(describe(&f.data));
+                }
+                if f.keyframe {
+                    counters.keyframes.fetch_add(1, Ordering::Relaxed);
+                    *counters.keyframe.lock().unwrap_or_else(|e| e.into_inner()) = Some(describe(&f.data));
+                }
                 let now = Instant::now();
                 sink.frame(CodedFrame { data: f.data, keyframe: f.keyframe, captured: now }, now);
             }
@@ -285,7 +315,38 @@ impl Video {
             shown = presented(anvil_video::TileKey::Stream(stream(id)));
         }
         let _ = id;
-        crate::state::CallPictures { captured, sent, received, shown, stalled: None }
+        crate::state::CallPictures { captured, sent, received, shown, stalled: None, report: None }
+    }
+}
+
+impl Video {
+    /// What became of the frames call `id` received, for a picture that is not shown: what the leg gave (frames,
+    /// keyframes, the first frame and the last keyframe with their size and NAL unit types), then, where the platform's host
+    /// decodes, its sink's and its decoder's own accounts (anvil-video's `Received`).
+    pub fn report(&self, id: u64) -> String {
+        let c = &self.counters;
+        let note = |m: &std::sync::Mutex<Option<String>>| m.lock().unwrap_or_else(|e| e.into_inner()).clone().unwrap_or_else(|| "none".into());
+        #[allow(unused_mut)]
+        let mut text = format!("leg: {} frames, {} keyframes; first frame {}; last keyframe {}", c.received.load(Ordering::Relaxed),
+                               c.keyframes.load(Ordering::Relaxed), note(&c.first), note(&c.keyframe));
+        #[cfg(any(target_os = "android", windows))]
+        if let Some(tiles) = self.tiles() {
+            match tiles.received(anvil_video::TileKey::Stream(stream(id))) {
+                Some(r) => {
+                    text += &format!("\nsink: {} frames, {} keyframes, {} waiting for a keyframe, {} failed, {} without a picture, {} pictures",
+                                     r.frames, r.keyframes, r.skipped, r.failed, r.empty, r.pictures);
+                    if let Some(e) = r.error {
+                        text += &format!("\nlast error: {e}");
+                    }
+                    if let Some(d) = r.decoder {
+                        text += &format!("\ndecoder: {d}");
+                    }
+                }
+                None => text += "\nsink: none for this call",
+            }
+        }
+        let _ = id;
+        text
     }
 }
 
@@ -427,10 +488,22 @@ mod tests {
         assert!(shown(2).is_empty(), "the last call's frames: {:?}", shown(2));
     }
 
+    #[tokio::test]
+    async fn a_picture_not_shown_is_accounted_for_from_the_frames_the_leg_gave() {
+        let video = Video::with_host(Arc::new(SyntheticVideoHost::new(&[VideoCodec::H264])));
+        video.show(1).unwrap();
+        let frame = |keyframe, data: &[u8]| VideoFrame { data: data.to_vec().into(), keyframe, timestamp: 0 };
+        video.sink.send(frame(true, &[0, 0, 0, 1, 0x67, 9, 0, 0, 0, 1, 0x68, 9, 0, 0, 1, 0x65, 9])).unwrap();
+        video.sink.send(frame(false, &[0, 0, 0, 1, 0x41, 9])).unwrap();
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert_eq!(video.report(1), "leg: 2 frames, 1 keyframes; first frame 17 B, NALs [7 8 5], starts 0000000167; \
+                                     last keyframe 17 B, NALs [7 8 5], starts 0000000167");
+    }
+
     #[test]
     fn a_stage_that_stops_counting_is_where_the_picture_stops() {
         use crate::state::CallPictures;
-        let at = |captured, sent, received, shown| CallPictures { captured, sent, received, shown, stalled: None };
+        let at = |captured, sent, received, shown| CallPictures { captured, sent, received, shown, stalled: None, report: None };
         assert_eq!(at(60, 60, 60, 60).stall(&at(30, 30, 30, 30), true), None);
         assert_eq!(at(0, 0, 60, 60).stall(&at(0, 0, 30, 30), true), Some("captured"));
         assert_eq!(at(60, 0, 60, 60).stall(&at(30, 0, 30, 30), true), Some("sent"));
