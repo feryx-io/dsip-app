@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import 'address.dart';
 import 'confirm.dart';
 import 'form_dialog.dart';
 import 'name_dialog.dart';
@@ -38,8 +38,8 @@ class ContactsScreen extends StatelessWidget {
     if (r['response'] == 'conversation') controller.showConversation(r['conversation'] as String);
   }
 
-  Future<void> _call(String did) async {
-    final r = await controller.run({'command': 'call', 'to': did});
+  Future<void> _call(String did, {bool video = false}) async {
+    final r = await placeCall(controller, did, video: video);
     if (r['response'] == 'call') controller.showTab(Tabs.calls);
   }
 
@@ -77,7 +77,8 @@ class ContactsScreen extends StatelessWidget {
                 ? PresenceDot(presence[did])
                 : const Icon(Icons.person_outline),
             title: Text(name, overflow: TextOverflow.ellipsis),
-            subtitle: Text(did, maxLines: 2, overflow: TextOverflow.ellipsis),
+            // selectable, like the user's own on Me: to copy a part, or all of it with the menu's entry
+            subtitle: SelectableText(did, key: Key('contact-address-$did'), maxLines: 2),
             trailing: Wrap(
               children: [
                 IconButton(
@@ -86,6 +87,14 @@ class ContactsScreen extends StatelessWidget {
                   icon: const Icon(Icons.call),
                   onPressed: () => _call(did),
                 ),
+                // audio or video; on a phone's width the video call is in the menu
+                if (state.video && roomForVideoButton(context))
+                  IconButton(
+                    key: Key('contact-video-$did'),
+                    tooltip: s.callVideoButton,
+                    icon: const Icon(Icons.videocam),
+                    onPressed: () => _call(did, video: true),
+                  ),
                 if (state.messaging.mailbox != null)
                   IconButton(
                     key: Key('contact-message-$did'),
@@ -97,12 +106,15 @@ class ContactsScreen extends StatelessWidget {
                   key: Key('contact-menu-$did'),
                   onSelected: (what) => switch (what) {
                     'rename' => editName(context, controller, state, did),
-                    'copy' => _copy(context, did),
+                    'copy' => copyAddress(context, did),
+                    'video' => _call(did, video: true),
                     _ => _delete(context, did, name),
                   },
-                  itemBuilder: (_) => [
+                  itemBuilder: (context) => [
+                    if (state.video && !roomForVideoButton(context))
+                      PopupMenuItem(key: Key('contact-video-$did'), value: 'video', child: Text(s.callVideoButton)),
                     PopupMenuItem(value: 'rename', child: Text(s.contactRename)),
-                    PopupMenuItem(value: 'copy', child: Text(s.meCopy)),
+                    PopupMenuItem(key: Key('contact-copy-$did'), value: 'copy', child: Text(s.copyAddress)),
                     PopupMenuItem(value: 'delete', child: Text(s.deleteAction)),
                   ],
                 ),
@@ -111,12 +123,5 @@ class ContactsScreen extends StatelessWidget {
           ),
       ],
     );
-  }
-
-  Future<void> _copy(BuildContext context, String did) async {
-    final s = Strings.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    await Clipboard.setData(ClipboardData(text: did));
-    messenger.showSnackBar(SnackBar(content: Text(s.meCopied)));
   }
 }

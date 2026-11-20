@@ -73,9 +73,9 @@ fn state() -> State {
     s.apply(&Change::History {
         history: vec![
             CallRecord { session: "01M6BTTMQ9QMKY9SYTY8415VZ0".into(), peer: "did:key:z6MkBob".into(), peer_name: None,
-                         direction: Direction::Outgoing, answered: true, reason: "user.hangup".into(), ended_at: 1_794_200_100 },
+                         direction: Direction::Outgoing, answered: true, reason: "user.hangup".into(), ended_at: 1_794_200_100, video: false },
             CallRecord { session: "01M6BTTMQ9QMKY9SYTY8415VZ9".into(), peer: "did:key:z6MkCarol".into(), peer_name: Some("Carol".into()),
-                         direction: Direction::Incoming, answered: false, reason: "user.cancelled".into(), ended_at: 1_794_200_200 },
+                         direction: Direction::Incoming, answered: false, reason: "user.cancelled".into(), ended_at: 1_794_200_200, video: false },
         ],
     });
     s.apply(&Change::Names { names: [("did:key:z6MkCarol".to_string(), "Carol Jones".to_string())].into() });

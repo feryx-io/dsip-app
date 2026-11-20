@@ -9,6 +9,7 @@ import 'package:dsip_app/src/client/models.dart';
 import 'package:dsip_app/src/controller.dart';
 import 'package:dsip_app/src/settings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_client.dart';
@@ -99,6 +100,55 @@ void main() {
     expect(find.textContaining('Delete Carol Jones from your contacts?'), findsOneWidget);
     await confirm(tester);
     expect(client.commands.last, {'command': 'set_name', 'identity': carol}, reason: 'no name: no longer a contact');
+  });
+
+  testWidgets('a contact and a recent call are called with video, and their address copied', (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    const bobs = '01M6BTTMQ9QMKY9SYTY8415VZ0';
+    (state['history'] as List).first['video'] = true;
+
+    // with room, a video button beside the call button (tall enough for the history under the fixture's video call)
+    await open(tester, 'Contacts', size: const Size(1200, 1400));
+    await tester.tap(find.byKey(const Key('contact-video-$carol')));
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'call', 'to': carol, 'video': true});
+    expect(controller.tab, Tabs.calls);
+    await tester.tap(find.text('Contacts').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contact-menu-$carol')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contact-copy-$carol')));
+    await tester.pumpAndSettle();
+    expect(copied, carol);
+    expect(tester.widget(find.byKey(const Key('contact-address-$carol'))), isA<SelectableText>(), reason: 'selectable, as on Me');
+
+    // the history says which calls were video calls, and calls back either way
+    await tester.tap(find.text('Calls').last);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const Key('history-$bobs')), matching: find.textContaining('Video call ·')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('call-back-video-$bobs')));
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'call', 'to': 'did:key:z6MkBob', 'video': true});
+    await tester.tap(find.byKey(const Key('history-menu-$bobs')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('copy-call-$bobs')));
+    await tester.pumpAndSettle();
+    expect(copied, 'did:key:z6MkBob');
+  });
+
+  testWidgets('on a phone\'s width the video call is in the row\'s menu', (tester) async {
+    await open(tester, 'Contacts', size: const Size(400, 800));
+    expect(find.byKey(const Key('contact-video-$carol')), findsNothing);
+    await tester.tap(find.byKey(const Key('contact-menu-$carol')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contact-video-$carol')));
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'call', 'to': carol, 'video': true});
   });
 
   testWidgets('a contact is added by identity and name', (tester) async {
