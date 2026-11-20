@@ -2,11 +2,15 @@
 // call, message, rename and delete from; the history kept across restarts, to call back from and delete; a request's
 // purpose and whole identity; the introductions sent; a message and a conversation deleted on this device.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dsip_app/src/app.dart';
 import 'package:dsip_app/src/client/models.dart';
 import 'package:dsip_app/src/controller.dart';
+import 'package:dsip_app/src/pictures.dart';
+import 'package:dsip_app/src/screens/address.dart';
+import 'package:dsip_app/src/screens/avatar.dart';
 import 'package:dsip_app/src/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -149,6 +153,55 @@ void main() {
     await tester.tap(find.byKey(const Key('contact-video-$carol')));
     await tester.pumpAndSettle();
     expect(client.commands.last, {'command': 'call', 'to': carol, 'video': true});
+  });
+
+  /// Let the app's file work, started by what was tapped, come to its end: each step ends in real time, and the
+  /// next starts when the frame is pumped.
+  Future<void> settleFiles(WidgetTester tester) async {
+    for (var i = 0; i < 8; i++) {
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    }
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a contact shows its initials, or the picture the user chose for it, in the contacts and the calls', (tester) async {
+    expect([initialsOf('Carol Jones'), initialsOf(' bob '), initialsOf('Ana María de la Cruz'), initialsOf(null)], ['CJ', 'B', 'AC', '']);
+    await open(tester, 'Contacts', size: const Size(1200, 1400));
+    final tile = find.byKey(const Key('contact-$carol'));
+    expect(find.descendant(of: tile, matching: find.text('CJ')), findsOneWidget);
+    expect(find.byKey(const Key('avatar-picture-$carol')), findsNothing);
+
+    // a 1×1 PNG, picked from the contact's menu
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+    pickPicture = () async => png;
+    await tester.tap(find.byKey(const Key('contact-menu-$carol')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('contact-no-picture-$carol')), findsNothing, reason: 'none to remove yet');
+    await tester.tap(find.byKey(const Key('contact-picture-$carol')));
+    await settleFiles(tester);
+    expect(controller.pictures.has(carol), isTrue);
+    expect(dir.listSync(recursive: true).whereType<File>().where((f) => f.path.contains('pictures')).single.readAsBytesSync(), png);
+    expect(find.byKey(const Key('avatar-picture-$carol')), findsOneWidget);
+    expect(find.descendant(of: tile, matching: find.text('CJ')), findsNothing);
+
+    // the same picture on her calls
+    await tester.tap(find.text('Calls').last);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const Key('history-01M6BTTMQ9QMKY9SYTY8415VZ9')), matching: find.byKey(const Key('avatar-picture-$carol'))), findsOneWidget);
+
+    // kept for the next start, until removed
+    final again = Pictures(controller.pictures.dir);
+    await tester.runAsync(again.load);
+    expect(again.has(carol), isTrue);
+    await tester.tap(find.text('Contacts').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contact-menu-$carol')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contact-no-picture-$carol')));
+    await settleFiles(tester);
+    expect(controller.pictures.has(carol), isFalse);
+    expect(find.descendant(of: tile, matching: find.text('CJ')), findsOneWidget);
   });
 
   testWidgets('a contact is added by identity and name', (tester) async {

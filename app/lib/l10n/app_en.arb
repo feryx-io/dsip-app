@@ -748,6 +748,10 @@
   "contactCall": "Call",
   "contactMessage": "Message",
   "contactRename": "Rename",
+  "contactPicture": "Choose a picture",
+  "@contactPicture": {"description": "Menu entry on a contact: pick an image file to show as that contact's small round picture. Kept on this device only."},
+  "contactPictureRemove": "Remove picture",
+  "@contactPictureRemove": {"description": "Menu entry on a contact that has a picture: take it away; their initials are shown again."},
   "deleteAction": "Delete",
   "contactDeleteConfirm": "Delete {name} from your contacts? Your calls and conversations with them stay.",
   "@contactDeleteConfirm": {

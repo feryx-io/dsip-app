@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,6 +12,12 @@ Future<void> copyAddress(BuildContext context, String did) async {
   await Clipboard.setData(ClipboardData(text: did));
   messenger.showSnackBar(SnackBar(content: Text(s.meCopied)));
 }
+
+/// An image file the user picks for a contact's picture: its bytes; null when they go back. Tests set it.
+Future<Uint8List?> Function() pickPicture = () async {
+  final file = await FilePicker.pickFile(type: FileType.image);
+  return file?.readAsBytes();
+};
 
 /// Call [to], with video when [video] (asking for the camera first on a phone). The command's response.
 Future<Map<String, dynamic>> placeCall(Controller controller, String to, {bool video = false}) async {

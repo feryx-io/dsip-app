@@ -1023,6 +1023,12 @@ class StringsEn extends Strings {
   String get contactRename => 'Rename';
 
   @override
+  String get contactPicture => 'Choose a picture';
+
+  @override
+  String get contactPictureRemove => 'Remove picture';
+
+  @override
   String get deleteAction => 'Delete';
 
   @override
@@ -2229,6 +2235,12 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get contactRename => '[Ŕéñàɱé o]';
+
+  @override
+  String get contactPicture => '[Çĥóóšé à þíçţúŕé one]';
+
+  @override
+  String get contactPictureRemove => '[Ŕéɱóṽé þíçţúŕé one]';
 
   @override
   String get deleteAction => '[Đéĺéţé o]';

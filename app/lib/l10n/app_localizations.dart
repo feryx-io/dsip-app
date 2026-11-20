@@ -1825,6 +1825,18 @@ abstract class Strings {
   /// **'Rename'**
   String get contactRename;
 
+  /// Menu entry on a contact: pick an image file to show as that contact's small round picture. Kept on this device only.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a picture'**
+  String get contactPicture;
+
+  /// Menu entry on a contact that has a picture: take it away; their initials are shown again.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove picture'**
+  String get contactPictureRemove;
+
   /// No description provided for @deleteAction.
   ///
   /// In en, this message translates to:

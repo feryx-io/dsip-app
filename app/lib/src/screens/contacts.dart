@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
 import 'address.dart';
+import 'avatar.dart';
 import 'confirm.dart';
 import 'form_dialog.dart';
 import 'name_dialog.dart';
@@ -47,6 +48,12 @@ class ContactsScreen extends StatelessWidget {
     final s = Strings.of(context);
     if (!await confirm(context, s.contactDeleteConfirm(name), s.deleteAction)) return;
     await controller.run({'command': 'set_name', 'identity': did});
+    await controller.setPicture(did, null);
+  }
+
+  Future<void> _picture(String did) async {
+    final bytes = await pickPicture();
+    if (bytes != null) await controller.setPicture(did, bytes);
   }
 
   @override
@@ -73,9 +80,22 @@ class ContactsScreen extends StatelessWidget {
           ListTile(
             key: Key('contact-$did'),
             contentPadding: EdgeInsets.zero,
-            leading: presence.containsKey(did)
-                ? PresenceDot(presence[did])
-                : const Icon(Icons.person_outline),
+            // their picture or initials; their presence, when followed, on its corner
+            leading: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Avatar(controller: controller, did: did, name: name),
+                if (presence.containsKey(did))
+                  PositionedDirectional(
+                    end: -2,
+                    bottom: -2,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Theme.of(context).colorScheme.surface),
+                      child: PresenceDot(presence[did]),
+                    ),
+                  ),
+              ],
+            ),
             title: Text(name, overflow: TextOverflow.ellipsis),
             // selectable, like the user's own on Me: to copy a part, or all of it with the menu's entry
             subtitle: SelectableText(did, key: Key('contact-address-$did'), maxLines: 2),
@@ -108,12 +128,17 @@ class ContactsScreen extends StatelessWidget {
                     'rename' => editName(context, controller, state, did),
                     'copy' => copyAddress(context, did),
                     'video' => _call(did, video: true),
+                    'picture' => _picture(did),
+                    'no-picture' => controller.setPicture(did, null),
                     _ => _delete(context, did, name),
                   },
                   itemBuilder: (context) => [
                     if (state.video && !roomForVideoButton(context))
                       PopupMenuItem(key: Key('contact-video-$did'), value: 'video', child: Text(s.callVideoButton)),
                     PopupMenuItem(value: 'rename', child: Text(s.contactRename)),
+                    PopupMenuItem(key: Key('contact-picture-$did'), value: 'picture', child: Text(s.contactPicture)),
+                    if (controller.pictures.has(did))
+                      PopupMenuItem(key: Key('contact-no-picture-$did'), value: 'no-picture', child: Text(s.contactPictureRemove)),
                     PopupMenuItem(key: Key('contact-copy-$did'), value: 'copy', child: Text(s.copyAddress)),
                     PopupMenuItem(value: 'delete', child: Text(s.deleteAction)),
                   ],

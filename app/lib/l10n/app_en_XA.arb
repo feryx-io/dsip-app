@@ -287,6 +287,8 @@
   "contactCall": "[Çàĺĺ ]",
   "contactMessage": "[Ḿéššàĝé o]",
   "contactRename": "[Ŕéñàɱé o]",
+  "contactPicture": "[Çĥóóšé à þíçţúŕé one]",
+  "contactPictureRemove": "[Ŕéɱóṽé þíçţúŕé one]",
   "deleteAction": "[Đéĺéţé o]",
   "contactDeleteConfirm": "[Đéĺéţé {name} ƒŕóɱ ýóúŕ çóñţàçţš? Ýóúŕ çàĺĺš àñđ çóñṽéŕšàţíóñš ŵíţĥ ţĥéɱ šţàý. one two three four f]",
   "contactMessageTitle": "[Ḿéššàĝé {name} on]",

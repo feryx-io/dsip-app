@@ -8,6 +8,7 @@ import '../controller.dart';
 import '../mobile/calls.dart';
 import '../mobile/platform.dart';
 import 'address.dart';
+import 'avatar.dart';
 import 'confirm.dart';
 import 'name_dialog.dart';
 import 'reasons.dart';
@@ -111,12 +112,20 @@ class _CallsScreenState extends State<CallsScreen> {
             ListTile(
               key: Key('history-${c.session}'),
               contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                c.missed ? Icons.call_missed : (c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
-                color: c.missed ? Theme.of(context).colorScheme.error : null,
-                semanticLabel: c.missed ? s.callMissed : null,
+              leading: Avatar(controller: widget.controller, did: c.peer, name: widget.state.names[c.peer] ?? c.peerName),
+              // which way it went, small, beside the name
+              title: Row(
+                children: [
+                  Icon(
+                    c.missed ? Icons.call_missed : (c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
+                    size: 18,
+                    color: c.missed ? Theme.of(context).colorScheme.error : null,
+                    semanticLabel: c.missed ? s.callMissed : null,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(widget.state.nameOf(c.peer, offered: c.peerName), overflow: TextOverflow.ellipsis)),
+                ],
               ),
-              title: Text(widget.state.nameOf(c.peer, offered: c.peerName), overflow: TextOverflow.ellipsis),
               subtitle: Tooltip(
                 message: s.callEndedCode(c.reason),
                 child: Text(
