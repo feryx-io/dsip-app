@@ -255,8 +255,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-audio"
-version = "0.2.95"
-source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
+version = "0.2.96"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.96#b65bfdaf8a1c32b76250e9dae5830af1fb23152e"
 dependencies = [
  "anvil-core",
  "async-trait",
@@ -273,8 +273,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-core"
-version = "0.2.95"
-source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
+version = "0.2.96"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.96#b65bfdaf8a1c32b76250e9dae5830af1fb23152e"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -316,8 +316,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-update"
-version = "0.2.95"
-source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
+version = "0.2.96"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.96#b65bfdaf8a1c32b76250e9dae5830af1fb23152e"
 dependencies = [
  "futures",
  "reqwest",
@@ -332,8 +332,8 @@ dependencies = [
 
 [[package]]
 name = "anvil-video"
-version = "0.2.95"
-source = "git+https://github.com/thevoiceguy/anvil?rev=48ec82ddd3a992831ad49584cb283531d88572f6#48ec82ddd3a992831ad49584cb283531d88572f6"
+version = "0.2.96"
+source = "git+https://github.com/thevoiceguy/anvil?tag=v0.2.96#b65bfdaf8a1c32b76250e9dae5830af1fb23152e"
 dependencies = [
  "anvil-core",
  "ashpd",
@@ -1776,7 +1776,7 @@ dependencies = [
 
 [[package]]
 name = "dsip-app"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "android-native-keyring-store",
  "anvil-audio",
@@ -2203,7 +2203,7 @@ dependencies = [
 
 [[package]]
 name = "dsip_app_bridge"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "anvil-core",
  "anvil-update",
