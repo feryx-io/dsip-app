@@ -794,6 +794,11 @@ class StringsEn extends Strings {
   }
 
   @override
+  String updateInstalling(String version) {
+    return 'Installing DSIP $version…';
+  }
+
+  @override
   String updateDownloading(String version) {
     return 'Getting DSIP $version…';
   }
@@ -2000,6 +2005,11 @@ class StringsEnXa extends StringsEn {
   @override
   String updateByHand(String version, String reason) {
     return '[ĐŠÍÞ $version íš óúţ. Ţĥíš çóþý đóéš ñóţ úþđàţé íţšéĺƒ ($reason). one two three f]';
+  }
+
+  @override
+  String updateInstalling(String version) {
+    return '[Íñšţàĺĺíñĝ ĐŠÍÞ $version… one tw]';
   }
 
   @override

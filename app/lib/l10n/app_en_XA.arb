@@ -220,6 +220,7 @@
   "updateAvailable": "[ĐŠÍÞ {version} íš óúţ. one ]",
   "updateAfterCall": "[ĐŠÍÞ {version} íš óúţ: úþđàţé óñçé ýóúŕ çàĺĺ íš óṽéŕ. one two thre]",
   "updateByHand": "[ĐŠÍÞ {version} íš óúţ. Ţĥíš çóþý đóéš ñóţ úþđàţé íţšéĺƒ ({reason}). one two three f]",
+  "updateInstalling": "[Íñšţàĺĺíñĝ ĐŠÍÞ {version}… one tw]",
   "updateDownloading": "[Ĝéţţíñĝ ĐŠÍÞ {version}… one t]",
   "updateFailed": "[Çóúĺđ ñóţ úþđàţé: {reason} one t]",
   "updateInstall": "[Úþđàţé àñđ ŕéšţàŕţ one ]",

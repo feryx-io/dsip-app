@@ -472,6 +472,14 @@
       }
     }
   },
+  "updateInstalling": "Installing DSIP {version}…",
+  "@updateInstalling": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updateDownloading": "Getting DSIP {version}…",
   "@updateDownloading": {
     "placeholders": {

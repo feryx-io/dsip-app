@@ -104,6 +104,21 @@ void main() {
     expect(find.textContaining('the setup is missing'), findsOneWidget);
   });
 
+  testWidgets('a stop that never comes back does not hold the install', (tester) async {
+    client.release = release;
+    client.stopHangs = true;
+    await open(tester);
+    controller.stopForInstall = const Duration(milliseconds: 50);
+    await controller.checkForUpdate();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Update and restart'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(client.updating, ['download', 'install']);
+    expect(quits, 1);
+  });
+
   testWidgets('not during a call', (tester) async {
     client.release = release;
     state = fixture()['state'] as Map<String, dynamic>; // a call up and one ringing

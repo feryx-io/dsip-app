@@ -97,6 +97,9 @@ class Controller extends ChangeNotifier {
   /// Where updating is: `idle`, `checking`, `latest` (a check found nothing newer), `downloading`, `failed`.
   String updateStatus = 'idle';
 
+  /// How long the app is given to stop before an update is installed over it.
+  Duration stopForInstall = const Duration(seconds: 5);
+
   /// Why the last check or update failed.
   String? updateError;
 
@@ -457,7 +460,7 @@ class Controller extends ChangeNotifier {
 
   /// Look for a newer release.
   Future<void> checkForUpdate() async {
-    if (updateStatus == 'checking' || updateStatus == 'downloading') return;
+    if (updateStatus == 'checking' || updateStatus == 'downloading' || updateStatus == 'installing') return;
     updateStatus = 'checking';
     notifyListeners();
     try {
@@ -480,7 +483,7 @@ class Controller extends ChangeNotifier {
   /// Update and restart: look again (an offer made hours ago installs the release out now, as Anvil learnt), fetch
   /// it, stop the app, and quit for the installer, which starts the app again. Not during a call.
   Future<void> installUpdate() async {
-    if (inCall) return;
+    if (inCall || updateStatus == 'downloading' || updateStatus == 'installing') return;
     await checkForUpdate();
     final u = update;
     if (u == null || !u.canInstall || updateStatus == 'failed') return;
@@ -489,9 +492,19 @@ class Controller extends ChangeNotifier {
     var stopped = false;
     try {
       await client.downloadUpdate();
-      await _updates?.cancel();
-      _updates = null;
-      await client.stop();
+      updateStatus = 'installing';
+      notifyListeners();
+      // The process ends right after, so a stop that hangs (a relay that does not answer the goodbye) must not hold
+      // the install: it is given a few seconds and left.
+      try {
+        await (() async {
+          await _updates?.cancel();
+          _updates = null;
+          await client.stop();
+        })().timeout(stopForInstall);
+      } on TimeoutException {
+        _updates = null;
+      }
       stopped = true;
       await client.installUpdate();
     } catch (e) {
