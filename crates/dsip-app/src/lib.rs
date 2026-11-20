@@ -191,6 +191,8 @@ pub(crate) struct Inner {
     changes: broadcast::Sender<Change>,
     calls: std::sync::Mutex<HashMap<u64, CallCtl>>,
     next_id: AtomicU64,
+    /// The calls placed here asking for video, for the history (a call not answered never carried any).
+    placed_video: std::sync::Mutex<std::collections::HashSet<u64>>,
     audio: Option<audio::Audio>,
     /// The calls' video, where there is one ([`Config::video`]).
     video: Option<video::Video>,
@@ -302,6 +304,7 @@ impl App {
                 changes,
                 calls: Default::default(),
                 next_id: AtomicU64::new(1),
+                placed_video: Default::default(),
                 audio,
                 video,
                 messaging: std::sync::OnceLock::new(),
@@ -412,14 +415,19 @@ impl App {
     pub async fn command(&self, cmd: Command) -> Response {
         match cmd {
             Command::State => Response::State { state: Box::new(self.state()) },
-            Command::Call { to, video } => match if video && self.inner.video.is_some() {
-                self.inner.phone.video_call(&to).await
-            } else {
-                self.inner.phone.call(&to).await
-            } {
-                Ok(call) => Response::Call { call: self.track(call, Direction::Outgoing, to, None) },
-                Err(e) => Response::error(e.to_string()),
-            },
+            Command::Call { to, video } => {
+                let video = video && self.inner.video.is_some();
+                match if video { self.inner.phone.video_call(&to).await } else { self.inner.phone.call(&to).await } {
+                    Ok(call) => {
+                        let id = self.track(call, Direction::Outgoing, to, None);
+                        if video {
+                            self.inner.placed_video.lock().unwrap_or_else(|e| e.into_inner()).insert(id);
+                        }
+                        Response::Call { call: id }
+                    }
+                    Err(e) => Response::error(e.to_string()),
+                }
+            }
             Command::Camera { call, on } => self.camera(call, on),
             Command::Answer { call } => self.act(call, Pick::Ringing, Action::Accept),
             Command::Decline { call } => self.act(call, Pick::Ringing, Action::Decline),
@@ -1095,8 +1103,10 @@ impl App {
             CallState::Ended { reason } => reason.clone(),
             _ => return,
         };
+        let placed_video = self.inner.placed_video.lock().unwrap_or_else(|e| e.into_inner()).remove(&id);
         let mut history = self.state().history;
         history.push(CallRecord {
+            video: c.video || placed_video,
             session: c.session,
             peer: c.peer,
             peer_name: c.peer_name,

@@ -9,6 +9,7 @@ import 'client/client.dart';
 import 'client/models.dart';
 import 'mobile/calls.dart';
 import 'mobile/platform.dart';
+import 'pictures.dart';
 import 'settings.dart';
 
 /// The home screen's tabs, in order.
@@ -46,6 +47,15 @@ class Controller extends ChangeNotifier {
 
   final Client client;
   final SettingsStore store;
+
+  /// The pictures the user gave contacts, kept in the app's folder.
+  late final Pictures pictures = Pictures(Directory('${store.dir.path}${Platform.pathSeparator}pictures'));
+
+  /// Give contact [did] the picture in [bytes] (an image file's), or with none take its picture away.
+  Future<void> setPicture(String did, Uint8List? bytes) async {
+    bytes == null ? await pictures.remove(did) : await pictures.set(did, bytes);
+    notifyListeners();
+  }
 
   /// The phone around the app, on Android and iOS; null on a desktop. A phone's app is updated by its store, not by
   /// itself.
@@ -143,6 +153,7 @@ class Controller extends ChangeNotifier {
   /// Read the settings; start the app when there are some.
   Future<void> load() async {
     alertSettings = await AlertSettings.load(store.dir);
+    await pictures.load();
     await alerter?.init(openAlert);
     final settings = this.settings = await store.load();
     configured = settings != null;

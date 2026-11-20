@@ -7,6 +7,8 @@ import '../client/models.dart';
 import '../controller.dart';
 import '../mobile/calls.dart';
 import '../mobile/platform.dart';
+import 'address.dart';
+import 'avatar.dart';
 import 'confirm.dart';
 import 'name_dialog.dart';
 import 'reasons.dart';
@@ -37,8 +39,7 @@ class _CallsScreenState extends State<CallsScreen> {
   Future<void> _call({bool video = false}) async {
     final to = _to.text.trim();
     if (to.isEmpty) return;
-    if (video) await widget.controller.mobile?.requestCamera();
-    final r = await widget.controller.run({'command': 'call', 'to': to, if (video) 'video': true});
+    final r = await placeCall(widget.controller, to, video: video);
     if (r['response'] == 'call') _to.clear();
   }
 
@@ -111,16 +112,24 @@ class _CallsScreenState extends State<CallsScreen> {
             ListTile(
               key: Key('history-${c.session}'),
               contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                c.missed ? Icons.call_missed : (c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
-                color: c.missed ? Theme.of(context).colorScheme.error : null,
-                semanticLabel: c.missed ? s.callMissed : null,
+              leading: Avatar(controller: widget.controller, did: c.peer, name: widget.state.names[c.peer] ?? c.peerName),
+              // which way it went, small, beside the name
+              title: Row(
+                children: [
+                  Icon(
+                    c.missed ? Icons.call_missed : (c.direction == Direction.incoming ? Icons.call_received : Icons.call_made),
+                    size: 18,
+                    color: c.missed ? Theme.of(context).colorScheme.error : null,
+                    semanticLabel: c.missed ? s.callMissed : null,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(widget.state.nameOf(c.peer, offered: c.peerName), overflow: TextOverflow.ellipsis)),
+                ],
               ),
-              title: Text(widget.state.nameOf(c.peer, offered: c.peerName), overflow: TextOverflow.ellipsis),
               subtitle: Tooltip(
                 message: s.callEndedCode(c.reason),
                 child: Text(
-                  '${c.missed ? s.callMissed : s.callEnded(endedReason(s, c.reason))} · ${_when(context, c)}',
+                  '${c.video ? s.callKindVideo : s.callKindAudio} · ${c.missed ? s.callMissed : s.callEnded(endedReason(s, c.reason))} · ${_when(context, c)}',
                   overflow: TextOverflow.ellipsis,
                   maxLines: 2,
                 ),
@@ -131,15 +140,29 @@ class _CallsScreenState extends State<CallsScreen> {
                     key: Key('call-back-${c.session}'),
                     tooltip: s.callBack,
                     icon: const Icon(Icons.call),
-                    onPressed: () => widget.controller.run({'command': 'call', 'to': c.peer}),
+                    onPressed: () => placeCall(widget.controller, c.peer),
                   ),
+                  // audio or video, whichever the call was; on a phone's width the video one is in the menu
+                  if (widget.state.video && roomForVideoButton(context))
+                    IconButton(
+                      key: Key('call-back-video-${c.session}'),
+                      tooltip: s.callBackVideo,
+                      icon: const Icon(Icons.videocam),
+                      onPressed: () => placeCall(widget.controller, c.peer, video: true),
+                    ),
                   PopupMenuButton<String>(
                     key: Key('history-menu-${c.session}'),
-                    onSelected: (what) => what == 'name'
-                        ? editName(context, widget.controller, widget.state, c.peer)
-                        : widget.controller.run({'command': 'forget_call', 'session': c.session}),
-                    itemBuilder: (_) => [
+                    onSelected: (what) => switch (what) {
+                      'name' => editName(context, widget.controller, widget.state, c.peer),
+                      'video' => placeCall(widget.controller, c.peer, video: true),
+                      'copy' => copyAddress(context, c.peer),
+                      _ => widget.controller.run({'command': 'forget_call', 'session': c.session}),
+                    },
+                    itemBuilder: (context) => [
+                      if (widget.state.video && !roomForVideoButton(context))
+                        PopupMenuItem(key: Key('call-back-video-${c.session}'), value: 'video', child: Text(s.callBackVideo)),
                       PopupMenuItem(key: Key('name-call-${c.session}'), value: 'name', child: Text(s.nameAction)),
+                      PopupMenuItem(key: Key('copy-call-${c.session}'), value: 'copy', child: Text(s.copyAddress)),
                       PopupMenuItem(value: 'forget', child: Text(s.callForget)),
                     ],
                   ),

@@ -305,6 +305,7 @@ class CallRecord {
     required this.answered,
     required this.reason,
     required this.endedAt,
+    this.video = false,
   });
 
   /// The call's session id: what `forget_call` names.
@@ -317,6 +318,9 @@ class CallRecord {
 
   /// Unix seconds.
   final int endedAt;
+
+  /// A video call: it carried video, or was placed here asking for it.
+  final bool video;
 
   /// A call that came in and was not answered: not declined here, nor answered on another device.
   bool get missed =>
@@ -332,6 +336,7 @@ class CallRecord {
     answered: j['answered'] as bool,
     reason: j['reason'] as String,
     endedAt: j['ended_at'] as int,
+    video: j['video'] as bool? ?? false,
   );
 }
 

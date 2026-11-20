@@ -261,6 +261,18 @@ class StringsEn extends Strings {
   String get callVideoButton => 'Video call';
 
   @override
+  String get callKindAudio => 'Audio call';
+
+  @override
+  String get callKindVideo => 'Video call';
+
+  @override
+  String get callBackVideo => 'Call back with video';
+
+  @override
+  String get copyAddress => 'Copy address';
+
+  @override
   String get callCameraOn => 'Camera on';
 
   @override
@@ -1011,6 +1023,12 @@ class StringsEn extends Strings {
   String get contactRename => 'Rename';
 
   @override
+  String get contactPicture => 'Choose a picture';
+
+  @override
+  String get contactPictureRemove => 'Remove picture';
+
+  @override
   String get deleteAction => 'Delete';
 
   @override
@@ -1446,6 +1464,18 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get callVideoButton => '[Ṽíđéó çàĺĺ on]';
+
+  @override
+  String get callKindAudio => '[Àúđíó çàĺĺ on]';
+
+  @override
+  String get callKindVideo => '[Ṽíđéó çàĺĺ on]';
+
+  @override
+  String get callBackVideo => '[Çàĺĺ ƀàçķ ŵíţĥ ṽíđéó one ]';
+
+  @override
+  String get copyAddress => '[Çóþý àđđŕéšš on]';
 
   @override
   String get callCameraOn => '[Çàɱéŕà óñ o]';
@@ -2205,6 +2235,12 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get contactRename => '[Ŕéñàɱé o]';
+
+  @override
+  String get contactPicture => '[Çĥóóšé à þíçţúŕé one]';
+
+  @override
+  String get contactPictureRemove => '[Ŕéɱóṽé þíçţúŕé one]';
 
   @override
   String get deleteAction => '[Đéĺéţé o]';

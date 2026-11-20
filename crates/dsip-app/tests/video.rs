@@ -88,6 +88,8 @@ async fn a_plain_call_carries_no_video() {
     assert!(matches!(alice.command(Command::Camera { call: Some(id), on: true }).await, Response::Error { .. }),
             "no camera in an audio call");
     alice.command(Command::Hangup { call: Some(id) }).await;
+    until("the call in both histories", || alice.state().history.len() == 1 && bob.state().history.len() == 1).await;
+    assert!(!alice.state().history[0].video && !bob.state().history[0].video, "kept as an audio call");
 }
 
 /// The camera's frames reach every video call, not only the first: a call over lets go of the camera's feed (dsip-media
@@ -111,4 +113,7 @@ async fn a_second_video_call_carries_frames_too() {
         alice.command(Command::Hangup { call: Some(id) }).await;
         until("both ended", || !answered(&alice) && !answered(&bob)).await;
     }
+    // kept as video calls, where they were placed and where they were answered
+    until("both calls in both histories", || alice.state().history.len() == 2 && bob.state().history.len() == 2).await;
+    assert!(alice.state().history.iter().chain(&bob.state().history).all(|c| c.video));
 }

@@ -86,6 +86,10 @@ pub struct CallRecord {
     pub reason: String,
     /// When it ended, unix seconds.
     pub ended_at: i64,
+    /// A video call: it carried video, or was placed here asking for it. A call that came in and was not answered is
+    /// not known to be one (what a call carries is known with its answer, B§2.1).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub video: bool,
 }
 
 /// Waking this device while it sleeps (app plan A5d; the Wake Profile): enrolled at the publisher's push gateway with

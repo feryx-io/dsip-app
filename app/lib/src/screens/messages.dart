@@ -4,6 +4,7 @@ import 'package:flutter/semantics.dart';
 import '../../l10n/app_localizations.dart';
 import '../client/models.dart';
 import '../controller.dart';
+import 'address.dart';
 import 'attachments.dart';
 import 'confirm.dart';
 import 'form_dialog.dart';
@@ -430,6 +431,13 @@ class _ThreadState extends State<_Thread> {
                         tooltip: s.nameAction,
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: () => editName(context, widget.controller, widget.state, _peer(x, me)!),
+                      ),
+                    if (_peer(x, me) != null)
+                      IconButton(
+                        key: const Key('copy-thread'),
+                        tooltip: s.copyAddress,
+                        icon: const Icon(Icons.copy),
+                        onPressed: () => copyAddress(context, _peer(x, me)!),
                       ),
                     IconButton(
                       key: const Key('delete-thread'),

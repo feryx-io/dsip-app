@@ -529,6 +529,30 @@ abstract class Strings {
   /// **'Video call'**
   String get callVideoButton;
 
+  /// In the list of recent calls, before how a call ended: it was a call with sound only.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio call'**
+  String get callKindAudio;
+
+  /// In the list of recent calls, before how a call ended: it was a call with video.
+  ///
+  /// In en, this message translates to:
+  /// **'Video call'**
+  String get callKindVideo;
+
+  /// Button or menu entry on a recent call: call that person again, with video.
+  ///
+  /// In en, this message translates to:
+  /// **'Call back with video'**
+  String get callBackVideo;
+
+  /// Menu entry or button on a contact, a recent call or a conversation: copies that person's identity (a did:… address) to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy address'**
+  String get copyAddress;
+
   /// Button in a video call that turns this side's camera on.
   ///
   /// In en, this message translates to:
@@ -1800,6 +1824,18 @@ abstract class Strings {
   /// In en, this message translates to:
   /// **'Rename'**
   String get contactRename;
+
+  /// Menu entry on a contact: pick an image file to show as that contact's small round picture. Kept on this device only.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a picture'**
+  String get contactPicture;
+
+  /// Menu entry on a contact that has a picture: take it away; their initials are shown again.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove picture'**
+  String get contactPictureRemove;
 
   /// No description provided for @deleteAction.
   ///
