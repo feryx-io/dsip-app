@@ -93,7 +93,7 @@ class CallView {
 /// A video call's pictures on this device, counted (`dsip-app`'s `CallPictures`): this side's camera to the network,
 /// the far end's from the network to the screen; the first stage that stops counting is where the picture stops.
 class CallPictures {
-  const CallPictures({required this.captured, required this.sent, required this.received, required this.shown, this.stalled, this.report});
+  const CallPictures({required this.captured, required this.sent, required this.received, required this.shown, this.stalled, this.report, this.errors});
   final int captured;
   final int sent;
   final int received;
@@ -105,6 +105,10 @@ class CallPictures {
   /// While `shown` stalled: what became of the frames received, in the decoder's own words (not translated).
   final String? report;
 
+  /// Why this call's camera or picture would not start, a reason a line in the host's own words (not translated);
+  /// kept for the whole call. Shown with the counts whether or not a stage stalled.
+  final String? errors;
+
   factory CallPictures.fromJson(Map<String, dynamic> j) => CallPictures(
     captured: j['captured'] as int,
     sent: j['sent'] as int,
@@ -112,6 +116,7 @@ class CallPictures {
     shown: j['shown'] as int,
     stalled: j['stalled'] as String?,
     report: j['report'] as String?,
+    errors: j['errors'] as String?,
   );
 }
 

@@ -351,6 +351,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Video stops at: shown'), findsOneWidget);
     expect(find.byKey(const Key('call-pictures-report-2')), findsOneWidget);
+    // a camera that would not start stays on the card, with no stage stalled
+    call['pictures'] = {'captured': 60, 'sent': 60, 'received': 60, 'shown': 60, 'errors': 'camera: no encoder for the codec'};
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Video stops at'), findsNothing);
+    expect(find.byKey(const Key('call-pictures-2')), findsOneWidget);
+    expect(find.text('camera: no encoder for the codec'), findsOneWidget);
   });
 
   testWidgets('with settings saved, the app starts at once and shows its calls', (tester) async {

@@ -49,6 +49,8 @@ pub struct Video {
     wanted: std::sync::Mutex<Option<u64>>,
     /// Frames sent and received, for the call's view.
     pub(crate) counters: Arc<Counters>,
+    /// The call whose camera or picture would not start, and why, each reason once ([`Video::errors`]).
+    failed: std::sync::Mutex<(u64, Vec<String>)>,
     /// The platform's host, whose tiles the app's textures show ([`Video::tiles`]).
     #[cfg(any(target_os = "android", windows))]
     desktop: Option<anvil_video::DesktopVideoHost>,
@@ -138,7 +140,7 @@ impl Video {
         let (requests, requests_rx) = mpsc::unbounded_channel();
         Video { host, feed, feed_rx, sink, received: Arc::new(Mutex::new(received)), requests,
                 requests_rx: Arc::new(Mutex::new(requests_rx)), showing: Default::default(), sending: Default::default(),
-                wanted: Default::default(), counters: Arc::default(),
+                wanted: Default::default(), counters: Arc::default(), failed: Default::default(),
                 #[cfg(any(target_os = "android", windows))]
                 desktop: None }
     }
@@ -163,7 +165,7 @@ impl Video {
     pub fn show(&self, id: u64) -> Result<(), String> {
         self.stop_showing();
         let mut sink = self.host.start_receive(stream(id), ReceiveConfig { codec: VideoCodec::H264, kind: VideoKind::Camera })
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| self.fail(id, "picture", e.to_string()))?;
         let (received, counters) = (self.received.clone(), self.counters.clone());
         counters.received.store(0, Ordering::Relaxed);
         counters.keyframes.store(0, Ordering::Relaxed);
@@ -197,7 +199,28 @@ impl Video {
         if self.sending_to(id) {
             return Ok(());
         }
-        self.start_sending(id)
+        self.start_sending(id).map_err(|e| self.fail(id, "camera", e))
+    }
+
+    /// Keep why call `id`'s `what` (its camera, its picture) would not start, for its view, and give the reason back.
+    /// Trying again where a phone took the camera away ([`Video::heal`]) is not kept: that is a phone's ordinary life.
+    fn fail(&self, id: u64, what: &str, e: String) -> String {
+        let mut failed = self.failed.lock().unwrap_or_else(|e| e.into_inner());
+        if failed.0 != id {
+            *failed = (id, Vec::new());
+        }
+        let line = format!("{what}: {e}");
+        if !failed.1.contains(&line) && failed.1.len() < 6 {
+            failed.1.push(line);
+        }
+        e
+    }
+
+    /// Why call `id`'s camera or picture would not start, a reason a line, in the host's own words: kept for the whole
+    /// call, also once a later try worked, to read off the screen of a phone whose log cannot be reached.
+    pub fn errors(&self, id: u64) -> Option<String> {
+        let failed = self.failed.lock().unwrap_or_else(|e| e.into_inner());
+        (failed.0 == id && !failed.1.is_empty()).then(|| failed.1.join("\n"))
     }
 
     /// Open the camera again for call `id` if it is wanted there and stopped: a phone gives the camera back once the
@@ -315,7 +338,7 @@ impl Video {
             shown = presented(anvil_video::TileKey::Stream(stream(id)));
         }
         let _ = id;
-        crate::state::CallPictures { captured, sent, received, shown, stalled: None, report: None }
+        crate::state::CallPictures { captured, sent, received, shown, stalled: None, report: None, errors: self.errors(id) }
     }
 }
 
@@ -437,11 +460,51 @@ mod tests {
         assert!(video.heal(1), "opened again");
         assert!(video.sending_to(1));
         assert_eq!(host.opened.load(Ordering::Relaxed), 2);
+        assert_eq!(video.errors(1), None, "a camera taken away and back is no error");
         until("frames again", || video.frames().0 > 3).await;
         // turned off, it stays off
         video.stop_sending();
         assert!(!video.sending_to(1));
         assert!(!video.heal(1));
+    }
+
+    /// A host whose encoder will not start the first time.
+    struct Refuses {
+        host: SyntheticVideoHost,
+        opened: AtomicUsize,
+    }
+
+    impl VideoHost for Refuses {
+        fn codecs(&self) -> Vec<VideoCodecCaps> {
+            self.host.codecs()
+        }
+        fn cameras(&self) -> Vec<CameraInfo> {
+            self.host.cameras()
+        }
+        fn start_send(&self, cfg: SendConfig) -> Result<Box<dyn VideoSource>, AnvilError> {
+            match self.opened.fetch_add(1, Ordering::Relaxed) {
+                0 => Err(AnvilError::Codec("no encoder".into())),
+                _ => self.host.start_send(cfg),
+            }
+        }
+        fn start_receive(&self, stream: StreamId, cfg: ReceiveConfig) -> Result<Box<dyn VideoSink>, AnvilError> {
+            self.host.start_receive(stream, cfg)
+        }
+    }
+
+    #[tokio::test]
+    async fn a_camera_that_would_not_start_is_kept_for_its_call() {
+        let video = Video::with_host(Arc::new(Refuses { host: SyntheticVideoHost::new(&[VideoCodec::H264]), opened: AtomicUsize::new(0) }));
+        assert_eq!(video.errors(1), None);
+        assert!(video.send(1).is_err());
+        assert_eq!(video.errors(1).as_deref(), Some("camera: codec error: no encoder"));
+        assert_eq!(video.pictures(1).errors.as_deref(), Some("camera: codec error: no encoder"));
+        // the next try works: what failed is still said, for this call and no other
+        video.send(1).unwrap();
+        assert!(video.sending_to(1));
+        assert_eq!(video.errors(1).as_deref(), Some("camera: codec error: no encoder"));
+        assert_eq!(video.errors(2), None);
+        video.stop_sending();
     }
 
     /// The far end's camera: what the leg hands this side, first frame a keyframe.
@@ -503,7 +566,7 @@ mod tests {
     #[test]
     fn a_stage_that_stops_counting_is_where_the_picture_stops() {
         use crate::state::CallPictures;
-        let at = |captured, sent, received, shown| CallPictures { captured, sent, received, shown, stalled: None, report: None };
+        let at = |captured, sent, received, shown| CallPictures { captured, sent, received, shown, stalled: None, report: None, errors: None };
         assert_eq!(at(60, 60, 60, 60).stall(&at(30, 30, 30, 30), true), None);
         assert_eq!(at(0, 0, 60, 60).stall(&at(0, 0, 30, 30), true), Some("captured"));
         assert_eq!(at(60, 0, 60, 60).stall(&at(30, 0, 30, 30), true), Some("sent"));
