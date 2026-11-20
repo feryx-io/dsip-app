@@ -1819,6 +1819,24 @@ abstract class Strings {
   /// **'Message'**
   String get contactMessage;
 
+  /// Windows: entry in the menu of the app's icon in the notification area (system tray); shows the app's window again.
+  ///
+  /// In en, this message translates to:
+  /// **'Open DSIP'**
+  String get trayOpen;
+
+  /// Windows: entry in the menu of the app's icon in the notification area; ends the app, which otherwise goes on when its window is closed.
+  ///
+  /// In en, this message translates to:
+  /// **'Quit DSIP'**
+  String get trayQuit;
+
+  /// Windows: notice shown once at the app's icon in the notification area when the user closes the window: the app was not ended.
+  ///
+  /// In en, this message translates to:
+  /// **'DSIP is still running and rings for calls. To end it, use Quit in this icon\'s menu.'**
+  String get trayRunning;
+
   /// No description provided for @contactRename.
   ///
   /// In en, this message translates to:

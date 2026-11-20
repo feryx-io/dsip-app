@@ -1020,6 +1020,16 @@ class StringsEn extends Strings {
   String get contactMessage => 'Message';
 
   @override
+  String get trayOpen => 'Open DSIP';
+
+  @override
+  String get trayQuit => 'Quit DSIP';
+
+  @override
+  String get trayRunning =>
+      'DSIP is still running and rings for calls. To end it, use Quit in this icon\'s menu.';
+
+  @override
   String get contactRename => 'Rename';
 
   @override
@@ -2232,6 +2242,16 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get contactMessage => '[Ḿéššàĝé o]';
+
+  @override
+  String get trayOpen => '[Óþéñ ĐŠÍÞ o]';
+
+  @override
+  String get trayQuit => '[Ǫúíţ ĐŠÍÞ o]';
+
+  @override
+  String get trayRunning =>
+      '[ĐŠÍÞ íš šţíĺĺ ŕúññíñĝ àñđ ŕíñĝš ƒóŕ çàĺĺš. Ţó éñđ íţ, úšé Ǫúíţ íñ ţĥíš íçóñ\'š ɱéñú. one two three four f]';
 
   @override
   String get contactRename => '[Ŕéñàɱé o]';

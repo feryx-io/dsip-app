@@ -26,6 +26,7 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   video_ = std::make_unique<VideoTextures>(flutter_controller_->engine(), GetHandle());
+  tray_ = std::make_unique<Tray>(flutter_controller_->engine(), GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -41,8 +42,10 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
-  // the textures go before the engine they are registered with
+  // the textures go before the engine they are registered with; the tray's
+  // icon with the window
   video_ = nullptr;
+  tray_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -54,6 +57,15 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // The tray first: a close hides the window, and Flutter would end the app.
+  if (tray_) {
+    std::optional<LRESULT> result =
+        tray_->Handle(hwnd, message, wparam, lparam);
+    if (result) {
+      return *result;
+    }
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
