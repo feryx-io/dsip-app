@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../l10n/app_localizations.dart';
 import 'client/models.dart';
 import 'controller.dart';
+import 'tray.dart';
 import 'screens/update.dart';
 import 'screens/voice.dart';
 import 'screens/calls.dart';
@@ -113,6 +114,7 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     widget.controller.strings = s;
+    Tray.labels(s);
     final error = widget.controller.takeError();
     final notice = widget.controller.takeNotice();
     final popup = widget.controller.takePopup();

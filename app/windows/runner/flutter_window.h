@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "tray.h"
 #include "video_texture.h"
 #include "win32_window.h"
 
@@ -32,6 +33,10 @@ class FlutterWindow : public Win32Window {
 
   // Video calls' pictures on textures (video_texture.cpp).
   std::unique_ptr<VideoTextures> video_;
+
+  // The app in the notification area: closing the window hides it there
+  // (tray.cpp).
+  std::unique_ptr<Tray> tray_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

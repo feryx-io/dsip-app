@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "flutter_window.h"
+#include "tray.h"
 #include "utils.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
@@ -11,6 +12,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
+  }
+
+  // One DSIP a user: closed, it stays in the notification area (tray.cpp),
+  // and started again it is the one running that comes forward, not a second
+  // with the same identity.
+  HANDLE once = ::CreateMutexW(nullptr, FALSE, L"com.feryx.dsip.running");
+  if (once && ::GetLastError() == ERROR_ALREADY_EXISTS) {
+    if (HWND running =
+            ::FindWindowW(L"FLUTTER_RUNNER_WIN32_WINDOW", L"DSIP")) {
+      DWORD process = 0;
+      ::GetWindowThreadProcessId(running, &process);
+      ::AllowSetForegroundWindow(process);
+      ::PostMessageW(running, ::RegisterWindowMessageW(kShowRunningMessage),
+                     0, 0);
+    }
+    return EXIT_SUCCESS;
   }
 
   // Initialize COM, so that it is available for use in the library and/or
