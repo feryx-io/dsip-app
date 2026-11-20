@@ -1423,6 +1423,12 @@ abstract class Strings {
   /// **'DSIP {version} is out. This copy does not update itself ({reason}).'**
   String updateByHand(String version, String reason);
 
+  /// No description provided for @updateInstalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing DSIP {version}…'**
+  String updateInstalling(String version);
+
   /// No description provided for @updateDownloading.
   ///
   /// In en, this message translates to:

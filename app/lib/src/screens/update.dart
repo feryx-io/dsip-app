@@ -16,13 +16,14 @@ class UpdateBanner extends StatelessWidget {
     final s = Strings.of(context);
     final u = controller.update;
     if (u == null || controller.updateDismissed == u.version) return const SizedBox.shrink();
-    final downloading = controller.updateStatus == 'downloading';
+    final installing = controller.updateStatus == 'installing';
+    final downloading = controller.updateStatus == 'downloading' || installing;
     final failed = controller.updateStatus == 'failed';
     return MaterialBanner(
       key: const Key('update-banner'),
       leading: const Icon(Icons.system_update),
       content: Text(switch ((downloading, failed, u.canInstall, controller.inCall)) {
-        (true, _, _, _) => s.updateDownloading(u.version),
+        (true, _, _, _) => installing ? s.updateInstalling(u.version) : s.updateDownloading(u.version),
         (_, true, _, _) => s.updateFailed(controller.updateError ?? ''),
         (_, _, false, _) => s.updateByHand(u.version, u.reason ?? ''),
         (_, _, true, true) => s.updateAfterCall(u.version),
@@ -56,6 +57,7 @@ class AboutSettings extends StatelessWidget {
       'checking' => s.updateChecking,
       'latest' => s.updateLatest,
       'downloading' => s.updateDownloading(u?.version ?? ''),
+      'installing' => s.updateInstalling(u?.version ?? ''),
       'failed' => s.updateFailed(controller.updateError ?? ''),
       _ => u == null ? null : s.updateAvailable(u.version),
     };
@@ -72,7 +74,9 @@ class AboutSettings extends StatelessWidget {
           children: [
             OutlinedButton(
               key: const Key('check-updates'),
-              onPressed: controller.updateStatus == 'checking' || controller.updateStatus == 'downloading'
+              onPressed: controller.updateStatus == 'checking' ||
+                      controller.updateStatus == 'downloading' ||
+                      controller.updateStatus == 'installing'
                   ? null
                   : controller.checkForUpdate,
               child: Text(s.updateCheck),

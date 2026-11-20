@@ -176,7 +176,11 @@ class FakeClient implements Client {
   Future<void> stop() async {
     _running = false;
     stops++;
+    if (stopHangs) await Completer<void>().future;
   }
+
+  /// A [stop] that never comes back.
+  bool stopHangs = false;
 
   /// What [checkForUpdate] finds (null: nothing newer), or throws.
   UpdateInfo? release;
