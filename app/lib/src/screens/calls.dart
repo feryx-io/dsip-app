@@ -204,14 +204,18 @@ class _LiveCall extends StatelessWidget {
               for (final e in [?n.micError, ?n.speakerError])
                 Text(e, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
-            // where the call's picture stops on this device, when a stage stalls
-            if (call.pictures case final p? when p.stalled != null) ...[
+            // where the call's picture stops on this device, when a stage stalls or its camera or picture would not start
+            if (call.pictures case final p? when p.stalled != null || p.errors != null) ...[
               Text(
                 s.callPictures(p.captured, p.sent, p.received, p.shown),
                 key: Key('call-pictures-${call.id}'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-              Text(s.callPicturesStalled(p.stalled!), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              if (p.stalled case final stage?)
+                Text(s.callPicturesStalled(stage), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              // what would not start, kept for the call: the pop-up saying so is gone in seconds
+              if (p.errors case final errors?)
+                SelectableText(errors, key: Key('call-pictures-errors-${call.id}'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
               // the decoder's own account, to read off a phone whose log cannot be reached
               if (p.report case final report?)
                 SelectableText(report, key: Key('call-pictures-report-${call.id}'), style: Theme.of(context).textTheme.bodySmall),

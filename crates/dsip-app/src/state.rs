@@ -391,6 +391,10 @@ pub struct CallPictures {
     /// (`Video::report`). For reading off the screen of a phone whose log cannot be reached.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub report: Option<String>,
+    /// Why this call's camera or picture would not start, a reason a line in the host's own words (`Video::errors`).
+    /// Kept for the whole call, also once a later try worked: shown with the counts whether or not a stage stalled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub errors: Option<String>,
 }
 
 impl CallPictures {
