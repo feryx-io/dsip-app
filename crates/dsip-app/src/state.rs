@@ -40,6 +40,39 @@ pub struct State {
     /// A voice message or voicemail being recorded, and what plays.
     #[serde(default)]
     pub voice: Voice,
+    /// This identity's profile card (§19.4): its picture, and whether the card is sent.
+    #[serde(default)]
+    pub profile: Profile,
+    /// The profile cards contacts sent, by identity (§19.4): each its sender's own claim, not verified. A name or a
+    /// picture the user gave a contact is shown before its card's.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub cards: BTreeMap<String, Card>,
+}
+
+/// This identity's profile card (§19.4, `profile-card/1.0`): [`Me::display_name`] and a picture, sent sealed to the
+/// other party of an introduction or a grant, and only by these standing choices, both off until turned on.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Profile {
+    /// The picture's file on this device (`SetPicture`): a JPEG or a PNG of at most 4,096 bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
+    /// Send the card with the introductions this identity sends, to those that take one.
+    #[serde(default)]
+    pub with_introductions: bool,
+    /// Send the card with the grants this identity gives (the requests it accepts), to those that take one.
+    #[serde(default)]
+    pub with_grants: bool,
+}
+
+/// A profile card received (§19.4): what its sender asks to be shown as. A claim of the sender's, never verified.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Card {
+    /// The name it gives.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Its picture: a JPEG or PNG file on this device.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
 }
 
 /// Recording and playing voice messages (M§8.2) and voicemail (M§13).
@@ -321,6 +354,9 @@ pub struct RequestView {
     /// What it says: why it asks (opened with this identity's key when it came sealed).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub purpose: Option<String>,
+    /// The profile card it came with (§19.4): a claim, not verified, shown with the request only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card: Option<Card>,
 }
 
 /// The identity and this device.
@@ -636,6 +672,16 @@ pub enum Change {
         /// As it is now.
         voice: Voice,
     },
+    /// This identity's profile card changed: its picture, or whether it is sent.
+    Profile {
+        /// As it is now.
+        profile: Profile,
+    },
+    /// The profile cards contacts sent changed: one came, was replaced, or is no longer shown.
+    Cards {
+        /// All of them, as they are now.
+        cards: BTreeMap<String, Card>,
+    },
     /// The app stopped: its phone unbound.
     Stopped,
 }
@@ -669,6 +715,8 @@ impl State {
             Change::History { history } => self.history = history.clone(),
             Change::Introduced { introduced } => self.messaging.introduced = introduced.clone(),
             Change::Voice { voice } => self.voice = voice.clone(),
+            Change::Profile { profile } => self.profile = profile.clone(),
+            Change::Cards { cards } => self.cards = cards.clone(),
             Change::Message { .. } | Change::MessageFile { .. } | Change::Granted { .. } | Change::Removed { .. } | Change::Stopped => {}
         }
     }

@@ -118,7 +118,11 @@ impl Host<SqliteProvider> for AppHost {
                 self.app.hide(&message.conversation, false);
                 self.app.publish(Change::Message { message });
             }
-            Output::Event(Event::Ui(Ui::Granted { by, .. })) => {
+            Output::Event(Event::Ui(Ui::Granted { by, profile, .. })) => {
+                // §19.4 "Keeping it": the grantor's card replaces the one held; a grant without one leaves it
+                if let Some(card) = &profile {
+                    self.app.keep_card(&by, card, engine.grant_held(&by).and_then(crate::profile::grant_until));
+                }
                 // the phone holds it too, to present when following their presence (P§6)
                 if let Some(g) = engine.grant_held(&by) {
                     match self.app.inner.phone.hold_grant(g).await {
@@ -179,8 +183,10 @@ fn refresh(app: &App, engine: &Engine<SqliteProvider>) {
             from: p["from"].as_str().unwrap_or("").to_string(),
             name: p["identity"]["display_name"].as_str().map(String::from),
             purpose: p["purpose"].as_str().map(String::from),
+            card: p.get("profile").filter(|c| c.is_object()).map(|c| crate::profile::view(&app.inner.identity_dir, c)),
         })
         .collect();
+    app.expire_cards();
     let (convs_changed, reqs_changed) = {
         let s = app.inner.state.lock().unwrap_or_else(|e| e.into_inner());
         (s.messaging.conversations != conversations, s.messaging.requests != requests)
@@ -287,7 +293,9 @@ async fn run(app: App, cfg: MessagingConfig, id: dsip_phone::Identity, relay: St
                 e.extra.insert("voicemail".into(), serde_json::json!({"max_duration_s": VOICEMAIL_MAX_S}));
             }
             let ka = id.key_agreement.as_ref().map(|k| &k.delegation);
-            let hint = dsip_transport::hints::reachability_with(&identity, &id.device, &id.delegation, &endpoints, seq, dsip_transport::now_s(), HINT_TTL_S, ka);
+            // §19.4 (spec-gap 189): the hint says this identity takes profile cards, whether or not it sends its own
+            let hint = dsip_transport::hints::reachability_listing(&identity, &id.device, &id.delegation, &endpoints, seq, dsip_transport::now_s(), HINT_TTL_S, ka,
+                                                                    &[dsip_core::profile_card::PROFILE_CARD_EXT]);
             for (node, r) in hints.publish(&hint).await {
                 tracing::info!("hint seq {seq} → {node}: {r:?}");
             }
@@ -512,16 +520,51 @@ async fn admit(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, code: Opt
     }
 }
 
-/// M§14.1: ask `to` for permission to message, the purpose sealed to its key agreement key.
+/// Whether this identity's card goes with an introduction or a grant (§19.4), as dsip-rs's rule says: the user's
+/// standing choice, the other party known to take cards (`listed`), and for an introduction of `size` encoded bytes
+/// a mailbox whose `hello` takes that much (`service_max`, its `introduction_max_bytes`).
+fn card_goes(sharing: bool, listed: bool, carrier: &str, service_max: &Value, size: usize) -> bool {
+    let ext = dsip_core::profile_card::PROFILE_CARD_EXT;
+    let verdict = dsip_messaging::first_contact::profile_card_send(&json!({
+        "sharing": sharing, "peer": {"listed": if listed { json!([ext]) } else { json!([]) }}, "carrier": carrier,
+        "service_introduction_max_bytes": service_max, "encoded_size": size}));
+    if sharing && verdict["card"] != true {
+        tracing::info!("the profile card does not go with this {carrier}: {}", verdict["why"]);
+    }
+    verdict["card"] == true
+}
+
+/// Whether `identity` is known to take profile cards (§19.4 "Who may be sent one"): it listed the extension on an
+/// introduction waiting here or on the grant held from it, or its document or its verified hint lists it.
+async fn takes_cards(mx: &mut Messenger<SqliteProvider>, identity: &str) -> bool {
+    let asked = mx.engine().requests().iter().any(|(_, p)| p["from"] == identity && p["profile_cards"] == true);
+    let granted = mx.engine().grant_held(identity)
+        .and_then(|g| dsip_core::b64::decode(g.split('.').nth(1)?))
+        .and_then(|p| serde_json::from_slice::<Value>(&p).ok())
+        .is_some_and(|p| dsip_core::profile_card::lists_profile_card(&p));
+    asked || granted || mx.peer_lists(identity, dsip_core::profile_card::PROFILE_CARD_EXT).await
+}
+
+/// M§14.1: ask `to` for permission to message, the purpose sealed to its key agreement key, and with it this
+/// identity's profile card when the user shares it with introductions and `to` takes one (§19.4).
 async fn introduce(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &str, purpose: &str) -> Result<Response, String> {
     let now = dsip_transport::now_s() as f64;
-    let r = mx.engine_mut().introduce(to, purpose, false, now).map_err(|e| e.0)?;
+    // its mailbox first: its hint says whether it takes a card, its mailbox's hello how large an introduction
+    let mut conn = mx.peer_connect(to).await.map_err(|e| e.to_string())?;
+    let did = conn.relay.did.clone();
+    let service_max = conn.relay.capabilities["introduction_max_bytes"].clone();
+    let sharing = host.app.state().profile.with_introductions;
+    let listed = sharing && takes_cards(mx, to).await;
+    let card = card_goes(sharing, listed, "introduction", &service_max, 0).then(|| host.app.my_card()).flatten();
+    let mut r = mx.engine_mut().introduce_with_card(to, purpose, false, card.as_ref(), now).map_err(|e| e.0)?;
+    if card.is_some() && !card_goes(sharing, listed, "introduction", &service_max, r.envelope.len()) {
+        // §19.4: a sender that may not send its card sends the introduction without it
+        r = mx.engine_mut().introduce(to, purpose, false, now).map_err(|e| e.0)?;
+    }
     // spec-gap 81: tell our own mailbox first, so the grant that answers is not rate-limited there (best effort)
     if let Err(e) = mx.send_frame(host, &r.send).await {
         tracing::warn!("introduction {} not announced to our own mailbox: {e}", r.id);
     }
-    let mut conn = mx.peer_connect(to).await.map_err(|e| e.to_string())?;
-    let did = conn.relay.did.clone();
     let frame = mx.engine_mut().first_contact_frame(&did, "introduction", to, &r.envelope, now);
     let answer = dsip_messenger::peer_exchange(&mut conn, &frame).await.map_err(|e| e.to_string())?;
     match answer["type"].as_str() {
@@ -537,8 +580,14 @@ async fn introduce(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, to: &
 /// A grant is one way (§19.4): the app takes accepting to mean both ways, as people expect of accepting a contact.
 async fn accept_request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, id: &str, back: bool) -> Result<Response, String> {
     let now = dsip_transport::now_s();
-    let requester = mx.engine().requests().get(id).and_then(|p| p["from"].as_str()).map(String::from).ok_or_else(|| format!("no request {id}"))?;
+    let asked = mx.engine().requests().get(id).cloned().ok_or_else(|| format!("no request {id}"))?;
+    let requester = asked["from"].as_str().map(String::from).ok_or_else(|| format!("no request {id}"))?;
+    // §19.4: our card goes on the grant by the user's choice, when the introduction listed the extension
+    let profile = card_goes(host.app.state().profile.with_grants, asked["profile_cards"] == true, "grant", &Value::Null, 0)
+        .then(|| host.app.my_card())
+        .flatten();
     let request = dsip_phone::GrantRequest {
+        profile,
         introduction: id.to_string(),
         requester: requester.clone(),
         scope: GRANT_SCOPE.iter().map(|s| s.to_string()).collect(),
@@ -551,6 +600,10 @@ async fn accept_request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, 
     let answer = dsip_messenger::peer_exchange(&mut conn, &frame).await.map_err(|e| e.to_string())?;
     if answer["type"] != "accepted" {
         return Err(format!("grant refused: {}", answer["reason"]));
+    }
+    // §19.4 "Keeping it": the introduction's card stays with the contact
+    if let Some(card) = asked.get("profile").filter(|c| c.is_object()) {
+        host.app.keep_card(&requester, card, None);
     }
     mx.engine_mut().forget_request(id);
     refresh(&host.app, mx.engine());

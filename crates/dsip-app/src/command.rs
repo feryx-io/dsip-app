@@ -200,6 +200,24 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         name: Option<String>,
     },
+    /// Give this identity a picture for its profile card (§19.4), or with no `path`, take it away. The file is a JPEG
+    /// or a PNG of at most 4,096 bytes (a screen shrinks the user's choice to fit); it is copied. The card goes
+    /// nowhere until [`Command::ShareProfile`] says so.
+    SetPicture {
+        /// The image file on this device.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+    },
+    /// Whether this identity's profile card, its name and picture, is sent (§19.4): sealed to the other party, and
+    /// only to one that takes cards. Two standing choices, both off until turned on; one not given stays as it is.
+    ShareProfile {
+        /// With the introductions sent.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        introductions: Option<bool>,
+        /// With the grants given: the requests accepted.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        grants: Option<bool>,
+    },
     /// Stop following an identity's presence.
     UnwatchPresence {
         /// The identity.

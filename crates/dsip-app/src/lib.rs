@@ -29,6 +29,7 @@ pub mod control;
 pub mod keys;
 pub mod messaging;
 pub mod pairing;
+pub mod profile;
 pub mod servers;
 pub mod video;
 mod settings;
@@ -51,8 +52,8 @@ pub use messaging::MessagingConfig;
 pub use settings::{init_identity, Mailbox, Settings};
 pub use wake::WakeConfig;
 pub use state::{
-    Audio as AudioState, AudioDevice, CallPictures, CallRecord, CallSound, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
-    Messaging, PresenceState, PresenceView, Push, RecordingView, Registration, RequestView, State, Voice,
+    Audio as AudioState, AudioDevice, CallPictures, CallRecord, CallSound, CallState, CallView, Card, Change, ConversationView, Direction, Introduced, Me,
+    MessageView, Messaging, PresenceState, PresenceView, Profile, Push, RecordingView, Registration, RequestView, State, Voice,
 };
 
 /// This build's version: the release's (a tag `vX.Y.Z` is this crate's version, `.github/workflows/release.yml`).
@@ -205,6 +206,8 @@ pub(crate) struct Inner {
     names_file: std::sync::Mutex<std::path::PathBuf>,
     /// The identity's folder.
     identity_dir: std::path::PathBuf,
+    /// The profile cards contacts sent ([`profile::CARDS_FILE`]); held while writing it.
+    cards: std::sync::Mutex<std::collections::BTreeMap<String, profile::Kept>>,
     /// The direct conversations deleted ([`HIDDEN_FILE`]): not listed until a message comes or goes in one again.
     pub(crate) hidden: std::sync::Mutex<std::collections::BTreeSet<String>>,
     /// The waking task, when the app has a push gateway.
@@ -280,7 +283,10 @@ impl App {
         let phone = b.build().await?;
         let relay = cfg.relay.clone();
         let saved = |file: &str| std::fs::read(identity_dir.join(file)).ok();
+        let cards = profile::load_cards(&identity_dir);
         let state = State {
+            profile: profile::load_profile(&identity_dir),
+            cards: profile::views(&identity_dir, &cards, dsip_transport::now_s()),
             me,
             messaging: Messaging {
                 introduced: saved(INTRODUCED_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default(),
@@ -313,6 +319,7 @@ impl App {
                 names_file: std::sync::Mutex::new(identity_dir.join(NAMES_FILE)),
                 hidden: std::sync::Mutex::new(saved(HIDDEN_FILE).and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()),
                 identity_dir: identity_dir.clone(),
+                cards: std::sync::Mutex::new(cards),
                 wake: std::sync::OnceLock::new(),
                 auto_busy: AtomicBool::new(false),
             }),
@@ -581,6 +588,14 @@ impl App {
                 };
                 self.publish(Change::Names { names });
                 self.save_names();
+                Response::Ok
+            }
+            Command::SetPicture { path } => match self.set_picture(path.as_deref()) {
+                Ok(()) => Response::Ok,
+                Err(e) => Response::error(e),
+            },
+            Command::ShareProfile { introductions, grants } => {
+                self.share_profile(introductions, grants);
                 Response::Ok
             }
             Command::UnwatchPresence { identity } => {
