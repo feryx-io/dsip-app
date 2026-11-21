@@ -180,7 +180,7 @@ class _HomeState extends State<Home> {
             Tabs.messages => MessagesScreen(controller: widget.controller, state: state),
             Tabs.contacts => ContactsScreen(controller: widget.controller, state: state),
             Tabs.presence => PresenceScreen(controller: widget.controller, state: state),
-            Tabs.me => MeScreen(state: state),
+            Tabs.me => MeScreen(controller: widget.controller, state: state),
             _ => SettingsScreen(controller: widget.controller, state: state),
           },
         ),

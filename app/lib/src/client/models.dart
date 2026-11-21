@@ -221,8 +221,41 @@ class ConversationView {
   );
 }
 
+/// A profile card someone sent (core §19.4): the name and picture they ask to be shown as. Their own claim, never
+/// verified: a screen that shows any of it says so.
+class ProfileCard {
+  const ProfileCard({this.name, this.picture});
+  final String? name;
+
+  /// The picture's file on this device (a small JPEG or PNG).
+  final String? picture;
+
+  factory ProfileCard.fromJson(Map<String, dynamic> j) =>
+      ProfileCard(name: j['name'] as String?, picture: j['picture'] as String?);
+}
+
+/// This identity's own card: its picture, and whether the card is sent. Both choices are off until turned on.
+class Profile {
+  const Profile({this.picture, this.withIntroductions = false, this.withGrants = false});
+
+  /// The picture's file on this device.
+  final String? picture;
+
+  /// Sent with the introductions this identity sends.
+  final bool withIntroductions;
+
+  /// Sent with the requests this identity accepts.
+  final bool withGrants;
+
+  factory Profile.fromJson(Map<String, dynamic> j) => Profile(
+    picture: j['picture'] as String?,
+    withIntroductions: j['with_introductions'] as bool? ?? false,
+    withGrants: j['with_grants'] as bool? ?? false,
+  );
+}
+
 class RequestView {
-  const RequestView({required this.id, required this.from, this.name, this.purpose});
+  const RequestView({required this.id, required this.from, this.name, this.purpose, this.card});
   final String id;
   final String from;
 
@@ -232,11 +265,15 @@ class RequestView {
   /// What it says: why it asks.
   final String? purpose;
 
+  /// The profile card it came with: shown with the request only, as unverified.
+  final ProfileCard? card;
+
   factory RequestView.fromJson(Map<String, dynamic> j) => RequestView(
     id: j['id'] as String,
     from: j['from'] as String,
     name: j['name'] as String?,
     purpose: j['purpose'] as String?,
+    card: j['card'] == null ? null : ProfileCard.fromJson(j['card'] as Map<String, dynamic>),
   );
 }
 
@@ -381,6 +418,8 @@ class AppState {
     this.names = const {},
     this.history = const [],
     this.voice = const VoiceState(),
+    this.profile = const Profile(),
+    this.cards = const {},
   });
   /// The app makes and takes video calls here: it has a camera and H.264.
   final bool video;
@@ -401,6 +440,12 @@ class AppState {
 
   /// A voice message or voicemail being recorded, and what plays.
   final VoiceState voice;
+
+  /// This identity's own profile card: its picture, and whether it is sent.
+  final Profile profile;
+
+  /// The profile cards contacts sent, by identity: each its sender's claim, not verified.
+  final Map<String, ProfileCard> cards;
 
   /// What to call [did]: the name the user gave it, else the name it [offered] (a caller's own, unchecked), else the
   /// identity, shortened.
@@ -423,6 +468,11 @@ class AppState {
     names: (j['names'] as Map<String, dynamic>? ?? const {}).cast<String, String>(),
     history: [for (final c in j['history'] as List? ?? const []) CallRecord.fromJson(c as Map<String, dynamic>)],
     voice: VoiceState.fromJson(j['voice'] as Map<String, dynamic>? ?? const {}),
+    profile: Profile.fromJson(j['profile'] as Map<String, dynamic>? ?? const {}),
+    cards: {
+      for (final MapEntry(:key, :value) in (j['cards'] as Map<String, dynamic>? ?? const {}).entries)
+        key: ProfileCard.fromJson(value as Map<String, dynamic>),
+    },
   );
 }
 

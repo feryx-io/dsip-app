@@ -182,6 +182,37 @@
   "meMailboxNone": "None: calls only",
   "meCopy": "Copy",
   "meCopied": "Copied",
+  "cardTitle": "Your card",
+  "@cardTitle": {"description": "Heading on the Me screen above the user's profile card: the name and picture they can choose to send to people."},
+  "cardIntro": "Your name and a small picture, for the people you introduce yourself to or accept. It is sent sealed, so only they can read it, and only if you turn it on below.",
+  "@cardIntro": {"description": "Explains the profile card under its heading. 'Sealed' means encrypted to the other person."},
+  "cardWithIntroductions": "Send with my introductions",
+  "@cardWithIntroductions": {"description": "Switch, off by default: send the user's card along when they introduce themselves to someone."},
+  "cardWithIntroductionsHint": "When you introduce yourself to someone whose app shows cards",
+  "cardWithGrants": "Send when I accept a request",
+  "@cardWithGrants": {"description": "Switch, off by default: send the user's card to someone whose request to message them they accept."},
+  "cardWithGrantsHint": "To the person whose request you accept, if their app shows cards",
+  "cardPictureUnreadable": "That file is not a picture this app can read.",
+  "cardClaimName": "Their card says “{name}” · not verified",
+  "@cardClaimName": {
+    "description": "Shown beside a profile card another person sent: the name on it is their own claim, nobody checked it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cardClaimNameAndPicture": "Their card says “{name}”, with this picture · not verified",
+  "@cardClaimNameAndPicture": {
+    "description": "As cardClaimName, when the card also carries the picture shown beside it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cardClaimPicture": "Picture from their card · not verified",
+  "@cardClaimPicture": {"description": "Shown beside a picture another person sent on their profile card, without a name: it is their own claim."},
   "commandFailed": "{reason}",
   "@commandFailed": {
     "placeholders": {

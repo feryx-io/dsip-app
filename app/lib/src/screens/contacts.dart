@@ -84,7 +84,7 @@ class ContactsScreen extends StatelessWidget {
             leading: Stack(
               clipBehavior: Clip.none,
               children: [
-                Avatar(controller: controller, did: did, name: name),
+                Avatar(controller: controller, did: did, name: name, cardPicture: state.cards[did]?.picture),
                 if (presence.containsKey(did))
                   PositionedDirectional(
                     end: -2,
@@ -98,7 +98,20 @@ class ContactsScreen extends StatelessWidget {
             ),
             title: Text(name, overflow: TextOverflow.ellipsis),
             // selectable, like the user's own on Me: to copy a part, or all of it with the menu's entry
-            subtitle: SelectableText(did, key: Key('contact-address-$did'), maxLines: 2),
+            subtitle: state.cards[did] == null
+                ? SelectableText(did, key: Key('contact-address-$did'), maxLines: 2)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SelectableText(did, key: Key('contact-address-$did'), maxLines: 2),
+                      // what they sent of themselves is their claim (core §19.4): said so, beside the identity
+                      Text(
+                        cardClaim(s, state.cards[did]!),
+                        key: Key('contact-card-$did'),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
             trailing: Wrap(
               children: [
                 IconButton(

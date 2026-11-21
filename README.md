@@ -11,6 +11,10 @@ sit on:
 - **Calls:** it binds an identity to its relay, rings for incoming calls, places calls, and carries their sound
   through the microphone and speaker. With `--hints-node`, it publishes its relay in its hint, and a call to
   someone bound to another relay goes through theirs, as the browser client does.
+- **Profile cards** (core §19.4, `profile-card/1.0`): your name and a small picture, sent sealed with the
+  introductions you send and the requests you accept, each only once you turn it on (`share-profile`; both are off
+  to begin with) and only to someone whose app takes cards (its hint says so). A card you receive is shown as its
+  sender's claim, not verified; a name or picture you gave a contact yourself comes first.
 - **Messages:** first contact (introduce, accept), then direct and group conversations, through the identity's
   mailbox. A group is made with identities that granted you; any member adds or removes another, and you leave one. A
   `did:key` identity's mailbox is found through its hint on the hints nodes, which the app publishes, as the browser
@@ -98,6 +102,8 @@ dsip-app add <group id> did:key:z6Mk…dave            # `remove <group id> <did
 dsip-app presence busy                               # available, busy, away, dnd, offline (invisible), or auto
 dsip-app follow did:key:z6Mk…carol                   # shown under presence.following once Carol has granted you
 dsip-app revoke did:key:z6Mk…carol                   # withdraw what you granted Carol; the others get new keys
+dsip-app picture me.jpg                              # your card's picture: a JPEG or PNG of at most 4,096 bytes
+dsip-app share-profile --introductions true          # send your card with introductions; `--grants true`: on accepting
 dsip-app audio --input <id> --output <id>            # ids from `state`'s audio.devices; `audio` alone looks again
 ```
 

@@ -6,6 +6,7 @@ import '../client/models.dart';
 import '../controller.dart';
 import 'address.dart';
 import 'attachments.dart';
+import 'avatar.dart';
 import 'confirm.dart';
 import 'form_dialog.dart';
 import 'name_dialog.dart';
@@ -175,7 +176,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 for (final r in m.requests)
                   ListTile(
                     key: Key('request-${r.id}'),
-                    isThreeLine: r.purpose != null,
+                    isThreeLine: r.purpose != null || r.card != null,
+                    // the card they sent with it, shown here only (core §19.4), and said below to be unverified
+                    leading: r.card == null
+                        ? null
+                        : Avatar(controller: c, did: r.from, name: r.card!.name ?? r.name, cardPicture: r.card!.picture),
                     title: Text(switch ((widget.state.names[r.from], r.name)) {
                       (final String mine, _) => mine,
                       (null, final String offered) => s.requestFrom(offered),
@@ -187,6 +192,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       children: [
                         if (r.purpose != null) Text(r.purpose!, key: Key('request-purpose-${r.id}')),
                         SelectableText(r.from, style: Theme.of(context).textTheme.bodySmall),
+                        if (r.card != null)
+                          Text(
+                            cardClaim(s, r.card!),
+                            key: Key('request-card-${r.id}'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                       ],
                     ),
                     trailing: Wrap(

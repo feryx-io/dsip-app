@@ -26,12 +26,19 @@ Map<String, dynamic> _fixture(String name) =>
 final screens = <(String, String?, Future<void> Function(WidgetTester)?, bool)>[
   ('first run', null, null, false),
   ('calls', 'Calls', null, true),
-  ('messages', 'Messages', (t) => t.tap(find.byKey(const Key('conversation-MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk'))), false),
+  ('messages', 'Messages', _openConversation, false),
   ('contacts', 'Contacts', null, true),
   ('presence', 'Presence', null, true),
   ('me', 'Me', null, true),
   ('settings', 'Settings', null, true),
 ];
+
+/// Open the fixture's conversation: scrolled to first, as at twice the text size the request above it fills the list.
+Future<void> _openConversation(WidgetTester t) async {
+  final row = find.byKey(const Key('conversation-MDFNNkVLUlRWRzNDNTVERk1RNDAxRzNNQTk'));
+  await t.dragUntilVisible(row, find.byType(ListView).first, const Offset(0, -150));
+  await t.tap(row);
+}
 
 /// WCAG 2's contrast ratio of two colours.
 double contrast(Color a, Color b) {

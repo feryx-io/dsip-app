@@ -317,6 +317,44 @@ class StringsEn extends Strings {
   String get meCopied => 'Copied';
 
   @override
+  String get cardTitle => 'Your card';
+
+  @override
+  String get cardIntro =>
+      'Your name and a small picture, for the people you introduce yourself to or accept. It is sent sealed, so only they can read it, and only if you turn it on below.';
+
+  @override
+  String get cardWithIntroductions => 'Send with my introductions';
+
+  @override
+  String get cardWithIntroductionsHint =>
+      'When you introduce yourself to someone whose app shows cards';
+
+  @override
+  String get cardWithGrants => 'Send when I accept a request';
+
+  @override
+  String get cardWithGrantsHint =>
+      'To the person whose request you accept, if their app shows cards';
+
+  @override
+  String get cardPictureUnreadable =>
+      'That file is not a picture this app can read.';
+
+  @override
+  String cardClaimName(String name) {
+    return 'Their card says “$name” · not verified';
+  }
+
+  @override
+  String cardClaimNameAndPicture(String name) {
+    return 'Their card says “$name”, with this picture · not verified';
+  }
+
+  @override
+  String get cardClaimPicture => 'Picture from their card · not verified';
+
+  @override
   String commandFailed(String reason) {
     return '$reason';
   }
@@ -1536,6 +1574,45 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get meCopied => '[Çóþíéđ o]';
+
+  @override
+  String get cardTitle => '[Ýóúŕ çàŕđ o]';
+
+  @override
+  String get cardIntro =>
+      '[Ýóúŕ ñàɱé àñđ à šɱàĺĺ þíçţúŕé, ƒóŕ ţĥé þéóþĺé ýóú íñţŕóđúçé ýóúŕšéĺƒ ţó óŕ àççéþţ. Íţ íš šéñţ šéàĺéđ, šó óñĺý ţĥéý çàñ ŕéàđ íţ, àñđ óñĺý íƒ ýóú ţúŕñ íţ óñ ƀéĺóŵ. one two three four five six seven eight ]';
+
+  @override
+  String get cardWithIntroductions => '[Šéñđ ŵíţĥ ɱý íñţŕóđúçţíóñš one tw]';
+
+  @override
+  String get cardWithIntroductionsHint =>
+      '[Ŵĥéñ ýóú íñţŕóđúçé ýóúŕšéĺƒ ţó šóɱéóñé ŵĥóšé àþþ šĥóŵš çàŕđš one two three fo]';
+
+  @override
+  String get cardWithGrants => '[Šéñđ ŵĥéñ Í àççéþţ à ŕéǫúéšţ one tw]';
+
+  @override
+  String get cardWithGrantsHint =>
+      '[Ţó ţĥé þéŕšóñ ŵĥóšé ŕéǫúéšţ ýóú àççéþţ, íƒ ţĥéíŕ àþþ šĥóŵš çàŕđš one two three fo]';
+
+  @override
+  String get cardPictureUnreadable =>
+      '[Ţĥàţ ƒíĺé íš ñóţ à þíçţúŕé ţĥíš àþþ çàñ ŕéàđ. one two th]';
+
+  @override
+  String cardClaimName(String name) {
+    return '[Ţĥéíŕ çàŕđ šàýš “$name” · ñóţ ṽéŕíƒíéđ one two ]';
+  }
+
+  @override
+  String cardClaimNameAndPicture(String name) {
+    return '[Ţĥéíŕ çàŕđ šàýš “$name”, ŵíţĥ ţĥíš þíçţúŕé · ñóţ ṽéŕíƒíéđ one two three]';
+  }
+
+  @override
+  String get cardClaimPicture =>
+      '[Þíçţúŕé ƒŕóɱ ţĥéíŕ çàŕđ · ñóţ ṽéŕíƒíéđ one two t]';
 
   @override
   String commandFailed(String reason) {
