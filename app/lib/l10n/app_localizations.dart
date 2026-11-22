@@ -565,6 +565,12 @@ abstract class Strings {
   /// **'Camera off'**
   String get callCameraOff;
 
+  /// Said to a screen reader for the dark box a video call shows in place of the other person's picture while none comes.
+  ///
+  /// In en, this message translates to:
+  /// **'Their camera is off'**
+  String get callFarCameraOff;
+
   /// No description provided for @callVia.
   ///
   /// In en, this message translates to:

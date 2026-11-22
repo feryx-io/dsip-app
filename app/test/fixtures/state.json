@@ -42,7 +42,8 @@
           "stalled": "played"
         },
         "video": true,
-        "camera": true
+        "camera": true,
+        "far_video": true
       },
       {
         "id": 3,

@@ -139,3 +139,18 @@ class _VideoTileState extends State<VideoTile> {
     return ColoredBox(color: Colors.black, child: picture);
   }
 }
+
+/// What a video call shows in place of the far end's picture while none comes (their camera is off): dark, and a
+/// camera struck through. Over the tile, which keeps its texture for when their pictures come again.
+class NoFarVideo extends StatelessWidget {
+  const NoFarVideo({super.key, required this.label});
+
+  /// What it is, for a screen reader.
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: Colors.black,
+    child: Center(child: Icon(Icons.videocam_off_outlined, color: Colors.white54, size: 40, semanticLabel: label)),
+  );
+}
