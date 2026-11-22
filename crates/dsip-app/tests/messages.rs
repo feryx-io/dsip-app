@@ -374,5 +374,14 @@ async fn profile_cards_go_with_the_introduction_and_the_grant_when_shared() {
     let bobs = Path::new(card.picture.as_deref().unwrap()).parent().and_then(Path::parent).expect("his identity's folder").to_path_buf();
     let saved: serde_json::Value = serde_json::from_slice(&std::fs::read(bobs.join(dsip_app::profile::CARDS_FILE)).unwrap()).unwrap();
     assert_eq!(saved[&alice_did]["card"]["display_name"], "Alice");
+
+    // Bob withdraws his grant. Alice is sent nothing of it: following him ends by policy while the grant still ran,
+    // and his card, which that grant carried, is shown no more (§19.4 "Keeping it", spec-gap 190). Hers came on her
+    // introduction, no grant of his: Bob keeps it with the contact.
+    assert_eq!(bob.command(Command::SetPresence { state: Some("available".into()) }).await, Response::Ok);
+    until(&alice, "Alice follows Bob, admitted by his grant", |s| s.presence.following.iter().any(|p| p.identity == bob_did && p.state.is_some())).await;
+    assert_eq!(bob.command(Command::RevokeGrants { identity: alice_did.clone() }).await, Response::Revoked { count: 1 });
+    until(&alice, "Bob's card is gone", |s| !s.cards.contains_key(&bob_did)).await;
+    assert!(bob.state().cards.contains_key(&alice_did));
     let _ = std::fs::remove_dir_all(&dir);
 }
