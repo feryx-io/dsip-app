@@ -4,8 +4,8 @@
 //! again.
 
 use dsip_app::{
-    AudioDevice, AudioState, CallRecord, CallSound, CallState, CallView, Change, ConversationView, Direction, Introduced, Me, MessageView,
-    PresenceView, RequestView, Mailbox, Response, Settings, State,
+    AudioDevice, AudioState, CallRecord, CallSound, CallState, CallView, Card, Change, ConversationView, Direction, Introduced, Me, MessageView,
+    PresenceView, Profile, RequestView, Mailbox, Response, Settings, State,
 };
 
 fn state() -> State {
@@ -65,7 +65,14 @@ fn state() -> State {
         }],
     });
     s.apply(&Change::Requests { requests: vec![RequestView { id: "01M6EKRTVG3C55DFMQ401G3MB0".into(), from: "did:key:z6MkCarol".into(), name: Some("Carol".into()),
-                                                                 purpose: Some("We met at the conference".into()) }] });
+                                                                 purpose: Some("We met at the conference".into()),
+                                                                 card: Some(Card { name: Some("Carol N.".into()), picture: Some("/home/alice/.local/share/dsip/identity/cards/5f2a9c0b7d1e4a66c0de1234.jpg".into()) }) }] });
+    s.apply(&Change::Profile {
+        profile: Profile { picture: Some("/home/alice/.local/share/dsip/identity/profile-picture-0a1b2c3d4e5f.jpg".into()), with_introductions: true, with_grants: false },
+    });
+    s.apply(&Change::Cards {
+        cards: [("did:key:z6MkBob".to_string(), Card { name: Some("Bob Marsh".into()), picture: Some("/home/alice/.local/share/dsip/identity/cards/9e8d7c6b5a4f3e2d1c0b9a88.png".into()) })].into(),
+    });
     s.apply(&Change::Introduced {
         introduced: vec![Introduced { to: "did:key:z6MkDave".into(), name: Some("Dave".into()), purpose: "Lunch on Friday?".into(),
                                       sent_at: 1_794_200_000, accepted: false }],

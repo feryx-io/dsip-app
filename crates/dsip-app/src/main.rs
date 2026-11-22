@@ -260,6 +260,21 @@ enum Cmd {
         /// The identity.
         identity: String,
     },
+    /// Your profile card's picture: a JPEG or PNG file of at most 4,096 bytes; without a file, no picture.
+    Picture {
+        /// The image file.
+        path: Option<PathBuf>,
+    },
+    /// Whether your profile card, your name and picture, is sent: sealed, and only to those that take cards. Both are
+    /// off until turned on.
+    ShareProfile {
+        /// With the introductions you send: `true` or `false`.
+        #[arg(long)]
+        introductions: Option<bool>,
+        /// With the requests you accept: `true` or `false`.
+        #[arg(long)]
+        grants: Option<bool>,
+    },
     /// Withdraw what you granted an identity (calls, presence); the others you granted get new presence keys.
     Revoke {
         /// The identity.
@@ -547,6 +562,8 @@ async fn main() -> Result<ExitCode> {
         Cmd::Follow { identity } => Command::WatchPresence { identity },
         Cmd::Unfollow { identity } => Command::UnwatchPresence { identity },
         Cmd::Revoke { identity } => Command::RevokeGrants { identity },
+        Cmd::Picture { path } => Command::SetPicture { path: path.map(|p| p.to_string_lossy().into_owned()) },
+        Cmd::ShareProfile { introductions, grants } => Command::ShareProfile { introductions, grants },
         Cmd::Answer { call } => Command::Answer { call },
         Cmd::Decline { call } => Command::Decline { call },
         Cmd::Hangup { call } => Command::Hangup { call },

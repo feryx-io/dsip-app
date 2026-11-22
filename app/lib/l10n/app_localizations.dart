@@ -637,6 +637,66 @@ abstract class Strings {
   /// **'Copied'**
   String get meCopied;
 
+  /// Heading on the Me screen above the user's profile card: the name and picture they can choose to send to people.
+  ///
+  /// In en, this message translates to:
+  /// **'Your card'**
+  String get cardTitle;
+
+  /// Explains the profile card under its heading. 'Sealed' means encrypted to the other person.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name and a small picture, for the people you introduce yourself to or accept. It is sent sealed, so only they can read it, and only if you turn it on below.'**
+  String get cardIntro;
+
+  /// Switch, off by default: send the user's card along when they introduce themselves to someone.
+  ///
+  /// In en, this message translates to:
+  /// **'Send with my introductions'**
+  String get cardWithIntroductions;
+
+  /// No description provided for @cardWithIntroductionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When you introduce yourself to someone whose app shows cards'**
+  String get cardWithIntroductionsHint;
+
+  /// Switch, off by default: send the user's card to someone whose request to message them they accept.
+  ///
+  /// In en, this message translates to:
+  /// **'Send when I accept a request'**
+  String get cardWithGrants;
+
+  /// No description provided for @cardWithGrantsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'To the person whose request you accept, if their app shows cards'**
+  String get cardWithGrantsHint;
+
+  /// No description provided for @cardPictureUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is not a picture this app can read.'**
+  String get cardPictureUnreadable;
+
+  /// Shown beside a profile card another person sent: the name on it is their own claim, nobody checked it.
+  ///
+  /// In en, this message translates to:
+  /// **'Their card says “{name}” · not verified'**
+  String cardClaimName(String name);
+
+  /// As cardClaimName, when the card also carries the picture shown beside it.
+  ///
+  /// In en, this message translates to:
+  /// **'Their card says “{name}”, with this picture · not verified'**
+  String cardClaimNameAndPicture(String name);
+
+  /// Shown beside a picture another person sent on their profile card, without a name: it is their own claim.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture from their card · not verified'**
+  String get cardClaimPicture;
+
   /// No description provided for @commandFailed.
   ///
   /// In en, this message translates to:

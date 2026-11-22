@@ -161,6 +161,7 @@ async fn introduced_granted_messaged_and_answered_through_mailboxes_found_by_hin
     until(&bob, "Bob sees the request", |s| s.messaging.requests.iter().any(|q| q.from == alice_did)).await;
     let request = bob.state().messaging.requests[0].clone();
     assert_eq!((request.name.as_deref(), request.purpose.as_deref()), (Some("Alice"), Some("hello from Alice")), "what she said, opened");
+    assert_eq!(request.card, None, "her card stays with her: sharing is off until turned on (§19.4)");
     assert_eq!(bob.command(Command::AcceptRequest { id: request.id }).await, Response::Ok);
     assert!(bob.state().messaging.requests.is_empty(), "answered, the request is gone");
     assert_eq!(bob.state().names.get(&alice_did).map(String::as_str), Some("Alice"), "Bob has her as a contact, by the name she gave");
@@ -171,6 +172,7 @@ async fn introduced_granted_messaged_and_answered_through_mailboxes_found_by_hin
     .await;
     assert_eq!(by, bob_did);
     assert!(alice.state().messaging.introduced[0].accepted, "her introduction, accepted");
+    assert!(alice.state().cards.is_empty() && bob.state().cards.is_empty(), "no card either way");
     assert_eq!(alice.state().names.get(&bob_did).map(String::as_str), Some("Bob"), "Alice has him as a contact, by the name she gave him");
     assert_eq!(alice.command(Command::ForgetIntroduction { to: bob_did.clone() }).await, Response::Ok);
     assert!(alice.state().messaging.introduced.is_empty());
@@ -302,5 +304,75 @@ async fn a_mailbox_enrolling_by_code_asks_for_it_then_serves() {
     assert_eq!(by, alice_did);
     alice.stop().await;
     bob.stop().await;
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// §19.4 (`profile-card/1.0`): each side's card goes only by its own standing choice, sealed, to the other, which
+/// said in its hint (Bob) or on its introduction (Alice) that it takes cards.
+#[tokio::test(flavor = "multi_thread")]
+async fn profile_cards_go_with_the_introduction_and_the_grant_when_shared() {
+    let dir = std::env::temp_dir().join(format!("dsip-app-cards-e2e-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(&dir, &["127.0.0.1".into(), "localhost".into()]).unwrap();
+    let tls = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    let hints = hints_node().await;
+    let net = Network::new();
+    let alice = app(&net, &dir, "Alice", mailbox(&dir, "mailbox-a", &tls, &hints).await, &hints).await;
+    let bob = app(&net, &dir, "Bob", mailbox(&dir, "mailbox-b", &tls, &hints).await, &hints).await;
+    let (alice_did, bob_did) = (alice.state().me.identity, bob.state().me.identity);
+    for (who, a) in [("Alice", &alice), ("Bob", &bob)] {
+        until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
+    }
+    tokio::time::sleep(Duration::from_millis(500)).await; // each has published its hint once bound
+
+    // a picture is a JPEG or a PNG of at most 4,096 bytes
+    let file = |name: &str, bytes: &[u8]| {
+        let p = dir.join(name);
+        std::fs::write(&p, bytes).unwrap();
+        p.to_string_lossy().into_owned()
+    };
+    let mut jpeg = vec![0xff, 0xd8, 0xff, 0xe0];
+    jpeg.resize(4_096, 7);
+    let mut large = jpeg.clone();
+    large.push(7);
+    for (bad, why) in [(file("large.jpg", &large), "at most 4096"), (file("a.gif", b"GIF89a..."), "JPEG or a PNG")] {
+        let Response::Error { message } = alice.command(Command::SetPicture { path: Some(bad) }).await else { panic!("taken") };
+        assert!(message.contains(why), "{message}");
+    }
+    assert_eq!(alice.command(Command::SetPicture { path: Some(file("alice.jpg", &jpeg)) }).await, Response::Ok);
+    let mine = alice.state().profile;
+    assert_eq!(std::fs::read(mine.picture.as_deref().expect("her picture")).unwrap(), jpeg);
+    assert!(!mine.with_introductions && !mine.with_grants, "nothing is shared until she says so");
+    assert_eq!(alice.command(Command::ShareProfile { introductions: Some(true), grants: None }).await, Response::Ok);
+    assert_eq!(bob.command(Command::ShareProfile { introductions: None, grants: Some(true) }).await, Response::Ok);
+    assert!(alice.state().profile.with_introductions && !alice.state().profile.with_grants);
+
+    // Alice asks: Bob's hint says he takes cards, his mailbox takes the larger introduction, so hers rides sealed
+    let mut a_changes = alice.subscribe();
+    let r = alice.command(Command::Introduce { to: bob_did.clone(), purpose: "hello from Alice".into(), name: None }).await;
+    assert_eq!(r, Response::Ok);
+    until(&bob, "Bob sees the request", |s| s.messaging.requests.iter().any(|q| q.from == alice_did)).await;
+    let request = bob.state().messaging.requests[0].clone();
+    assert_eq!(request.purpose.as_deref(), Some("hello from Alice"));
+    let card = request.card.clone().expect("her card, with the request");
+    assert_eq!(card.name.as_deref(), Some("Alice"));
+    assert_eq!(std::fs::read(card.picture.as_deref().expect("her picture")).unwrap(), jpeg);
+    assert!(bob.state().cards.is_empty(), "an introduction's card is shown with the request only");
+
+    // Bob accepts: her card stays with the contact, and his goes on the grant
+    assert_eq!(bob.command(Command::AcceptRequest { id: request.id }).await, Response::Ok);
+    assert_eq!(bob.state().cards.get(&alice_did), Some(&card));
+    next(&mut a_changes, "Alice's grant", |c| matches!(c, Change::Granted { by } if *by == bob_did).then_some(())).await;
+    until(&alice, "Alice has Bob's card", |s| s.cards.contains_key(&bob_did)).await;
+    assert_eq!(alice.state().cards[&bob_did], dsip_app::Card { name: Some("Bob".into()), picture: None }, "his name; he has no picture");
+    assert_eq!(std::fs::read(bob.state().cards[&alice_did].picture.as_deref().unwrap()).unwrap(), jpeg, "her picture is still kept");
+
+    // a picture taken away is gone; the cards received are kept in the identity's folder
+    assert_eq!(alice.command(Command::SetPicture { path: None }).await, Response::Ok);
+    assert_eq!(alice.state().profile.picture, None);
+    let bobs = Path::new(card.picture.as_deref().unwrap()).parent().and_then(Path::parent).expect("his identity's folder").to_path_buf();
+    let saved: serde_json::Value = serde_json::from_slice(&std::fs::read(bobs.join(dsip_app::profile::CARDS_FILE)).unwrap()).unwrap();
+    assert_eq!(saved[&alice_did]["card"]["display_name"], "Alice");
     let _ = std::fs::remove_dir_all(&dir);
 }
