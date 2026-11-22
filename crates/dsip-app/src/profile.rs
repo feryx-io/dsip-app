@@ -7,8 +7,10 @@
 //! sent and one for requests accepted (§19.4 "Consent"). A card received is its sender's own claim: the state says
 //! nothing of it is verified, and a screen shows it so.
 //!
-//! Impl: a card that came on a grant is no longer shown once that grant's `valid_until` has passed (§19.4 "Keeping
-//! it", a SHOULD). The app is not told when a grantor revokes a grant, so a revoked grant's card stays until then.
+//! A card that came on a grant is no longer shown once that grant's `valid_until` has passed, or once the grant is
+//! revoked (§19.4 "Keeping it", a SHOULD). A grantee is sent no revocation: the phone says when following the
+//! grantor's presence was ended by policy while the grant still ran (`dsip_phone::ShareEnded`, spec-gap 190), and
+//! the card goes then. Not following them, the app learns nothing and the card stays until `valid_until`.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -177,6 +179,17 @@ impl App {
         let mut kept = self.inner.cards.lock().unwrap_or_else(|e| e.into_inner());
         kept.insert(identity.to_string(), Kept { card: card.clone(), until });
         self.publish_cards(&kept);
+    }
+
+    /// Forget the card `identity` sent on a grant: that grant was revoked, as far as a grantee can tell (§19.4
+    /// "Keeping it", spec-gap 190). A card that came on their introduction is ours to keep with the contact: it rode
+    /// no grant of theirs.
+    pub(crate) fn drop_granted_card(&self, identity: &str) {
+        let mut kept = self.inner.cards.lock().unwrap_or_else(|e| e.into_inner());
+        if kept.get(identity).is_some_and(|k| k.until.is_some()) {
+            kept.remove(identity);
+            self.publish_cards(&kept);
+        }
     }
 
     /// Stop showing the cards whose grant has ended, and forget them.

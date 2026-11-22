@@ -378,6 +378,14 @@ impl App {
                 }
             }
         });
+        // §19.4: a grantor ended our share early (their grant revoked): the card that grant carried is shown no more
+        let a = app.clone();
+        tokio::spawn(async move {
+            while let Some(ended) = a.inner.phone.share_ended().await {
+                tracing::info!("{} ended what their grant shared: their card is no longer shown", ended.identity);
+                a.drop_granted_card(&ended.identity);
+            }
+        });
         // follow again what was followed when the app last ran (the grants that admit us are the phone's, kept too)
         let a = app.clone();
         tokio::spawn(async move {
