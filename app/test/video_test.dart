@@ -152,6 +152,86 @@ void main() {
     expect(find.byType(VideoFullScreen), findsNothing);
   });
 
+  /// The fixture's state with its answered call (2) changed by [change].
+  Map<String, dynamic> withCall2(void Function(Map<String, dynamic> call) change) {
+    final state = fixture()['state'] as Map<String, dynamic>;
+    change((state['calls'] as List).cast<Map<String, dynamic>>().firstWhere((c) => c['id'] == 2));
+    return state;
+  }
+
+  /// Call 2 as an answered audio call.
+  void audioOnly(Map<String, dynamic> c) {
+    for (final k in ['video', 'camera', 'far_video', 'camera_wanted', 'pictures']) {
+      c.remove(k);
+    }
+  }
+
+  testWidgets('video is added to an answered audio call from its own button', (tester) async {
+    await open(tester);
+    expect(find.byKey(const Key('add-video-2')), findsNothing, reason: 'it has video');
+    client.push(withCall2(audioOnly));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('video-2')), findsNothing);
+    expect(find.byKey(const Key('add-video-3')), findsNothing, reason: 'not a call still ringing');
+    await tester.ensureVisible(find.byKey(const Key('add-video-2')));
+    await tester.tap(find.byKey(const Key('add-video-2')));
+    await tester.pump();
+    expect(client.commands.last, {'command': 'add_video', 'call': 2});
+    // asked, not answered yet: the button waits and says so
+    client.push(withCall2((c) { audioOnly(c); c['video_asked'] = true; }));
+    await tester.pumpAndSettle();
+    expect(find.text('Asking for video…'), findsOneWidget);
+    expect(tester.widget<OutlinedButton>(find.byKey(const Key('add-video-2'))).onPressed, isNull);
+    // not taken: said, and it may be asked again
+    client.push(withCall2((c) { audioOnly(c); c['video_refused'] = true; }));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('video-refused-2')), findsOneWidget);
+    expect(tester.widget<OutlinedButton>(find.byKey(const Key('add-video-2'))).onPressed, isNotNull);
+  });
+
+  testWidgets('no add video button where the app has no video', (tester) async {
+    await open(tester, video: false);
+    final state = withCall2(audioOnly)..remove('video');
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('add-video-2')), findsNothing);
+  });
+
+  testWidgets('on a phone, adding video asks for the camera first', (tester) async {
+    final mobile = FakeMobile();
+    await open(tester, mobile: mobile);
+    client.push(withCall2(audioOnly));
+    await tester.pumpAndSettle();
+    mobile.log.clear();
+    await tester.ensureVisible(find.byKey(const Key('add-video-2')));
+    await tester.tap(find.byKey(const Key('add-video-2')));
+    await tester.pumpAndSettle();
+    expect(mobile.log, contains('requestCamera'));
+    expect(client.commands.last, {'command': 'add_video', 'call': 2});
+  });
+
+  testWidgets("on a phone, video the other person added turns no camera on here", (tester) async {
+    final mobile = FakeMobile();
+    await open(tester, mobile: mobile);
+    client.push(withCall2(audioOnly));
+    await tester.pumpAndSettle();
+    mobile.log.clear();
+    final before = client.commands.length;
+    // the far end added video: the call has it, this side did not choose it
+    client.push(withCall2((c) { c['camera'] = false; c.remove('camera_wanted'); }));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('video-2')), findsOneWidget);
+    expect(mobile.log, isNot(contains('requestCamera')));
+    expect(client.commands.length, before, reason: 'no camera command');
+    // this side chose it: the camera is asked for and turned on
+    client.push(withCall2(audioOnly));
+    await tester.pumpAndSettle();
+    client.push(withCall2((c) => c['camera'] = false));
+    await tester.pumpAndSettle();
+    expect(mobile.log, contains('requestCamera'));
+    expect(client.commands.last, {'command': 'camera', 'call': 2, 'on': true});
+  });
+
   testWidgets('on a phone, a video call asks for the camera first', (tester) async {
     final mobile = FakeMobile();
     await open(tester, mobile: mobile);

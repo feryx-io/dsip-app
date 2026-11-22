@@ -45,6 +45,9 @@ fn state() -> State {
         video: id == 2,
         camera: id == 2,
         far_video: id == 2,
+        camera_wanted: id == 2,
+        video_asked: id == 1,
+        video_refused: false,
         pictures: None,
     };
     for c in [

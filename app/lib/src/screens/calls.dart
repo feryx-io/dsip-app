@@ -270,9 +270,14 @@ class _LiveCall extends StatelessWidget {
               const SizedBox(height: 12),
               _VideoArea(key: Key('video-${call.id}'), call: call, controller: controller),
             ],
+            if (call.videoRefused && !call.video) ...[
+              const SizedBox(height: 8),
+              Text(s.callVideoRefused, key: Key('video-refused-${call.id}'), style: Theme.of(context).textTheme.bodySmall),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: call.ringingHere
                   ? [
                       keyed('Enter', FilledButton.icon(onPressed: () => act('answer'), icon: const Icon(Icons.call), label: Text(s.callAnswer))),
@@ -294,6 +299,20 @@ class _LiveCall extends StatelessWidget {
                           icon: Icon(call.muted ? Icons.mic : Icons.mic_off),
                           label: Text(call.muted ? s.callUnmute : s.callMute),
                         )),
+                      // an audio call, where the app has video: ask the far end to add it (asking for the camera
+                      // first on a phone); while the answer is awaited, the button says so
+                      if (state.video && !call.video && call.state.answered)
+                        OutlinedButton.icon(
+                          key: Key('add-video-${call.id}'),
+                          onPressed: call.videoAsked
+                              ? null
+                              : () async {
+                                  await controller.mobile?.requestCamera();
+                                  controller.run({'command': 'add_video', 'call': call.id});
+                                },
+                          icon: const Icon(Icons.videocam),
+                          label: Text(call.videoAsked ? s.callVideoAsked : s.callAddVideo),
+                        ),
                       if (call.video && call.state.answered)
                         OutlinedButton.icon(
                           key: Key('camera-${call.id}'),
@@ -339,7 +358,8 @@ class _VideoAreaState extends State<_VideoArea> {
   void initState() {
     super.initState();
     final mobile = widget.controller.mobile;
-    if (mobile != null && !widget.call.camera) {
+    // only for video this side chose: video the far end added turns no camera on here
+    if (mobile != null && widget.call.cameraWanted && !widget.call.camera) {
       mobile.requestCamera().then((allowed) {
         if (allowed && mounted) widget.controller.run({'command': 'camera', 'call': widget.call.id, 'on': true});
       });

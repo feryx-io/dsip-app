@@ -406,6 +406,17 @@ pub struct CallView {
     /// This side's camera sends to it ([`crate::Command::Camera`]).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub camera: bool,
+    /// This side chose video for the call: it placed or answered it as a video call, or added video to it
+    /// ([`crate::Command::AddVideo`]). Its camera goes on with the video; where the far end added the video, the
+    /// camera stays off until it is turned on.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub camera_wanted: bool,
+    /// This side asked to add video and the far end has not answered yet (§12.8 rule 2).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub video_asked: bool,
+    /// This side asked to add video and the far end did not take it (B§2.1, §12.8 rule 5); the call goes on.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub video_refused: bool,
     /// The far end's pictures are coming in: frames of theirs arrived within the last second and a half. Without
     /// (their camera is off, or their pictures do not get here), a screen shows no picture of theirs rather than the
     /// last one that came.
@@ -767,6 +778,9 @@ mod tests {
             video: false,
             camera: false,
             far_video: false,
+            camera_wanted: false,
+            video_asked: false,
+            video_refused: false,
             pictures: None,
         };
         state.apply(&Change::CallAdded { call });

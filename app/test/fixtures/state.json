@@ -17,7 +17,8 @@
           "reason": "user.hangup"
         },
         "muted": false,
-        "media": false
+        "media": false,
+        "video_asked": true
       },
       {
         "id": 2,
@@ -43,6 +44,7 @@
         },
         "video": true,
         "camera": true,
+        "camera_wanted": true,
         "far_video": true
       },
       {

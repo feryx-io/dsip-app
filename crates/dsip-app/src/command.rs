@@ -27,6 +27,13 @@ pub enum Command {
         /// On or off.
         on: bool,
     },
+    /// Add video to an answered audio call (§12.8, B§5.3), where the app has video; without `call`, the latest. The
+    /// far end's answer says whether it takes it: the call's view has video then, or says it was refused.
+    AddVideo {
+        /// The app's call id.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        call: Option<u64>,
+    },
     /// Answer a call ringing here; without `call`, the one ringing longest.
     Answer {
         /// The app's call id.
