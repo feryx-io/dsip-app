@@ -355,6 +355,8 @@ class _VideoAreaState extends State<_VideoArea> {
 
   Widget _area(BuildContext context) {
     final s = Strings.of(context);
+    // neither camera on: no picture to show, so no room kept for one
+    if (!widget.call.farVideo && !widget.call.camera) return const SizedBox.shrink(key: Key('video-none'));
     final far = VideoTile(
       key: const Key('video-far'),
       stream: widget.call.id,
@@ -379,7 +381,17 @@ class _VideoAreaState extends State<_VideoArea> {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: GestureDetector(onDoubleTap: () => _full(context), child: far),
+                  child: GestureDetector(
+                    onDoubleTap: () => _full(context),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        far,
+                        // their camera off: dark, not the last picture that came
+                        if (!widget.call.farVideo) NoFarVideo(key: const Key('video-far-off'), label: s.callFarCameraOff),
+                      ],
+                    ),
+                  ),
                 ),
                 if (widget.call.camera) Positioned(right: 8, bottom: 8, width: selfWidth, height: selfHeight, child: self),
                 Positioned(

@@ -216,8 +216,9 @@ impl Video {
         e
     }
 
-    /// Why call `id`'s camera or picture would not start, a reason a line, in the host's own words: kept for the whole
-    /// call, also once a later try worked, to read off the screen of a phone whose log cannot be reached.
+    /// Why call `id`'s camera or picture would not start, a reason a line, in the host's own words, to read off the
+    /// screen of a phone whose log cannot be reached. The camera's reasons are kept until it opens; the picture's for
+    /// the whole call.
     pub fn errors(&self, id: u64) -> Option<String> {
         let failed = self.failed.lock().unwrap_or_else(|e| e.into_inner());
         (failed.0 == id && !failed.1.is_empty()).then(|| failed.1.join("\n"))
@@ -247,6 +248,14 @@ impl Video {
         let cfg = SendConfig { codec: VideoCodec::H264, kind: VideoKind::Camera, camera: None, max: MAX, kbps: START_KBPS,
                                fps: FPS, encodings: vec![Encoding { id: EncodingId(0), max: MAX, kbps: START_KBPS }] };
         let mut source = self.host.start_send(cfg).map_err(|e| e.to_string())?;
+        // it opened: why it would not before is no longer the call's to show (a phone refuses the camera to an app not
+        // yet on the screen, and gives it a moment later)
+        {
+            let mut failed = self.failed.lock().unwrap_or_else(|e| e.into_inner());
+            if failed.0 == id {
+                failed.1.retain(|line| !line.starts_with("camera: "));
+            }
+        }
         let (feed, requests, counters) = (self.feed.clone(), self.requests_rx.clone(), self.counters.clone());
         let task = tokio::spawn(async move {
             let mut requests = requests.lock().await;
@@ -493,17 +502,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_camera_that_would_not_start_is_kept_for_its_call() {
+    async fn a_camera_that_would_not_start_is_said_for_its_call_until_it_does() {
         let video = Video::with_host(Arc::new(Refuses { host: SyntheticVideoHost::new(&[VideoCodec::H264]), opened: AtomicUsize::new(0) }));
         assert_eq!(video.errors(1), None);
         assert!(video.send(1).is_err());
         assert_eq!(video.errors(1).as_deref(), Some("camera: codec error: no encoder"));
         assert_eq!(video.pictures(1).errors.as_deref(), Some("camera: codec error: no encoder"));
-        // the next try works: what failed is still said, for this call and no other
+        assert_eq!(video.errors(2), None, "for this call and no other");
+        // the next try works: the camera is on, and what failed before is no longer said
         video.send(1).unwrap();
         assert!(video.sending_to(1));
-        assert_eq!(video.errors(1).as_deref(), Some("camera: codec error: no encoder"));
-        assert_eq!(video.errors(2), None);
+        assert_eq!(video.errors(1), None);
         video.stop_sending();
     }
 
