@@ -205,4 +205,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Their card says “Carol N.” · not verified'), findsOneWidget);
   });
+
+  testWidgets('their card\'s picture is shown wherever they are, marked as not verified where no words say so', (tester) async {
+    const bob = 'did:key:z6MkBob';
+    final theirs = File('${dir.path}/bob.png')..writeAsBytesSync(noisyPng(8));
+    state['cards'] = {
+      bob: {'name': 'Bob Marsh', 'picture': theirs.path},
+    };
+    String shown(Finder within) {
+      final image = tester.widget<Image>(find.descendant(of: within, matching: find.byKey(const Key('avatar-picture-$bob'))));
+      return ((image.image as ResizeImage).imageProvider as FileImage).file.path;
+    }
+
+    Finder mark(Finder within) => find.descendant(of: within, matching: find.byKey(const Key('avatar-claim-$bob')));
+
+    // the conversation with him
+    await open(tester, 'Messages');
+    final conversation = find.byWidgetPredicate((w) => w.key.toString().contains('conversation-') && w is ListTile);
+    expect(shown(conversation), theirs.path);
+    expect(tester.widget<Tooltip>(mark(conversation)).message, 'Picture from their card · not verified');
+
+    // his calls: the ones going on, and the ones before
+    await tester.tap(find.text('Calls').last);
+    await tester.pumpAndSettle();
+    for (final row in [find.byKey(const Key('call-2')), find.byKey(const Key('call-3'))]) {
+      expect(shown(row), theirs.path);
+      expect(mark(row), findsOneWidget);
+    }
+    final before = find.byWidgetPredicate((w) => w.key.toString().contains('history-') && w is ListTile);
+    expect(shown(before), theirs.path);
+    expect(mark(before), findsOneWidget);
+
+    // the picture the user chose for him is theirs to vouch for: no mark
+    await tester.runAsync(() => controller.setPicture(bob, noisyPng(8)));
+    await tester.pumpAndSettle();
+    expect(shown(before), isNot(theirs.path));
+    expect(find.byKey(const Key('avatar-claim-$bob')), findsNothing);
+  });
+
+  testWidgets('where the screen says in words that a card is not verified, its picture carries no mark', (tester) async {
+    final theirs = File('${dir.path}/theirs.png')..writeAsBytesSync(noisyPng(8));
+    state['cards'] = {
+      carol: {'name': 'Carol N.', 'picture': theirs.path},
+    };
+    await open(tester, 'Contacts');
+    expect(find.byKey(const Key('avatar-picture-$carol')), findsOneWidget);
+    expect(find.byKey(const Key('contact-card-$carol')), findsOneWidget);
+    expect(find.byKey(const Key('avatar-claim-$carol')), findsNothing);
+  });
 }

@@ -180,7 +180,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     // the card they sent with it, shown here only (core §19.4), and said below to be unverified
                     leading: r.card == null
                         ? null
-                        : Avatar(controller: c, did: r.from, name: r.card!.name ?? r.name, cardPicture: r.card!.picture),
+                        : Avatar(controller: c, did: r.from, name: r.card!.name ?? r.name, cardPicture: r.card!.picture, claimBeside: true),
                     title: Text(switch ((widget.state.names[r.from], r.name)) {
                       (final String mine, _) => mine,
                       (null, final String offered) => s.requestFrom(offered),
@@ -223,7 +223,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 ListTile(
                   key: Key('conversation-${x.group}'),
                   selected: x.group == _open,
-                  leading: Icon(x.kind == 'group' ? Icons.group : Icons.person),
+                  // someone: their picture or initials, as on Contacts; a group: a group
+                  leading: switch (_peer(x, widget.state.me.identity)) {
+                    final String peer => Avatar(
+                      controller: c,
+                      did: peer,
+                      name: widget.state.names[peer],
+                      cardPicture: widget.state.cards[peer]?.picture,
+                    ),
+                    null => Icon(x.kind == 'group' ? Icons.group : Icons.person),
+                  },
                   title: Text(_title(s, x, widget.state)),
                   subtitle: x.pending > 0 ? Text(s.conversationPending(x.pending)) : null,
                   onTap: () => _select(x.group),

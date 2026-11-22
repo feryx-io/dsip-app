@@ -112,7 +112,12 @@ class _CallsScreenState extends State<CallsScreen> {
             ListTile(
               key: Key('history-${c.session}'),
               contentPadding: EdgeInsets.zero,
-              leading: Avatar(controller: widget.controller, did: c.peer, name: widget.state.names[c.peer] ?? c.peerName),
+              leading: Avatar(
+                controller: widget.controller,
+                did: c.peer,
+                name: widget.state.names[c.peer] ?? c.peerName,
+                cardPicture: widget.state.cards[c.peer]?.picture,
+              ),
               // which way it went, small, beside the name
               title: Row(
                 children: [
@@ -206,9 +211,27 @@ class _LiveCall extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(name, style: Theme.of(context).textTheme.titleMedium, overflow: TextOverflow.ellipsis),
-            if (state.named(call.peer, offered: call.peerName))
-              Text(call.peer, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
+            Row(
+              children: [
+                Avatar(
+                  controller: controller,
+                  did: call.peer,
+                  name: state.names[call.peer] ?? call.peerName,
+                  cardPicture: state.cards[call.peer]?.picture,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: Theme.of(context).textTheme.titleMedium, overflow: TextOverflow.ellipsis),
+                      if (state.named(call.peer, offered: call.peerName))
+                        Text(call.peer, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             // a screen reader says a call ringing in, and each change of state, without the user moving there (A7)
             Announced('${_status(s)}: $name', child: Text(_status(s))),
