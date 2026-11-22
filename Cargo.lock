@@ -1829,7 +1829,7 @@ dependencies = [
 [[package]]
 name = "dsip-broadcast"
 version = "0.1.1"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "dsip-schema",
@@ -1841,7 +1841,7 @@ dependencies = [
 [[package]]
 name = "dsip-core"
 version = "0.3.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "aes-gcm 0.10.3",
  "base64 0.22.1",
@@ -1859,7 +1859,7 @@ dependencies = [
 [[package]]
 name = "dsip-dht"
 version = "0.2.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "dsip-schema",
@@ -1871,7 +1871,7 @@ dependencies = [
 [[package]]
 name = "dsip-endpoint"
 version = "0.5.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "dsip-recording",
@@ -1887,7 +1887,7 @@ dependencies = [
 [[package]]
 name = "dsip-events"
 version = "0.2.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "aes 0.8.4",
  "base64 0.22.1",
@@ -1903,7 +1903,7 @@ dependencies = [
 [[package]]
 name = "dsip-mailbox"
 version = "0.5.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1941,7 +1941,7 @@ dependencies = [
 [[package]]
 name = "dsip-media"
 version = "0.2.1"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "audiopus",
  "bytes",
@@ -1960,7 +1960,7 @@ dependencies = [
 [[package]]
 name = "dsip-messaging"
 version = "0.7.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "aes-gcm 0.10.3",
  "dsip-core",
@@ -1977,7 +1977,7 @@ dependencies = [
 [[package]]
 name = "dsip-messaging-device"
 version = "0.6.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "dsip-endpoint",
@@ -1995,7 +1995,7 @@ dependencies = [
 [[package]]
 name = "dsip-messenger"
 version = "0.6.1"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "dsip-messaging",
@@ -2015,7 +2015,7 @@ dependencies = [
 [[package]]
 name = "dsip-mls"
 version = "0.1.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "dsip-messaging",
@@ -2033,7 +2033,7 @@ dependencies = [
 [[package]]
 name = "dsip-phone"
 version = "0.7.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-broadcast",
  "dsip-core",
@@ -2052,7 +2052,7 @@ dependencies = [
 [[package]]
 name = "dsip-push"
 version = "0.1.1"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "aes-gcm 0.10.3",
  "anyhow",
@@ -2075,7 +2075,7 @@ dependencies = [
 [[package]]
 name = "dsip-recording"
 version = "0.1.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "serde_json",
  "sha2 0.10.9",
@@ -2084,7 +2084,7 @@ dependencies = [
 [[package]]
 name = "dsip-relay"
 version = "0.3.1"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -2112,7 +2112,7 @@ dependencies = [
 [[package]]
 name = "dsip-schema"
 version = "0.3.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "curve25519-dalek 4.1.3",
  "dsip-core",
@@ -2123,7 +2123,7 @@ dependencies = [
 [[package]]
 name = "dsip-session"
 version = "0.2.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "serde",
@@ -2133,7 +2133,7 @@ dependencies = [
 [[package]]
 name = "dsip-testkit"
 version = "0.3.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "dsip-endpoint",
@@ -2148,7 +2148,7 @@ dependencies = [
 [[package]]
 name = "dsip-transport"
 version = "0.11.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "base64 0.22.1",
  "clap",
@@ -2184,7 +2184,7 @@ dependencies = [
 [[package]]
 name = "dsip-wake"
 version = "0.2.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "jsonschema",
@@ -2194,7 +2194,7 @@ dependencies = [
 [[package]]
 name = "dsip-webrtc-binding"
 version = "0.1.0"
-source = "git+https://github.com/feryx-io/dsip-rs?rev=ca78f5b793774981af7c986bbae546473a36a188#ca78f5b793774981af7c986bbae546473a36a188"
+source = "git+https://github.com/feryx-io/dsip-rs?rev=6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f#6831e9ec5dba3ea61f5d30f88c7689ed73f5fe7f"
 dependencies = [
  "dsip-core",
  "serde",
