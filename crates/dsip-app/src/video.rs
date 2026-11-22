@@ -47,6 +47,10 @@ pub struct Video {
     sending: std::sync::Mutex<Option<(u64, JoinHandle<()>)>>,
     /// The call the camera is wanted for, until turned off: [`Video::heal`] opens it again when it stopped.
     wanted: std::sync::Mutex<Option<u64>>,
+    /// Held while the camera is opened or stopped: one at a time. Two that open it at once (the call's own start and
+    /// the screen's "camera on", which a phone sends as the call's video appears) each find it not yet sending, and
+    /// the second open takes the camera from the first, whose failure is then said for a call whose camera works.
+    opening: std::sync::Mutex<()>,
     /// Frames sent and received, for the call's view.
     pub(crate) counters: Arc<Counters>,
     /// The call whose camera or picture would not start, and why, each reason once ([`Video::errors`]).
@@ -140,7 +144,7 @@ impl Video {
         let (requests, requests_rx) = mpsc::unbounded_channel();
         Video { host, feed, feed_rx, sink, received: Arc::new(Mutex::new(received)), requests,
                 requests_rx: Arc::new(Mutex::new(requests_rx)), showing: Default::default(), sending: Default::default(),
-                wanted: Default::default(), counters: Arc::default(), failed: Default::default(),
+                wanted: Default::default(), opening: Default::default(), counters: Arc::default(), failed: Default::default(),
                 #[cfg(any(target_os = "android", windows))]
                 desktop: None }
     }
@@ -193,8 +197,10 @@ impl Video {
 
     /// Send the camera to call `id`: captured, encoded as H.264, into its leg; the far end's keyframe and bitrate
     /// requests go to the encoder. Wanted from now on, even if it will not open yet ([`Video::heal`]); already sending
-    /// to `id`, it goes on as it is (a camera opened twice is busy).
+    /// to `id`, it goes on as it is (a camera opened twice is busy), as it does when another caller is opening it now:
+    /// this one waits and finds it sending.
     pub fn send(&self, id: u64) -> Result<(), String> {
+        let _one = self.opening.lock().unwrap_or_else(|e| e.into_inner());
         *self.wanted.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
         if self.sending_to(id) {
             return Ok(());
@@ -227,6 +233,7 @@ impl Video {
     /// Open the camera again for call `id` if it is wanted there and stopped: a phone gives the camera back once the
     /// app is on the screen again. True when it was opened again.
     pub fn heal(&self, id: u64) -> bool {
+        let _one = self.opening.lock().unwrap_or_else(|e| e.into_inner());
         let wanted = *self.wanted.lock().unwrap_or_else(|e| e.into_inner()) == Some(id);
         if !wanted || self.sending_to(id) {
             return false;
@@ -287,6 +294,7 @@ impl Video {
 
     /// Stop the camera, until asked for again; the call's picture stays shown.
     pub fn stop_sending(&self) {
+        let _one = self.opening.lock().unwrap_or_else(|e| e.into_inner());
         *self.wanted.lock().unwrap_or_else(|e| e.into_inner()) = None;
         self.abort_sending();
     }
@@ -513,6 +521,52 @@ mod tests {
         video.send(1).unwrap();
         assert!(video.sending_to(1));
         assert_eq!(video.errors(1), None);
+        video.stop_sending();
+    }
+
+    /// A host whose camera takes a moment to open and, as a phone's does, fails an open made while another is under
+    /// way.
+    struct OneAtATime {
+        host: SyntheticVideoHost,
+        opening: AtomicUsize,
+        opened: AtomicUsize,
+    }
+
+    impl VideoHost for OneAtATime {
+        fn codecs(&self) -> Vec<VideoCodecCaps> {
+            self.host.codecs()
+        }
+        fn cameras(&self) -> Vec<CameraInfo> {
+            self.host.cameras()
+        }
+        fn start_send(&self, cfg: SendConfig) -> Result<Box<dyn VideoSource>, AnvilError> {
+            let others = self.opening.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(Duration::from_millis(200));
+            let now = self.opening.fetch_sub(1, Ordering::SeqCst);
+            if others > 0 || now > 1 {
+                return Err(AnvilError::Codec("request: camera status -10000".into()));
+            }
+            self.opened.fetch_add(1, Ordering::SeqCst);
+            self.host.start_send(cfg)
+        }
+        fn start_receive(&self, stream: StreamId, cfg: ReceiveConfig) -> Result<Box<dyn VideoSink>, AnvilError> {
+            self.host.start_receive(stream, cfg)
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_camera_asked_for_twice_at_once_is_opened_once() {
+        let host = Arc::new(OneAtATime { host: SyntheticVideoHost::new(&[VideoCodec::H264]), opening: AtomicUsize::new(0),
+                                         opened: AtomicUsize::new(0) });
+        let video = Arc::new(Video::with_host(host.clone()));
+        // the call's own start and the screen's "camera on", together
+        let asks: Vec<_> = (0..2).map(|_| { let v = video.clone(); tokio::task::spawn_blocking(move || v.send(1)) }).collect();
+        for a in asks {
+            a.await.unwrap().unwrap();
+        }
+        assert_eq!(host.opened.load(Ordering::SeqCst), 1, "opened once");
+        assert!(video.sending_to(1));
+        assert_eq!(video.errors(1), None, "neither ask failed");
         video.stop_sending();
     }
 
