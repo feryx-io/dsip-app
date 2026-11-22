@@ -62,6 +62,9 @@ void main() {
 
   testWidgets('a call ended is named from the calls, and every call to that identity shows it', (tester) async {
     await open(tester, 'Calls');
+    // below the calls going on: scrolled to
+    await tester.ensureVisible(find.byKey(const Key('history-menu-01M6BTTMQ9QMKY9SYTY8415VZ0')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('history-menu-01M6BTTMQ9QMKY9SYTY8415VZ0')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('name-call-01M6BTTMQ9QMKY9SYTY8415VZ0')));

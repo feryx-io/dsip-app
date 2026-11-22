@@ -84,7 +84,7 @@ class ContactsScreen extends StatelessWidget {
             leading: Stack(
               clipBehavior: Clip.none,
               children: [
-                Avatar(controller: controller, did: did, name: name, cardPicture: state.cards[did]?.picture),
+                Avatar(controller: controller, did: did, name: name, cardPicture: state.cards[did]?.picture, claimBeside: true),
                 if (presence.containsKey(did))
                   PositionedDirectional(
                     end: -2,
