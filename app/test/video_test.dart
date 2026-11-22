@@ -65,6 +65,45 @@ void main() {
     expect(client.commands.last, {'command': 'camera', 'call': 2, 'on': false});
   });
 
+  testWidgets('their camera off: dark in place of their picture; both off: no picture at all', (tester) async {
+    await open(tester);
+    final state = fixture()['state'] as Map<String, dynamic>;
+    Map<String, dynamic> call() => (state['calls'] as List).cast<Map<String, dynamic>>().firstWhere((c) => c['id'] == 2);
+    expect(find.byKey(const Key('video-far-off')), findsNothing, reason: 'their pictures come in');
+
+    // theirs stop coming: the last one is covered, this side's camera stays in its corner
+    call().remove('far_video');
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('video-far-off')), findsOneWidget);
+    expect(tester.widget<NoFarVideo>(find.byKey(const Key('video-far-off'))).label, 'Their camera is off');
+    expect(find.byKey(const Key('video-self')), findsOneWidget);
+
+    // full screen says the same
+    await tester.tap(find.byKey(const Key('video-full-2')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('full-far-off')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('full-leave')));
+    await tester.pumpAndSettle();
+
+    // this side's off as well: nothing to show, and the camera's button still there to turn it on
+    call().remove('camera');
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('video-far')), findsNothing);
+    expect(find.byKey(const Key('video-self')), findsNothing);
+    await tester.tap(find.byKey(const Key('camera-2')));
+    await tester.pump();
+    expect(client.commands.last, {'command': 'camera', 'call': 2, 'on': true});
+
+    // theirs again: shown again
+    call()['far_video'] = true;
+    client.push(state);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('video-far')), findsOneWidget);
+    expect(find.byKey(const Key('video-far-off')), findsNothing);
+  });
+
   testWidgets("each picture keeps its own shape: a phone's upright one is tall", (tester) async {
     showTile = (stream) async => _FakeTexture(stream == null ? 1 : 2);
     tileShape = (stream) => stream == null ? const Size(640, 480) : const Size(480, 640);

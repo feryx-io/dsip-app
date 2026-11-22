@@ -44,6 +44,7 @@ class CallView {
     this.sound,
     this.video = false,
     this.camera = false,
+    this.farVideo = false,
     this.pictures,
   });
   final int id;
@@ -66,6 +67,9 @@ class CallView {
   /// This side's camera sends to it.
   final bool camera;
 
+  /// The far end's pictures are coming in. Without, no picture of theirs is shown (not the last one that came).
+  final bool farVideo;
+
   /// What its video did on this device, while it has video.
   final CallPictures? pictures;
 
@@ -84,6 +88,7 @@ class CallView {
     via: j['via'] as String?,
     video: j['video'] as bool? ?? false,
     camera: j['camera'] as bool? ?? false,
+    farVideo: j['far_video'] as bool? ?? false,
     error: j['error'] as String?,
     sound: j['sound'] == null ? null : CallSound.fromJson(j['sound'] as Map<String, dynamic>),
     pictures: j['pictures'] == null ? null : CallPictures.fromJson(j['pictures'] as Map<String, dynamic>),
@@ -105,8 +110,8 @@ class CallPictures {
   /// While `shown` stalled: what became of the frames received, in the decoder's own words (not translated).
   final String? report;
 
-  /// Why this call's camera or picture would not start, a reason a line in the host's own words (not translated);
-  /// kept for the whole call. Shown with the counts whether or not a stage stalled.
+  /// Why this call's camera or picture would not start, a reason a line in the host's own words (not translated).
+  /// Shown with the counts whether or not a stage stalled; the camera's are gone once it opens.
   final String? errors;
 
   factory CallPictures.fromJson(Map<String, dynamic> j) => CallPictures(

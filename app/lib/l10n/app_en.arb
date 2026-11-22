@@ -163,6 +163,8 @@
   "@callCameraOn": {"description": "Button in a video call that turns this side's camera on."},
   "callCameraOff": "Camera off",
   "@callCameraOff": {"description": "Button in a video call that turns this side's camera off."},
+  "callFarCameraOff": "Their camera is off",
+  "@callFarCameraOff": {"description": "Said to a screen reader for the dark box a video call shows in place of the other person's picture while none comes."},
   "callVia": "Through {relay}",
   "@callVia": {
     "placeholders": {

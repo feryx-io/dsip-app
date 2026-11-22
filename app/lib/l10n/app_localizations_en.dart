@@ -279,6 +279,9 @@ class StringsEn extends Strings {
   String get callCameraOff => 'Camera off';
 
   @override
+  String get callFarCameraOff => 'Their camera is off';
+
+  @override
   String callVia(String relay) {
     return 'Through $relay';
   }
@@ -1535,6 +1538,9 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get callCameraOff => '[Çàɱéŕà óƒƒ on]';
+
+  @override
+  String get callFarCameraOff => '[Ţĥéíŕ çàɱéŕà íš óƒƒ one ]';
 
   @override
   String callVia(String relay) {

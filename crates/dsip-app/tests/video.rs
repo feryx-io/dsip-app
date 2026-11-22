@@ -54,6 +54,8 @@ async fn a_video_call_carries_frames_both_ways() {
     })
     .await;
     assert!(alice.state().calls[&id].camera, "a video call's camera starts with it");
+    let far = |app: &App| app.state().calls.values().any(|c| c.far_video);
+    until("each sees the other's pictures come in", || far(&alice) && far(&bob)).await;
     // the camera off: Alice's view says so, and her frames stop
     assert_eq!(alice.command(Command::Camera { call: Some(id), on: false }).await, Response::Ok);
     assert!(!alice.state().calls[&id].camera);
@@ -61,9 +63,13 @@ async fn a_video_call_carries_frames_both_ways() {
     let sent = alice.video_frames().unwrap().0;
     tokio::time::sleep(Duration::from_millis(500)).await;
     assert_eq!(alice.video_frames().unwrap().0, sent, "no frames with the camera off");
+    // Bob's view says her pictures stopped coming (a screen shows none, not the last one); his still reach her
+    until("Bob sees Alice's pictures stop", || !far(&bob)).await;
+    assert!(far(&alice));
     // and on again
     assert_eq!(alice.command(Command::Camera { call: None, on: true }).await, Response::Ok);
     until("frames again", || alice.video_frames().unwrap().0 >= sent + 5).await;
+    until("Bob sees Alice's pictures again", || far(&bob)).await;
     // the pictures' counters on the call's view, nothing stalled
     until("the pictures counted", || {
         alice.state().calls[&id].pictures.as_ref().is_some_and(|p| p.sent > 0 && p.received > 0 && p.stalled.is_none())

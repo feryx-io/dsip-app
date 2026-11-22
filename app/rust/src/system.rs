@@ -431,6 +431,7 @@ mod tests {
             sound: None,
             video: false,
             camera: false,
+            far_video: false,
             pictures: None,
         }
     }

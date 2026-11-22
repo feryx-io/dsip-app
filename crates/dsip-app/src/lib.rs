@@ -86,6 +86,10 @@ pub const HIDDEN_FILE: &str = "hidden.json";
 /// The longest name the user may give an identity, in characters.
 pub const NAME_MAX: usize = 64;
 
+/// How long after the last frame of theirs a video call is said to bring no picture ([`CallView::far_video`]): well
+/// over the gap between two frames, short enough that a camera turned off is seen to be.
+const FAR_VIDEO_GONE: Duration = Duration::from_millis(1500);
+
 /// The presence states a device may publish (the `dsip-presence-state` registry, P§5).
 pub const PRESENCE_STATES: &[&str] = &["available", "busy", "away", "dnd", "offline"];
 
@@ -941,6 +945,7 @@ impl App {
             sound: None,
             video: false,
             camera: false,
+            far_video: false,
             pictures: None,
         };
         self.publish(Change::CallAdded { call: view });
@@ -954,6 +959,8 @@ impl App {
             // the same for its pictures, while it has video
             let mut seen: std::collections::VecDeque<CallPictures> = std::collections::VecDeque::new();
             let mut pictures_stalled: Option<String> = None;
+            // how many frames of theirs had come when last looked, and when one last came
+            let mut far: (u64, Option<std::time::Instant>) = (0, None);
             let mut has_audio = false;
             let mut has_video = false;
             let mut was_answered = false;
@@ -1045,6 +1052,17 @@ impl App {
                             }
                         }
                         let camera = app.inner.video.as_ref().is_some_and(|v| v.sending_to(id));
+                        // their pictures come in: one came within FAR_VIDEO_GONE (a camera turned off sends none)
+                        let far_video = match &app.inner.video {
+                            Some(v) if has_video && v.showing() == Some(id) => {
+                                let received = v.frames().1;
+                                if received != far.0 {
+                                    far = (received, (received > 0).then(std::time::Instant::now));
+                                }
+                                far.1.is_some_and(|at| at.elapsed() < FAR_VIDEO_GONE)
+                            }
+                            _ => false,
+                        };
                         // the pictures' counters about once a second, and the stage that stalled over the last two
                         let pictures = match &app.inner.video {
                             Some(v) if has_video && ticks.is_multiple_of(4) => {
@@ -1062,7 +1080,7 @@ impl App {
                             _ => None,
                         };
                         let differs = app.inner.state.lock().unwrap_or_else(|e| e.into_inner()).calls.get(&id)
-                            .is_some_and(|v| v.media != media || v.error != err || v.video != video || v.camera != camera
+                            .is_some_and(|v| v.media != media || v.error != err || v.video != video || v.camera != camera || v.far_video != far_video
                                 || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s))
                                 || pictures.as_ref().is_some_and(|p| v.pictures.as_ref() != Some(p)));
                         if differs {
@@ -1070,6 +1088,7 @@ impl App {
                                 v.media = media;
                                 v.video = video;
                                 v.camera = camera;
+                                v.far_video = far_video;
                                 v.error = err;
                                 if sound.is_some() {
                                     v.sound = sound;

@@ -104,7 +104,14 @@ class _VideoFullScreenState extends State<VideoFullScreen> {
                   Positioned.fill(
                     child: GestureDetector(
                       onDoubleTap: _leave,
-                      child: VideoTile(key: const Key('full-far'), stream: call.id),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          VideoTile(key: const Key('full-far'), stream: call.id),
+                          // their camera off: dark, not the last picture that came
+                          if (!call.farVideo) NoFarVideo(key: const Key('full-far-off'), label: s.callFarCameraOff),
+                        ],
+                      ),
                     ),
                   ),
                   if (call.camera)

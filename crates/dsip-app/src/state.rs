@@ -406,6 +406,11 @@ pub struct CallView {
     /// This side's camera sends to it ([`crate::Command::Camera`]).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub camera: bool,
+    /// The far end's pictures are coming in: frames of theirs arrived within the last second and a half. Without
+    /// (their camera is off, or their pictures do not get here), a screen shows no picture of theirs rather than the
+    /// last one that came.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub far_video: bool,
     /// What its video did on this device, counted, while it has video: where a call's picture stops shows here.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pictures: Option<CallPictures>,
@@ -431,8 +436,8 @@ pub struct CallPictures {
     /// (`Video::report`). For reading off the screen of a phone whose log cannot be reached.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub report: Option<String>,
-    /// Why this call's camera or picture would not start, a reason a line in the host's own words (`Video::errors`).
-    /// Kept for the whole call, also once a later try worked: shown with the counts whether or not a stage stalled.
+    /// Why this call's camera or picture would not start, a reason a line in the host's own words (`Video::errors`):
+    /// shown with the counts whether or not a stage stalled. The camera's are gone once it opens.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub errors: Option<String>,
 }
@@ -761,6 +766,7 @@ mod tests {
             sound: None,
             video: false,
             camera: false,
+            far_video: false,
             pictures: None,
         };
         state.apply(&Change::CallAdded { call });
