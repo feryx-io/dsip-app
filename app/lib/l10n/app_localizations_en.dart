@@ -279,6 +279,15 @@ class StringsEn extends Strings {
   String get callCameraOff => 'Camera off';
 
   @override
+  String get callAddVideo => 'Add video';
+
+  @override
+  String get callVideoAsked => 'Asking for video…';
+
+  @override
+  String get callVideoRefused => 'They did not take video. The call goes on.';
+
+  @override
   String get callFarCameraOff => 'Their camera is off';
 
   @override
@@ -1538,6 +1547,16 @@ class StringsEnXa extends StringsEn {
 
   @override
   String get callCameraOff => '[Çàɱéŕà óƒƒ on]';
+
+  @override
+  String get callAddVideo => '[Àđđ ṽíđéó o]';
+
+  @override
+  String get callVideoAsked => '[Àšķíñĝ ƒóŕ ṽíđéó… one]';
+
+  @override
+  String get callVideoRefused =>
+      '[Ţĥéý đíđ ñóţ ţàķé ṽíđéó. Ţĥé çàĺĺ ĝóéš óñ. one two t]';
 
   @override
   String get callFarCameraOff => '[Ţĥéíŕ çàɱéŕà íš óƒƒ one ]';

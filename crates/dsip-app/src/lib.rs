@@ -182,6 +182,7 @@ enum Action {
     Accept,
     Decline,
     HangUp,
+    AddVideo,
 }
 
 /// The app's hold on one call.
@@ -448,6 +449,7 @@ impl App {
                 }
             }
             Command::Camera { call, on } => self.camera(call, on),
+            Command::AddVideo { call } => self.add_video(call),
             Command::Answer { call } => self.act(call, Pick::Ringing, Action::Accept),
             Command::Decline { call } => self.act(call, Pick::Ringing, Action::Decline),
             Command::Hangup { call } => self.act(call, Pick::Latest, Action::HangUp),
@@ -946,6 +948,9 @@ impl App {
             video: false,
             camera: false,
             far_video: false,
+            camera_wanted: false,
+            video_asked: false,
+            video_refused: false,
             pictures: None,
         };
         self.publish(Change::CallAdded { call: view });
@@ -964,6 +969,10 @@ impl App {
             let mut has_audio = false;
             let mut has_video = false;
             let mut was_answered = false;
+            // whether the call was audio only when it got its devices, and whether this side then asked for video: the
+            // camera goes on with video this side chose, and stays off with video the far end added
+            let mut began_audio_only: Option<bool> = None;
+            let mut asked_video = false;
             loop {
                 tokio::select! {
                     changed = call.changed() => {
@@ -1010,23 +1019,37 @@ impl App {
                         Some(Action::Accept) => call.command(dsip_endpoint::CallCommand::Accept { session: call.session().to_string() }),
                         Some(Action::Decline) => call.command(dsip_endpoint::CallCommand::Decline { session: call.session().to_string() }),
                         Some(Action::HangUp) | None => call.hang_up(),
+                        Some(Action::AddVideo) => {
+                            asked_video = true;
+                            call.add_video();
+                            app.update(id, |v| { v.video_asked = true; v.video_refused = false; });
+                        }
                     },
                     _ = poll.tick() => {
                         let (media, err) = (call.media_received(), call.error());
                         // a video call's camera and picture, once it has the devices (what the answer accepted is known
                         // only then, B§2.1)
                         let video = call.video();
+                        if has_audio {
+                            began_audio_only.get_or_insert(!video);
+                        }
+                        let camera_wanted = video && (asked_video || began_audio_only != Some(true));
                         if let Some(v) = &app.inner.video {
                             if has_audio && video && !has_video {
                                 has_video = true;
                                 if let Err(e) = v.show(id) {
                                     tracing::warn!("call {id}: its video not shown: {e}");
                                 }
-                                if let Err(e) = v.send(id) {
-                                    tracing::warn!("call {id}: no camera: {e}");
+                                if camera_wanted {
+                                    if let Err(e) = v.send(id) {
+                                        tracing::warn!("call {id}: no camera: {e}");
+                                    }
                                 }
                             }
                         }
+                        // where this side's asking for video is (§12.8): waiting on the far end, or not taken
+                        let ask = call.video_ask();
+                        let (video_asked, video_refused) = (ask == dsip_phone::VideoAsk::Asked, ask == dsip_phone::VideoAsk::Refused && !video);
                         // the sound's counters about once a second, while it rings back or has the devices
                         ticks += 1;
                         let mut sound = match &app.inner.audio {
@@ -1081,6 +1104,7 @@ impl App {
                         };
                         let differs = app.inner.state.lock().unwrap_or_else(|e| e.into_inner()).calls.get(&id)
                             .is_some_and(|v| v.media != media || v.error != err || v.video != video || v.camera != camera || v.far_video != far_video
+                                || v.camera_wanted != camera_wanted || v.video_asked != video_asked || v.video_refused != video_refused
                                 || sound.as_ref().is_some_and(|s| v.sound.as_ref() != Some(s))
                                 || pictures.as_ref().is_some_and(|p| v.pictures.as_ref() != Some(p)));
                         if differs {
@@ -1089,6 +1113,9 @@ impl App {
                                 v.video = video;
                                 v.camera = camera;
                                 v.far_video = far_video;
+                                v.camera_wanted = camera_wanted;
+                                v.video_asked = video_asked;
+                                v.video_refused = video_refused;
                                 v.error = err;
                                 if sound.is_some() {
                                     v.sound = sound;
@@ -1103,6 +1130,22 @@ impl App {
             }
         });
         id
+    }
+
+    /// Add video to answered audio call `call` (the latest, without): the call's task asks the far end (§12.8).
+    fn add_video(&self, call: Option<u64>) -> Response {
+        if self.inner.video.is_none() {
+            return Response::error("this app has no video");
+        }
+        let Some(id) = call.or_else(|| self.pick(Pick::Latest)) else { return Response::error("no call is up") };
+        match self.state().calls.get(&id) {
+            None => return Response::error(format!("no call {id}")),
+            Some(c) if !matches!(c.state, CallState::Answered { .. }) => return Response::error(format!("call {id} is not answered")),
+            Some(c) if c.video => return Response::error(format!("call {id} has video")),
+            Some(c) if c.video_asked => return Response::error(format!("call {id}: video is asked for")),
+            Some(_) => {}
+        }
+        self.act(Some(id), Pick::Latest, Action::AddVideo)
     }
 
     /// The camera on or off in video call `call` (the one shown, without).

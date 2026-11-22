@@ -45,6 +45,9 @@ class CallView {
     this.video = false,
     this.camera = false,
     this.farVideo = false,
+    this.cameraWanted = false,
+    this.videoAsked = false,
+    this.videoRefused = false,
     this.pictures,
   });
   final int id;
@@ -70,6 +73,16 @@ class CallView {
   /// The far end's pictures are coming in. Without, no picture of theirs is shown (not the last one that came).
   final bool farVideo;
 
+  /// This side chose video for the call (placed or answered it as a video call, or added video to it): its camera
+  /// goes on with the video. Where the far end added the video, the camera stays off until it is turned on.
+  final bool cameraWanted;
+
+  /// This side asked to add video, and the far end has not answered yet.
+  final bool videoAsked;
+
+  /// This side asked to add video, and the far end did not take it; the call goes on.
+  final bool videoRefused;
+
   /// What its video did on this device, while it has video.
   final CallPictures? pictures;
 
@@ -89,6 +102,9 @@ class CallView {
     video: j['video'] as bool? ?? false,
     camera: j['camera'] as bool? ?? false,
     farVideo: j['far_video'] as bool? ?? false,
+    cameraWanted: j['camera_wanted'] as bool? ?? false,
+    videoAsked: j['video_asked'] as bool? ?? false,
+    videoRefused: j['video_refused'] as bool? ?? false,
     error: j['error'] as String?,
     sound: j['sound'] == null ? null : CallSound.fromJson(j['sound'] as Map<String, dynamic>),
     pictures: j['pictures'] == null ? null : CallPictures.fromJson(j['pictures'] as Map<String, dynamic>),

@@ -432,6 +432,9 @@ mod tests {
             video: false,
             camera: false,
             far_video: false,
+            camera_wanted: false,
+            video_asked: false,
+            video_refused: false,
             pictures: None,
         }
     }

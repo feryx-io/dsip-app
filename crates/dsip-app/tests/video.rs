@@ -123,3 +123,35 @@ async fn a_second_video_call_carries_frames_too() {
     until("both calls in both histories", || alice.state().history.len() == 2 && bob.state().history.len() == 2).await;
     assert!(alice.state().history.iter().chain(&bob.state().history).all(|c| c.video));
 }
+
+/// Video added to an audio call under way (§12.8, B§5.3): the one who asks sends its camera; the other sees it, and
+/// its own camera stays off until it turns it on.
+#[tokio::test(flavor = "multi_thread")]
+async fn video_is_added_to_an_audio_call() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let net = Network::new();
+    let (alice, bob) = (app(&net, "Alice").await, app(&net, "Bob").await);
+    assert!(matches!(alice.command(Command::AddVideo { call: None }).await, Response::Error { .. }), "no call to add it to");
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity, video: false }).await);
+    until("Bob's call rings", || bob.state().calls.values().any(|c| c.state == CallState::Ringing)).await;
+    assert!(matches!(alice.command(Command::AddVideo { call: Some(id) }).await, Response::Error { .. }), "not before the answer");
+    let theirs = call_of(bob.command(Command::Answer { call: None }).await);
+    until("answered and heard", || answered(&alice) && answered(&bob) && alice.state().calls[&id].media).await;
+    assert!(!alice.state().calls[&id].video && !bob.state().calls[&theirs].video);
+
+    assert_eq!(alice.command(Command::AddVideo { call: Some(id) }).await, Response::Call { call: id });
+    until("both views say video", || alice.state().calls[&id].video && bob.state().calls[&theirs].video).await;
+    until("Alice's camera is on", || alice.state().calls[&id].camera).await;
+    let (a, b) = (alice.state().calls[&id].clone(), bob.state().calls[&theirs].clone());
+    assert!(a.camera_wanted && !a.video_asked && !a.video_refused, "{a:?}");
+    assert!(!b.camera_wanted && !b.camera, "the far end's adding video turns no camera on here: {b:?}");
+    until("Alice's frames reach Bob", || bob.video_frames().unwrap().1 > 5 && bob.state().calls[&theirs].far_video).await;
+    assert_eq!(alice.video_frames().unwrap().1, 0, "Bob sends none");
+    assert!(matches!(alice.command(Command::AddVideo { call: Some(id) }).await, Response::Error { .. }), "it has video");
+    // Bob turns his camera on: the same call carries his pictures too
+    assert_eq!(bob.command(Command::Camera { call: Some(theirs), on: true }).await, Response::Ok);
+    until("Bob's frames reach Alice", || alice.video_frames().unwrap().1 > 5 && alice.state().calls[&id].far_video).await;
+    assert!(alice.state().calls[&id].media, "and the sound goes on");
+    alice.command(Command::Hangup { call: Some(id) }).await;
+    until("the call in both histories", || alice.state().history.len() == 1 && bob.state().history.len() == 1).await;
+}

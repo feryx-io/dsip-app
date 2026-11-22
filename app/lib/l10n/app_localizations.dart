@@ -565,6 +565,24 @@ abstract class Strings {
   /// **'Camera off'**
   String get callCameraOff;
 
+  /// Button in an answered audio call that asks the other person to add video to the call.
+  ///
+  /// In en, this message translates to:
+  /// **'Add video'**
+  String get callAddVideo;
+
+  /// Label of the disabled add-video button while the other person's app has not answered the request yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Asking for video…'**
+  String get callVideoAsked;
+
+  /// Shown in an audio call after this side asked to add video and the other person's app did not accept it.
+  ///
+  /// In en, this message translates to:
+  /// **'They did not take video. The call goes on.'**
+  String get callVideoRefused;
+
   /// Said to a screen reader for the dark box a video call shows in place of the other person's picture while none comes.
   ///
   /// In en, this message translates to:
