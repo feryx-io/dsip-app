@@ -426,6 +426,12 @@ class _ThreadState extends State<_Thread> {
     if (r['response'] == 'ok') widget.onLeft();
   }
 
+  /// Call the one this conversation is with, and show the call.
+  Future<void> _call(String peer, {bool video = false}) async {
+    final r = await placeCall(widget.controller, peer, video: video);
+    if (r['response'] == 'call') widget.controller.showTab(Tabs.calls);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
@@ -445,26 +451,57 @@ class _ThreadState extends State<_Thread> {
               ? Wrap(
                   spacing: 4,
                   children: [
-                    if (_peer(x, me) != null)
+                    // call the one this conversation is with, without leaving it for Contacts
+                    if (peer != null)
                       IconButton(
-                        key: const Key('name-thread'),
-                        tooltip: s.nameAction,
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => editName(context, widget.controller, widget.state, _peer(x, me)!),
+                        key: const Key('call-thread'),
+                        tooltip: s.contactCall,
+                        icon: const Icon(Icons.call),
+                        onPressed: () => _call(peer),
                       ),
-                    if (_peer(x, me) != null)
+                    if (peer != null && widget.state.video)
                       IconButton(
-                        key: const Key('copy-thread'),
-                        tooltip: s.copyAddress,
-                        icon: const Icon(Icons.copy),
-                        onPressed: () => copyAddress(context, _peer(x, me)!),
+                        key: const Key('video-thread'),
+                        tooltip: s.callVideoButton,
+                        icon: const Icon(Icons.videocam),
+                        onPressed: () => _call(peer, video: true),
                       ),
-                    IconButton(
-                      key: const Key('delete-thread'),
-                      tooltip: s.conversationDelete,
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: widget.onDelete,
-                    ),
+                    // on a phone's width the rest is in a menu: the name keeps its room
+                    if (roomForVideoButton(context)) ...[
+                      if (peer != null)
+                        IconButton(
+                          key: const Key('name-thread'),
+                          tooltip: s.nameAction,
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () => editName(context, widget.controller, widget.state, peer),
+                        ),
+                      if (peer != null)
+                        IconButton(
+                          key: const Key('copy-thread'),
+                          tooltip: s.copyAddress,
+                          icon: const Icon(Icons.copy),
+                          onPressed: () => copyAddress(context, peer),
+                        ),
+                      IconButton(
+                        key: const Key('delete-thread'),
+                        tooltip: s.conversationDelete,
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: widget.onDelete,
+                      ),
+                    ] else
+                      PopupMenuButton<String>(
+                        key: const Key('thread-menu'),
+                        onSelected: (what) => switch (what) {
+                          'name' => editName(context, widget.controller, widget.state, peer!),
+                          'copy' => copyAddress(context, peer!),
+                          _ => widget.onDelete(),
+                        },
+                        itemBuilder: (_) => [
+                          if (peer != null) PopupMenuItem(key: const Key('name-thread'), value: 'name', child: Text(s.nameAction)),
+                          if (peer != null) PopupMenuItem(key: const Key('copy-thread'), value: 'copy', child: Text(s.copyAddress)),
+                          PopupMenuItem(key: const Key('delete-thread'), value: 'delete', child: Text(s.conversationDelete)),
+                        ],
+                      ),
                   ],
                 )
               : Wrap(
