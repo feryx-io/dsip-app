@@ -130,6 +130,21 @@ void main() {
     expect(client.commands.last, {'command': 'thread', 'conversation': group});
   });
 
+  testWidgets('someone whose introduction was accepted is called before the first message', (tester) async {
+    client.answer = (cmd) => switch (cmd['command']) {
+      'call' => {'response': 'call', 'call': 7},
+      _ => {'response': 'ok'},
+    };
+    await open(tester, {...state, 'video': true});
+    await tester.tap(find.byTooltip('Accept'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('call-thread')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('video-thread')));
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'call', 'to': 'did:key:z6MkCarol', 'video': true});
+    expect(controller.tab, Tabs.calls, reason: 'the call is shown');
+  });
+
   testWidgets('an introduction of yours, accepted, opens the conversation with it on top', (tester) async {
     final introduced = ((state['messaging'] as Map)['introduced'] as List).cast<Map<String, dynamic>>();
     introduced.first['accepted'] = true;
