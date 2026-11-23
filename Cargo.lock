@@ -1776,7 +1776,7 @@ dependencies = [
 
 [[package]]
 name = "dsip-app"
-version = "0.9.3"
+version = "0.9.4"
 dependencies = [
  "android-native-keyring-store",
  "anvil-audio",
@@ -2203,7 +2203,7 @@ dependencies = [
 
 [[package]]
 name = "dsip_app_bridge"
-version = "0.9.3"
+version = "0.9.4"
 dependencies = [
  "anvil-core",
  "anvil-update",
