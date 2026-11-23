@@ -665,6 +665,12 @@ class _DraftState extends State<_Draft> {
     if (r['response'] == 'conversation') widget.onMade(r['conversation'] as String);
   }
 
+  /// Call them, and show the call.
+  Future<void> _call({bool video = false}) async {
+    final r = await placeCall(widget.controller, widget.peer, video: video);
+    if (r['response'] == 'call') widget.controller.showTab(Tabs.calls);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
@@ -675,6 +681,25 @@ class _DraftState extends State<_Draft> {
         ListTile(
           leading: widget.onBack == null ? null : BackButton(key: const Key('thread-back'), onPressed: widget.onBack),
           title: Text(widget.state.nameOf(widget.peer)),
+          // they may be called before the first message, as from a conversation
+          trailing: Wrap(
+            spacing: 4,
+            children: [
+              IconButton(
+                key: const Key('call-thread'),
+                tooltip: s.contactCall,
+                icon: const Icon(Icons.call),
+                onPressed: () => _call(),
+              ),
+              if (widget.state.video)
+                IconButton(
+                  key: const Key('video-thread'),
+                  tooltip: s.callVideoButton,
+                  icon: const Icon(Icons.videocam),
+                  onPressed: () => _call(video: true),
+                ),
+            ],
+          ),
         ),
         const Divider(height: 1),
         Expanded(
