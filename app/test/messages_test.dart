@@ -166,6 +166,50 @@ void main() {
     expect(tester.widget<TextField>(find.byKey(const Key('compose'))).controller!.text, isEmpty);
   });
 
+  testWidgets('the one a conversation is with is called from it, with video too', (tester) async {
+    client.answer = (cmd) => switch (cmd['command']) {
+      'thread' => m['thread'] as Map<String, dynamic>,
+      'call' => {'response': 'call', 'call': 7},
+      _ => {'response': 'ok'},
+    };
+    await open(tester, {...state, 'video': true});
+    await tester.tap(find.byKey(const Key('conversation-$group')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('video-thread')));
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'call', 'to': 'did:key:z6MkBob', 'video': true});
+    expect(controller.tab, Tabs.calls, reason: 'the call is shown');
+
+    await tester.tap(find.text('Messages'));
+    await tester.pumpAndSettle();
+    if (find.byKey(const Key('call-thread')).evaluate().isEmpty) {
+      await tester.tap(find.byKey(const Key('conversation-$group')));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byKey(const Key('call-thread')));
+    await tester.pumpAndSettle();
+    expect(client.commands.last, {'command': 'call', 'to': 'did:key:z6MkBob'});
+  });
+
+  testWidgets('without video the conversation offers a call only, and on a phone the rest is in a menu', (tester) async {
+    await open(tester, {...state, 'video': false});
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('conversation-$group')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('call-thread')), findsOneWidget);
+    expect(find.byKey(const Key('video-thread')), findsNothing);
+    expect(find.byKey(const Key('copy-thread')), findsNothing);
+    await tester.tap(find.byKey(const Key('thread-menu')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('name-thread')), findsOneWidget);
+    expect(find.byKey(const Key('copy-thread')), findsOneWidget);
+    expect(find.byKey(const Key('delete-thread')), findsOneWidget);
+  });
+
   testWidgets('first contact: introduce yourself, then message, or make a group', (tester) async {
     await open(tester);
     await tester.tap(find.text('Introduce yourself').first);
