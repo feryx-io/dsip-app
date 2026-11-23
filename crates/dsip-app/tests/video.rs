@@ -155,3 +155,73 @@ async fn video_is_added_to_an_audio_call() {
     alice.command(Command::Hangup { call: Some(id) }).await;
     until("the call in both histories", || alice.state().history.len() == 1 && bob.state().history.len() == 1).await;
 }
+
+/// A dialer whose device can stop being heard: what it gave still carries the relay's frames to the device, and what
+/// the device sends is dropped once `mute` is set.
+struct Unheard {
+    to: std::sync::Arc<dyn dsip_transport::conn::Dialer>,
+    mute: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl dsip_transport::conn::Dialer for Unheard {
+    fn dial(&self) -> dsip_transport::conn::DialFuture {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let (dial, mute) = (self.to.dial(), std::sync::Arc::clone(&self.mute));
+        Box::pin(async move {
+            let (mut far_r, mut far_w) = tokio::io::split(dial.await?);
+            let (ours, near) = tokio::io::duplex(1 << 17);
+            let (mut near_r, mut near_w) = tokio::io::split(near);
+            tokio::spawn(async move {
+                let _ = tokio::io::copy(&mut far_r, &mut near_w).await;
+            });
+            tokio::spawn(async move {
+                let mut buf = vec![0u8; 1 << 16];
+                while let Ok(n) = near_r.read(&mut buf).await {
+                    if n == 0 || (!mute.load(std::sync::atomic::Ordering::Relaxed) && far_w.write_all(&buf[..n]).await.is_err()) {
+                        break;
+                    }
+                }
+            });
+            Ok(Box::new(ours) as Box<dyn dsip_transport::conn::Io>)
+        })
+    }
+}
+
+/// Video asked of a far end whose answer never comes (§12.8 rule 7): the asking is over at the update's `expires_at`,
+/// 30 s on; the call's view says it was not taken, and the call goes on as the audio call it was.
+#[tokio::test(flavor = "multi_thread")]
+async fn video_asked_and_never_answered_is_not_taken_when_the_asking_lapses() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let net = Network::new();
+    let mute = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let alice = app(&net, "Alice").await;
+    let bob = {
+        let mut cfg = Config::new(net.identity("Bob"), "wss://relay.invalid/dsip");
+        cfg.dialer = Some(std::sync::Arc::new(Unheard { to: net.dialer(), mute: std::sync::Arc::clone(&mute) }));
+        cfg.audio = Some(HostKind::Tone);
+        cfg.video = Some(HostKind::Tone);
+        App::start(cfg).await.expect("the app starts")
+    };
+    let id = call_of(alice.command(Command::Call { to: bob.state().me.identity, video: false }).await);
+    until("Bob's call rings", || bob.state().calls.values().any(|c| c.state == CallState::Ringing)).await;
+    call_of(bob.command(Command::Answer { call: None }).await);
+    until("answered and heard", || answered(&alice) && answered(&bob) && alice.state().calls[&id].media).await;
+
+    // nothing Bob sends reaches the relay from here: Alice's update gets to him, his answer gets nowhere
+    mute.store(true, std::sync::atomic::Ordering::Relaxed);
+    let asked = std::time::Instant::now();
+    assert_eq!(alice.command(Command::AddVideo { call: Some(id) }).await, Response::Call { call: id });
+    until("Alice's view says she is asking", || alice.state().calls[&id].video_asked).await;
+    until("the update reached Bob, who took it", || bob.state().calls.values().any(|c| c.video)).await;
+    tokio::time::sleep(Duration::from_secs(20)).await;
+    let a = alice.state().calls[&id].clone();
+    assert!(a.video_asked && !a.video_refused && !a.video, "still asking before the update expires: {a:?}");
+    until("the asking lapses", || alice.state().calls[&id].video_refused).await;
+    let (a, took) = (alice.state().calls[&id].clone(), asked.elapsed());
+    // on time, though the phone wakes its agent every second for presence (dsip-transport's fix of that)
+    assert!(took >= Duration::from_millis(28_500) && took < Duration::from_secs(34), "it lapsed at the update's expiry, not {took:?} on");
+    assert!(!a.video_asked && !a.video && !a.camera && !a.camera_wanted, "{a:?}");
+    assert!(matches!(a.state, CallState::Answered { .. }) && a.media, "the call goes on: {a:?}");
+    assert_eq!(alice.video_frames().unwrap().0, 0, "no camera frame was sent");
+    alice.command(Command::Hangup { call: Some(id) }).await;
+}
