@@ -186,13 +186,9 @@ async fn revoking_a_grant_sends_the_others_new_keys_through_their_mailboxes() {
     }
 
     // P§12.5: withdrawing Carol's grant rotates the keys; Alice's new grant is deposited at her mailbox
-    let mut a_changes = alice.subscribe();
+    // (a grant that follows the one she holds: she is told of no acceptance, so what shows it arrived is that she reads
+    // what Bob seals next)
     assert_eq!(bob.command(Command::RevokeGrants { identity: carol_did.clone() }).await, Response::Revoked { count: 1 });
-    tokio::time::timeout(Duration::from_secs(20), async {
-        while !matches!(a_changes.recv().await, Ok(Change::Granted { by }) if by == bob_did) {}
-    })
-    .await
-    .expect("Alice's grant with the new keys, at her mailbox");
     assert_eq!(bob.command(Command::SetPresence { state: Some("away".into()) }).await, Response::Ok);
     until(&alice, "Alice reads Bob away", |_| shown(&alice, &bob_did).is_some_and(|p| p.state.as_deref() == Some("away") && p.unreadable == 0)).await;
     tokio::time::sleep(Duration::from_secs(2)).await;

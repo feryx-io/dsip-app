@@ -385,3 +385,83 @@ async fn profile_cards_go_with_the_introduction_and_the_grant_when_shared() {
     assert!(bob.state().cards.contains_key(&alice_did));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// §19.4 "A changed card" (spec-gap 192): a picture set after two identities are contacts reaches the other, on a
+/// grant that follows the one each issued and revokes nothing. Nobody is told of an acceptance again, and each goes
+/// on following the other's presence.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_changed_card_reaches_those_already_contacts() {
+    let dir = std::env::temp_dir().join(format!("dsip-app-cards-changed-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (cert, key) = dsip_transport::tls::ensure_self_signed(&dir, &["127.0.0.1".into(), "localhost".into()]).unwrap();
+    let tls = dsip_transport::tls::acceptor(&cert, &key).unwrap();
+    let hints = hints_node().await;
+    let net = Network::new();
+    let alice = app(&net, &dir, "Alice", mailbox(&dir, "mailbox-a", &tls, &hints).await, &hints).await;
+    let bob = app(&net, &dir, "Bob", mailbox(&dir, "mailbox-b", &tls, &hints).await, &hints).await;
+    let (alice_did, bob_did) = (alice.state().me.identity, bob.state().me.identity);
+    for (who, a) in [("Alice", &alice), ("Bob", &bob)] {
+        until(a, &format!("{who} bound to the mailbox"), |s| s.messaging.connected).await;
+    }
+    tokio::time::sleep(Duration::from_millis(500)).await; // each has published its hint once bound
+
+    // contacts, neither with a picture and neither sharing a card: Bob accepts Alice, and she him in turn
+    let r = alice.command(Command::Introduce { to: bob_did.clone(), purpose: "hello from Alice".into(), name: None }).await;
+    assert_eq!(r, Response::Ok);
+    until(&bob, "Bob sees the request", |s| s.messaging.requests.iter().any(|q| q.from == alice_did)).await;
+    let id = bob.state().messaging.requests[0].id.clone();
+    assert_eq!(bob.command(Command::AcceptRequest { id }).await, Response::Ok);
+    until(&alice, "Alice holds Bob's grant", |s| s.messaging.introduced.iter().any(|i| i.to == bob_did && i.accepted)).await;
+    until(&bob, "Bob holds Alice's grant", |s| s.messaging.introduced.iter().any(|i| i.to == alice_did && i.accepted)).await;
+    assert!(alice.state().cards.is_empty() && bob.state().cards.is_empty(), "no card went: neither shares one");
+    assert_eq!(bob.command(Command::SetPresence { state: Some("available".into()) }).await, Response::Ok);
+    until(&alice, "Alice follows Bob", |s| s.presence.following.iter().any(|p| p.identity == bob_did && p.state.is_some())).await;
+
+    let file = |name: &str, fill: u8| {
+        let mut jpeg = vec![0xff, 0xd8, 0xff, 0xe0];
+        jpeg.resize(2_000, fill);
+        let p = dir.join(name);
+        std::fs::write(&p, &jpeg).unwrap();
+        (p.to_string_lossy().into_owned(), jpeg)
+    };
+    let picture_of = |s: &dsip_app::State, who: &str| s.cards.get(who).and_then(|c| c.picture.as_deref()).and_then(|p| std::fs::read(p).ok());
+    let (mut a_changes, mut b_changes) = (alice.subscribe(), bob.subscribe());
+
+    // Bob sets a picture while he shares nothing: it stays with him. Sharing turned on sends it.
+    let (path, bobs) = file("bob.jpg", 1);
+    assert_eq!(bob.command(Command::SetPicture { path: Some(path) }).await, Response::Ok);
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    assert!(alice.state().cards.is_empty(), "a card leaves only by its user's standing choice");
+    assert_eq!(bob.command(Command::ShareProfile { introductions: None, grants: Some(true) }).await, Response::Ok);
+    until(&alice, "Alice has Bob's picture", |s| picture_of(s, &bob_did).as_ref() == Some(&bobs)).await;
+    assert_eq!(alice.state().cards[&bob_did].name.as_deref(), Some("Bob"));
+
+    // Alice shares first and sets her picture after: the change sends it
+    assert_eq!(alice.command(Command::ShareProfile { introductions: None, grants: Some(true) }).await, Response::Ok);
+    let (path, alices) = file("alice.jpg", 2);
+    assert_eq!(alice.command(Command::SetPicture { path: Some(path) }).await, Response::Ok);
+    until(&bob, "Bob has Alice's picture", |s| picture_of(s, &alice_did).as_ref() == Some(&alices)).await;
+
+    // another picture replaces it, and none takes it away
+    let (path, newer) = file("bob-2.jpg", 3);
+    assert_eq!(bob.command(Command::SetPicture { path: Some(path) }).await, Response::Ok);
+    until(&alice, "Alice has Bob's new picture", |s| picture_of(s, &bob_did).as_ref() == Some(&newer)).await;
+    assert_eq!(alice.command(Command::SetPicture { path: None }).await, Response::Ok);
+    until(&bob, "Alice's picture is gone at Bob's", |s| s.cards.get(&alice_did).is_some_and(|c| c.picture.is_none())).await;
+    assert_eq!(bob.state().cards[&alice_did].name.as_deref(), Some("Alice"));
+
+    // nothing was revoked: Alice still follows Bob and sees what he says next, and his card is still shown
+    assert_eq!(bob.command(Command::SetPresence { state: Some("busy".into()) }).await, Response::Ok);
+    until(&alice, "Alice sees Bob busy", |s| s.presence.following.iter().any(|p| p.identity == bob_did && p.state.as_deref() == Some("busy"))).await;
+    assert!(alice.state().cards.contains_key(&bob_did), "his card was not dropped");
+    // and no one was told of an acceptance again
+    for (who, changes) in [("Alice", &mut a_changes), ("Bob", &mut b_changes)] {
+        while let Ok(c) = changes.try_recv() {
+            assert!(!matches!(c, Change::Granted { .. }), "{who} was told of a grant again");
+        }
+    }
+    alice.stop().await;
+    bob.stop().await;
+    let _ = std::fs::remove_dir_all(&dir);
+}
