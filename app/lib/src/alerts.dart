@@ -86,7 +86,8 @@ abstract class Alerter {
   /// Show [alert], replacing the one shown before under the same [id].
   Future<void> show(int id, Alert alert);
 
-  /// Take away the alert shown under [id], if it still is.
+  /// Take away the alert shown under [id], if it still is. Where the system cannot take away one alone (Windows, for an
+  /// app without a package identity), every alert of the app's goes.
   Future<void> cancel(int id);
 }
 
@@ -162,7 +163,15 @@ class SystemAlerter implements Alerter {
   Future<void> cancel(int id) async {
     if (!_ready) return;
     try {
-      await _plugin.cancel(id: id);
+      // Windows takes one toast away only for an app with a package identity (MSIX), and this one is installed
+      // without: its `cancel` leaves a toast that is showing where it is, so a ringing call's stayed up, with its
+      // buttons, after the call was answered in the window. Clearing all of the app's does take it away, along with
+      // the earlier ones still in the notification centre (what they told of is in the app).
+      if (Platform.isWindows) {
+        await _plugin.cancelAll();
+      } else {
+        await _plugin.cancel(id: id);
+      }
     } catch (e) {
       debugPrint('alerts: $e');
     }
