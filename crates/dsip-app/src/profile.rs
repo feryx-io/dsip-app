@@ -157,15 +157,27 @@ impl App {
             let _ = std::fs::remove_file(old);
         }
         self.set_profile(profile);
+        self.send_cards();
         Ok(())
+    }
+
+    /// The card changed, or is shared from now on: send it to those this identity granted (§19.4 "A changed card").
+    fn send_cards(&self) {
+        if let Some(m) = self.inner.messaging.get() {
+            let _ = m.send(crate::messaging::Req::SendCards);
+        }
     }
 
     /// `ShareProfile`: the standing choices, each left as it is when not given.
     pub(crate) fn share_profile(&self, introductions: Option<bool>, grants: Option<bool>) {
         let mut profile = self.state().profile;
         profile.with_introductions = introductions.unwrap_or(profile.with_introductions);
+        let turned_on = !profile.with_grants && grants == Some(true);
         profile.with_grants = grants.unwrap_or(profile.with_grants);
         self.set_profile(profile);
+        if turned_on {
+            self.send_cards();
+        }
     }
 
     fn set_profile(&self, profile: Profile) {

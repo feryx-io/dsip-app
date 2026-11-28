@@ -85,6 +85,8 @@ pub(crate) enum Req {
     Forget { conversation: String, id: Option<String>, reply: oneshot::Sender<Response> },
     /// Deposit a grant the phone issued at its grantee's mailbox.
     Deliver { to: String, grant: String },
+    /// Send this identity's card, changed, to those it granted ([`send_cards`]).
+    SendCards,
     /// Register with the mailbox to be woken (A5d), or end the registration (`None`).
     Wake { ask: Option<crate::wake::MailboxAsk>, reply: oneshot::Sender<(crate::Registration, Option<crate::wake::Registered>)> },
     /// Present an admission code to the mailbox (M§4.1, spec-gap 185).
@@ -131,8 +133,13 @@ impl Host<SqliteProvider> for AppHost {
                         Err(e) => tracing::warn!("holding the grant from {by}: {e}"),
                     }
                 }
+                // a grant that follows the one held (new presence keys, P§12.5; a changed card, §19.4) accepts nothing
+                // anew: the contact is there already, and the user is told of no acceptance
+                let known = self.app.state().messaging.introduced.iter().any(|i| i.to == by && i.accepted);
                 self.app.introduction_accepted(&by);
-                self.app.publish(Change::Granted { by });
+                if !known {
+                    self.app.publish(Change::Granted { by });
+                }
             }
             Output::Event(Event::Ui(Ui::Removed { group, by, left: false, .. })) => {
                 self.app.publish(Change::Removed { conversation: group, by });
@@ -438,6 +445,7 @@ async fn request(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost, req: Re
                 tracing::warn!("the grant to {to} not deposited at its mailbox: {e}");
             }
         }
+        Req::SendCards => send_cards(mx, host).await,
         Req::Wake { ask, reply } => {
             let r = match ask {
                 Some(a) => crate::wake::at_mailbox(mx, host, a).await,
@@ -709,6 +717,39 @@ async fn deliver(mx: &mut Messenger<SqliteProvider>, to: &str, grant: &str) -> R
     match answer["type"].as_str() {
         Some("accepted") => Ok(()),
         _ => Err(format!("refused: {} (retry after {})", answer["reason"], answer["retry_after"])),
+    }
+}
+
+/// §19.4 "A changed card" (spec-gap 192): this identity's card, as it is now, to every identity that holds a live
+/// grant from this device and takes cards, while the user shares it with the requests they accept. Each gets a grant
+/// that follows the one it holds, permitting the same, deposited at its mailbox; nothing is revoked, so those who
+/// follow this identity's presence go on doing so.
+///
+/// Impl: a card that could not be deposited (the mailbox away) is not tried again until the card next changes.
+async fn send_cards(mx: &mut Messenger<SqliteProvider>, host: &mut AppHost) {
+    if !host.app.state().profile.with_grants {
+        return;
+    }
+    let Some(card) = host.app.my_card() else { return };
+    let granted = match host.app.inner.phone.granted().await {
+        Ok(g) => g,
+        Err(e) => return tracing::warn!("the card not sent: {e}"),
+    };
+    for identity in granted {
+        // §19.4 "Who may be sent one": a receiver without the extension refuses a grant that carries a card
+        if !takes_cards(mx, &identity).await {
+            continue;
+        }
+        match host.app.inner.phone.send_card(&identity, card.clone()).await {
+            Ok(grants) => {
+                for grant in grants {
+                    if let Err(e) = deliver(mx, &identity, &grant).await {
+                        tracing::warn!("the card for {identity} not deposited at its mailbox: {e}");
+                    }
+                }
+            }
+            Err(e) => tracing::warn!("the card for {identity}: {e}"),
+        }
     }
 }
 
